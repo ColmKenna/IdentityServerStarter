@@ -1,0 +1,103 @@
+@page
+@model IdentityServerAspNetIdentity.Pages.Consent.Index
+@{
+}
+
+<div class="page-consent">
+    <div class="lead">
+        @if (Model.View.ClientLogoUrl != null)
+        {
+            <div class="client-logo"><img src="@Model.View.ClientLogoUrl"></div>
+        }
+        <h1>
+            @Model.View.ClientName
+            <small class="text-muted">is requesting your permission</small>
+        </h1>
+        <p>Uncheck the permissions you do not wish to grant.</p>
+    </div>
+
+    <div class="form-validation">
+        <partial name="_ValidationSummary" />
+    </div>
+
+    <form asp-page="/Consent/Index" class="form-wrapper">
+        <input type="hidden" asp-for="Input.ReturnUrl" />
+        <div class="form-content">
+            @if (Model.View.IdentityScopes.Any())
+            {
+                <div class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <span>👤</span>
+                            Personal Information
+                        </div>
+                        <ul class="item-list">
+                            @foreach (var scope in Model.View.IdentityScopes)
+                            {
+                                <partial name="_ScopeListItem" model="@scope" />
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+
+            @if (Model.View.ApiScopes.Any())
+            {
+                <div class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <span>📋</span>
+                            Application Access
+                        </div>
+                        <ul class="item-list">
+                            @foreach (var scope in Model.View.ApiScopes)
+                            {
+                                <partial name="_ScopeListItem" model="scope" />
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+
+            <div class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <span>✏️</span>
+                        Description
+                    </div>
+                    <div class="card-content">
+                        <input class="input-field" placeholder="Description or name of device" asp-for="Input.Description" autofocus>
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.View.AllowRememberConsent)
+            {
+                <div class="content-section">
+                    <div class="checkbox-field">
+                        <input class="checkbox-input" asp-for="Input.RememberConsent">
+                        <label class="checkbox-label" asp-for="Input.RememberConsent">
+                            <strong>Remember My Decision</strong>
+                        </label>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="action-bar">
+            <div class="action-buttons">
+                <button name="Input.button" value="yes" class="button button-primary" autofocus>Yes, Allow</button>
+                <button name="Input.button" value="no" class="button button-secondary">No, Do Not Allow</button>
+            </div>
+            <div class="client-info">
+                @if (Model.View.ClientUrl != null)
+                {
+                    <a class="button button-info" href="@Model.View.ClientUrl">
+                        <span>ℹ️</span>
+                        <strong>@Model.View.ClientName</strong>
+                    </a>
+                }
+            </div>
+        </div>
+    </form>
+</div>

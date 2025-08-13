@@ -1,0 +1,89 @@
+@page
+@model IdentityServerAspNetIdentity.Pages.Login.Index
+
+<div class="login-page">
+    <div class="lead">
+        <h1>Login</h1>
+        <p>Choose how to login</p>
+    </div>
+
+    <partial name="_ValidationSummary" />
+
+    <div class="form-grid">
+
+        @if (Model.View.EnableLocalLogin)
+        {
+            <div class="form-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Local Account</h2>
+                    </div>
+
+                    <div class="card-content">
+                        <form asp-page="/Account/Login/Index">
+                            <input type="hidden" asp-for="Input.ReturnUrl" />
+
+                            <div class="form-field">
+                                <label asp-for="Input.Username"></label>
+                                <input class="input-field" placeholder="Username" asp-for="Input.Username" autofocus>
+                            </div>
+                            <div class="form-field">
+                                <label asp-for="Input.Password"></label>
+                                <input type="password" class="input-field" placeholder="Password" asp-for="Input.Password" autocomplete="off">
+                            </div>
+                            
+                            @if (Model.View.AllowRememberLogin)
+                            {
+                                <div class="form-field">
+                                    <div class="checkbox-field">
+                                        <input class="checkbox-input" asp-for="Input.RememberLogin">
+                                        <label class="checkbox-label" asp-for="Input.RememberLogin">
+                                            Remember My Login
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                            
+                            <button class="button button-primary" name="Input.Button" value="login">Login</button>
+                            <button class="button button-secondary" name="Input.Button" value="cancel">Cancel</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (Model.View.VisibleExternalProviders.Any())
+        {
+            <div class="form-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>External Account</h2>
+                    </div>
+                    <div class="card-content">
+                        <ul class="provider-list">
+                            @foreach (var provider in Model.View.VisibleExternalProviders)
+                            {
+                                <li class="provider-item">
+                                    <a class="button button-secondary"
+                                       asp-page="/ExternalLogin/Challenge"
+                                       asp-route-scheme="@provider.AuthenticationScheme"
+                                       asp-route-returnUrl="@Model.Input.ReturnUrl">
+                                        @provider.DisplayName
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (!Model.View.EnableLocalLogin && !Model.View.VisibleExternalProviders.Any())
+        {
+            <div class="alert-warning">
+                <strong>Invalid login request</strong>
+                There are no login schemes configured for this request.
+            </div>
+        }
+    </div>
+</div>

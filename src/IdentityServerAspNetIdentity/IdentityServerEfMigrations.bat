@@ -1,0 +1,4 @@
+﻿dotnet ef migrations add  InitialIdentityServerPersistedGrantDbMigration  -p ..\IdentityServer.EF.DataAccess\IdentityServer.EF.DataAccess.csproj -c Duende.IdentityServer.EntityFramework.DbContexts.PersistedGrantDbContext -o ..\IdentityServer.EF.DataAccess\DataMigrations\Migrations\IdentityServer\PersistedGrantDb
+dotnet ef migrations add InitialIdentityServerConfigurationDbMigration -p ..\IdentityServer.EF.DataAccess\IdentityServer.EF.DataAccess.csproj -c Duende.IdentityServer.EntityFramework.DbContexts.ConfigurationDbContext -o ..\IdentityServer.EF.DataAccess\DataMigrations/Migrations/IdentityServer/ConfigurationDb
+
+ 

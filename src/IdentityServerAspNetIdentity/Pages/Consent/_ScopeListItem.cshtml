@@ -1,0 +1,47 @@
+@using IdentityServerAspNetIdentity.Pages.Consent
+@model ScopeViewModel
+
+<li class="list-item">
+    <label class="item-label">
+        <input class="form-checkbox"
+               type="checkbox"
+               name="Input.ScopesConsented"
+               id="scopes_@Model.Value"
+               value="@Model.Value"
+               checked="@Model.Checked"
+               disabled="@Model.Required" />
+        @if (Model.Required)
+        {
+            <input type="hidden"
+                   name="Input.ScopesConsented"
+                   value="@Model.Value" />
+        }
+        <strong>@Model.DisplayName</strong>
+        @if (Model.Emphasize)
+        {
+            <span class="emphasis-icon">⚠️</span>
+        }
+    </label>
+    @if (Model.Required)
+    {
+        <span class="required-text"><em>(required)</em></span>
+    }
+    @if (Model.Description != null)
+    {
+        <div class="item-description">
+            <label for="scopes_@Model.Value">@Model.Description</label>
+        </div>
+    }
+    @if (Model.Resources?.Any() == true)
+    {
+        <div class="item-description">
+            <label>Will be available to these resource servers:</label>
+            <ul class="resource-list">
+            @foreach (var resource in Model.Resources)
+            {
+                <li>@resource.DisplayName</li>
+            }
+            </ul>
+        </div>
+    }
+</li>

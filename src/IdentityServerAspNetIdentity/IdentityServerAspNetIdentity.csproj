@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="7.0.8" />
+
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.0" />
+		<PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
+
+		<PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />
+		<PackageReference Include="Duende.IdentityServer.EntityFramework" Version="7.0.8" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\IdentityServer.EF.DataAccess\IdentityServer.EF.DataAccess.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Pages\Shared\Components\List\" />
+	  <Folder Include="ViewModels\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <UpToDateCheckInput Remove="Pages\Components\List\Default.cshtml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <_ContentIncludedByDefault Remove="Pages\Components\CheckBoxGroup\Default.cshtml" />
+	  <_ContentIncludedByDefault Remove="Pages\Components\List\Default.cshtml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <UpToDateCheckInput Remove="Pages\Components\List\Default.cshtml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <UpToDateCheckInput Remove="Pages\Components\CheckBoxGroup\Default.cshtml" />
+	</ItemGroup>
+</Project>

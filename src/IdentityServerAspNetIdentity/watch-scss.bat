@@ -1,0 +1,3 @@
+@echo off
+echo Starting SCSS watch mode...
+sass --watch wwwroot/css/site.scss:wwwroot/css/site.css

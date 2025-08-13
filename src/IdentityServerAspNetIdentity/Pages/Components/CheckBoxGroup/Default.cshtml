@@ -1,0 +1,17 @@
+﻿@model IdentityServerAspNetIdentity.Pages.Components.CheckBoxGroup.CheckBoxGroupViewwModel
+
+<div class="form-group row">
+    @if (Model.Label.Length > 0)
+    {
+        <label class="col-12">@Model.Label</label>
+    }
+    @foreach (var checkboxViewModel in Model.Items)
+    {
+        <div class="col-sm-6 col-xs-12 col-lg-6">
+            <input class="form-check-input" type="checkbox" name="@Model.Name" value="@checkboxViewModel.Value" id="@checkboxViewModel.Value" @(checkboxViewModel.Selected ? "checked" : "")></input>
+            <label class="form-check-label" for="@checkboxViewModel.Value">
+                @checkboxViewModel.Text
+            </label>
+        </div>
+    }
+</div>

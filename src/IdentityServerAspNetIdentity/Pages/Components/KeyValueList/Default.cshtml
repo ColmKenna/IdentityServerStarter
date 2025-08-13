@@ -1,0 +1,42 @@
+﻿@model IdentityServerAspNetIdentity.Pages.Components.KeyValueList.KeyValueListViewModel
+
+@{
+    var keyName = $"{Model.Name.Replace('.', '_')}Key";
+    var valueName = $"{Model.Name.Replace('.', '_')}Value";
+}
+<ul class="list-group" id="@Model.ComponentID">
+    <li id="@($"add{@Model.Name.Replace('.', '_')}")" class="list-group-item d-flex">
+            @if (Model.KeyOptions is {Count: > 0 })
+            {
+                <input list="KeyOptions" class="col-md-2 col-12" id="@($"new{@keyName}")">
+                <datalist id="KeyOptions">
+                    @foreach (var option in Model.KeyOptions)
+                    {
+                        <option value="@option">@option</option>
+                    }
+                </datalist>
+            }
+            else
+            {
+                <input class="col-md-2  col-12" type="text" id="@($"new{@keyName}")" placeholder="Enter Key">
+            }
+            <input class="col-md-8 col-12" type="text" id="@($"new{@valueName}")" placeholder="Enter Value">
+            <button class="col-md-2 col-12 btn btn-outline-primary float-right" type="button" onclick="@Html.Raw($"AddKeyValueItem('{@Model.ComponentID}','{@Model.Name}', 'new{@keyName}', 'new{@valueName}') ")">
+                <i class="bi bi-plus"></i>
+            </button>
+    </li>
+
+    @for (var i = 0; i < Model.Properties.Count; i++)
+    {
+        <li class="list-group-item d-flex">
+            <label class="control-label col-md-2 col-12" for="@($"{@Model.Name.Replace('.','_')}{i}__Key")">@Model.Properties[i].Key</label>
+            <input class="d-none" type="text"  name="@($"{@Model.Name}[{i}].Key")" id="@($"{@Model.Name.Replace('.','_')}{i}__Key")" value="@($"{@Model.Properties[i].Key}")">
+            <input class="col-md-8 col-12" type="text"  name="@($"{@Model.Name}[{i}].Value")" id="@($"{@Model.Name.Replace('.','_')}{i}__Value")" value="@($"{@Model.Properties[i].Value}")">
+            <span class="field-validation-valid" data-valmsg-for="@($"{@Model.Name}[{i}].Value")" data-valmsg-replace="true"></span>
+            <button class="col-md-2 col-12 btn btn-outline-danger delete float-right" onclick="@($"removeItem('{@Model.ComponentID}','{@Model.Name}',{i})")">
+                <i class="bi bi-x"></i>
+            </button>
+        </li>
+    }
+
+</ul>

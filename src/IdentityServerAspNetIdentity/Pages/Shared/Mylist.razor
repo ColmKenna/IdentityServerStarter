@@ -1,0 +1,38 @@
+﻿@using Microsoft.AspNetCore.Components
+
+<div class="form-group">
+    <label>Redirect Uris:</label>
+    <div id="RedirectUris" class="row">
+        <div class="col-8">
+            <ul class="list-group">
+                <li class="list-group-item">
+                    <input type="text" class="col-10" id="redirectUriInput" placeholder="Add new item">
+                    <button type="button" id="add-button" class="col-2 btn btn-outline-primary float-right" onclick="@AddRedirectUriFunctionName"><i class="bi bi-plus"></i></button>
+                </li>
+
+                @foreach (var redirectUri in RedirectUris)
+                {
+                    <li class="list-group-item">
+                        <input name="@PropertyName" class="form-control d-none" value="@redirectUri" />
+                        <label class="col-10"> @redirectUri </label>
+                        <button type="button" class="col-2 btn btn-outline-danger delete float-right" onclick="@($"window.{RemoveLiContainerFunctionName}(this)")"><i class="bi bi-x"></i></button>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<string> RedirectUris { get; set; } = new List<string>();
+
+    [Parameter]
+    public string PropertyName { get; set; }
+
+    [Parameter]
+    public string AddRedirectUriFunctionName { get; set; }
+
+    [Parameter]
+    public string RemoveLiContainerFunctionName { get; set; }
+}/

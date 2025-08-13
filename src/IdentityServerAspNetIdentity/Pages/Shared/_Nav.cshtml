@@ -1,0 +1,36 @@
+@using Duende.IdentityServer.Extensions
+@{
+    string name = null;
+    if (!true.Equals(ViewData["signed-out"]))
+    {
+        name = Context.User?.GetDisplayName();
+    }
+}
+
+<div class="nav-page">
+    <nav class="custom-navbar">
+        <div class="nav-container">
+            <a href="~/" class="nav-brand">
+                <img src="~/duende-logo.svg" class="icon-banner">
+                Duende IdentityServer
+            </a>
+
+            <div class="nav-menu">
+                @if (!string.IsNullOrWhiteSpace(name))
+                {
+                    <div class="nav-dropdown">
+                        <a href="#" class="nav-link dropdown-toggle">@name ▼</a>
+                        <div class="dropdown-content">
+                            <a asp-page="/Account/Logout/Index">Logout</a>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <a class="nav-link" asp-page="/Account/Register/Index">Register</a>
+                    <a class="nav-link" asp-page="/Account/Login/Index">Login</a>
+                }
+            </div>
+        </div>
+    </nav>
+</div>
