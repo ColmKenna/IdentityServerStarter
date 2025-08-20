@@ -1,5 +1,21 @@
+@{
+    // Server-side theme logic (optional)
+    var defaultTheme = "dark"; // You can make this dynamic based on user settings, time, etc.
+    var currentHour = DateTime.Now.Hour;
+    
+    // Example: Auto dark mode between 6 PM and 6 AM
+    if (currentHour >= 18 || currentHour < 6)
+    {
+        defaultTheme = "dark";
+    }
+    else
+    {
+        defaultTheme = "light";
+    }
+}
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="@defaultTheme">
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -10,6 +26,10 @@
     <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
     <link rel="shortcut icon" type="image/x-icon" href="~/favicon.ico" />
     
+    <!-- add font awesome -->
+      <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+
+
     <!-- Bootstrap removed - using custom CSS only -->
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
@@ -20,7 +40,25 @@
         @RenderBody()
     </div>
 
-    <!-- Bootstrap JS removed -->
+    <!-- Theme Configuration -->
+    <script>
+        // Set default theme before theme switcher loads
+        // Options: 'light', 'dark', 'blue', 'green', 'purple'
+        const defaultTheme = 'dark';
+        
+        // Apply theme immediately to prevent flash
+        if (defaultTheme !== 'light') {
+            document.documentElement.setAttribute('data-theme', defaultTheme);
+        }
+        
+        // Set in localStorage if not already set
+        if (!localStorage.getItem('theme')) {
+            localStorage.setItem('theme', defaultTheme);
+        }
+    </script>
+    
+    <!-- Theme Switcher -->
+    <script src="~/js/theme-switcher.js"></script>
 
     @RenderSection("scripts", required: false)
 </body>

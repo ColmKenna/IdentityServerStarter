@@ -7,30 +7,133 @@
     }
 }
 
-<div class="nav-page">
-    <nav class="custom-navbar">
-        <div class="nav-container">
+<div class="header-grid">
+    <nav>
+        <div class="burger-menu"></div>
+        <div class="title">
             <a href="~/" class="nav-brand">
-                <img src="~/duende-logo.svg" class="icon-banner">
+                <img src="~/duende-logo.svg" class="icon-banner" alt="Duende IdentityServer">
                 Duende IdentityServer
             </a>
-
-            <div class="nav-menu">
-                @if (!string.IsNullOrWhiteSpace(name))
-                {
-                    <div class="nav-dropdown">
-                        <a href="#" class="nav-link dropdown-toggle">@name ▼</a>
-                        <div class="dropdown-content">
+        </div>
+        
+        <div class="menu-container">
+            <div class="theme-menu">
+                <button id="theme-button" aria-haspopup="true" aria-expanded="false" aria-controls="theme-menu-list">
+                    <i class="fas fa-palette"></i>
+                    <span class="label">
+                        <span>Theme</span>
+                    </span>
+                    <span class="chevron">▼</span>
+                </button>
+                <ul id="theme-menu-list" class="dropdown" role="menu">
+                    <li><a href="#" data-theme="light">Light</a></li>
+                    <li><a href="#" data-theme="dark">Dark</a></li>
+                    <li><a href="#" data-theme="blue">Blue</a></li>
+                    <li><a href="#" data-theme="green">Green</a></li>
+                    <li><a href="#" data-theme="purple">Purple</a></li>
+                </ul>
+            </div>
+            <div>
+                <button id="menu-button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu">
+                    <i class="fas fa-user"></i>
+                    <span class="label">
+                        <span>@(string.IsNullOrWhiteSpace(name) ? "Login" : name)</span>
+                    </span>
+                    <span class="chevron">▼</span>
+                </button>
+                <ul id="menu" class="dropdown" role="menu">
+                    @if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        <li>
                             <a asp-page="/Account/Logout/Index">Logout</a>
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <a class="nav-link" asp-page="/Account/Register/Index">Register</a>
-                    <a class="nav-link" asp-page="/Account/Login/Index">Login</a>
-                }
+                        </li>
+                    }
+                    else
+                    {
+                        <li>
+                            <a class="nav-link" asp-page="/Account/Register/Index">Register</a>
+                        </li>
+                        <li>
+                            <a class="nav-link" asp-page="/Account/Login/Index">Login</a>
+                        </li>
+                    }
+                </ul>
             </div>
         </div>
+
+
     </nav>
 </div>
+
+
+<script>
+    const userMenuButton = document.getElementById('menu-button');
+    const userMenu = document.getElementById('menu');
+    const themeMenuButton = document.getElementById('theme-button');
+    const themeMenu = document.getElementById('theme-menu-list');
+
+    function closeAllMenus() {
+        userMenuButton.setAttribute('aria-expanded', 'false');
+        userMenuButton.classList.remove('open');
+        themeMenuButton.setAttribute('aria-expanded', 'false');
+        themeMenuButton.classList.remove('open');
+    }
+
+    userMenuButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isExpanded = userMenuButton.getAttribute('aria-expanded') === 'true';
+        if (isExpanded) {
+            closeAllMenus();
+        } else {
+            closeAllMenus();
+            userMenuButton.setAttribute('aria-expanded', 'true');
+            userMenuButton.classList.add('open');
+        }
+    });
+
+    themeMenuButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isExpanded = themeMenuButton.getAttribute('aria-expanded') === 'true';
+        if (isExpanded) {
+            closeAllMenus();
+        } else {
+            closeAllMenus();
+            themeMenuButton.setAttribute('aria-expanded', 'true');
+            themeMenuButton.classList.add('open');
+        }
+    });
+
+    const themeLinks = themeMenu.querySelectorAll('a');
+
+    function applyTheme(theme) {
+        if (theme === 'light') {
+            document.documentElement.removeAttribute('data-theme');
+        } else {
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        localStorage.setItem('theme', theme);
+    }
+
+    themeLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const theme = e.target.dataset.theme;
+            applyTheme(theme);
+            closeAllMenus();
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!userMenu.contains(e.target) && !userMenuButton.contains(e.target) &&
+            !themeMenu.contains(e.target) && !themeMenuButton.contains(e.target)) {
+            closeAllMenus();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        applyTheme(savedTheme);
+    });
+
+</script>
