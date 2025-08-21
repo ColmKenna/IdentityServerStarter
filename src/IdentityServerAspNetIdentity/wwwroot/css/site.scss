@@ -401,4 +401,192 @@ img.icon-banner {
   margin-right: 10px;
 }
 
+/* 3.3. Authentication (Login)
+   ========================================================================== */
+.login-page {
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.lead {
+  text-align: center;
+  margin-bottom: 1.5rem;
+
+  h1 {
+    margin: 0 0 0.25rem 0;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+
+  @media (min-width: 900px) {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.form-section {
+  width: 100%;
+}
+
+.card {
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--surface-bg);
+
+  h2 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+}
+
+.card-content {
+  padding: 1rem;
+}
+
+.form-field {
+  margin-bottom: 0.9rem;
+
+  label {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+  }
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: var(--form-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+
+  &:focus {
+    border-color: var(--focus-border);
+    box-shadow: var(--focus-shadow);
+  }
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .checkbox-input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--primary-color);
+  }
+
+  .checkbox-label {
+    user-select: none;
+    color: var(--text-primary);
+  }
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  margin-right: 0.5rem;
+  margin-top: 0.25rem;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus {
+    box-shadow: var(--focus-shadow);
+  }
+}
+
+.button-primary {
+  background: var(--primary-color);
+  color: var(--text-light);
+  border-color: var(--primary-color);
+
+  &:hover,
+  &:focus {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: var(--text-light);
+  }
+}
+
+.button-secondary {
+  background: var(--secondary-color);
+  color: var(--text-light);
+  border-color: var(--secondary-color);
+
+  &:hover,
+  &:focus {
+    background: var(--secondary-hover);
+    border-color: var(--secondary-hover);
+    color: var(--text-light);
+  }
+}
+
+/* External providers list */
+.provider-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  .provider-item {
+    margin-bottom: 0.5rem;
+
+    a.button {
+      width: 100%;
+    }
+  }
+}
+
+/* Validation summary can be styled via the partial (if needed),
+   but keep a simple spacing here to separate from cards */
+.validation-summary-valid,
+.validation-summary-errors {
+  margin-bottom: 1rem;
+}
+
+/* Alerts */
+.alert-warning {
+  display: block;
+  padding: 0.75rem 1rem;
+  background-color: rgba(255, 193, 7, 0.15); /* based on --warning-color */
+  border-left: 4px solid var(--warning-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+
+  strong {
+    display: inline-block;
+    margin-right: 0.35rem;
+  }
+}
+
 /*# sourceMappingURL=site.scss.map */
