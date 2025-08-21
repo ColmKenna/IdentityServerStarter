@@ -18,6 +18,9 @@ namespace IdentityServerAspNetIdentity;
 
 internal static class HostingExtensions
 {
+    ///private const string DefaultConnectionDocker = "DefaultConnection";
+    private const string DefaultConnectionDocker = "DefaultConnectionDocker";
+
     private static void InitializeDatabase(IApplicationBuilder app)
     {
         using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
@@ -143,7 +146,7 @@ internal static class HostingExtensions
         builder.Services.AddRazorPages();
 
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(builder.Configuration.GetConnectionString(DefaultConnectionDocker)));
 
         builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -163,13 +166,13 @@ internal static class HostingExtensions
             .AddConfigurationStore(options =>
             {
                 options.ConfigureDbContext = b =>
-                    b.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+                    b.UseSqlServer(builder.Configuration.GetConnectionString(DefaultConnectionDocker),
                         sql => sql.MigrationsAssembly(migrationsAssembly));
             })
             .AddOperationalStore(options =>
             {
                 options.ConfigureDbContext = b =>
-                    b.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+                    b.UseSqlServer(builder.Configuration.GetConnectionString(DefaultConnectionDocker),
                         sql => sql.MigrationsAssembly(migrationsAssembly));
             })
             .AddAspNetIdentity<ApplicationUser>()

@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64 
+    container_name: mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "YourStrong!Passw0rd"
+    ports:
+      - "1433:1433"
+    volumes:
+      - ./mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/tcp/127.0.0.1/1433 >/dev/null 2>&1 || exit 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  identityserver:
+    image: mcr.microsoft.com/dotnet/sdk:9.0
+    container_name: identityserver
+    depends_on:
+      - mssql
+    working_dir: /workspace
+    volumes:
+      - ./src:/workspace/src:cached
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # override the DefaultConnection to point at the mssql container
+      ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=IdentityServer;User Id=sa;Password=YourStrong!Passw0rd;MultipleActiveResultSets=true"
+    ports:
+      - "5000:5000"
+    restart: on-failure
+    # wait-for-it is fetched at container start and used to block until SQL is reachable
+    command: sh -c "apt-get update -y >/dev/null 2>&1 && apt-get install -y wget ca-certificates >/dev/null 2>&1 || true; \
+      wget -q -O /wait-for-it.sh https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh && chmod +x /wait-for-it.sh; \
+      /wait-for-it.sh mssql:1433 -t 90 -- dotnet run --project /workspace/src/IdentityServerAspNetIdentity/IdentityServerAspNetIdentity.csproj --urls http://0.0.0.0:5000"
+
+networks:
+  default:
+    driver: bridge
