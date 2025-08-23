@@ -41,24 +41,8 @@
     </div>
 
     <!-- Theme Configuration -->
-    <script>
-        // Set default theme before theme switcher loads
-        // Options: 'light', 'dark', 'blue', 'green', 'purple'
-        const defaultTheme = 'dark';
-        
-        // Apply theme immediately to prevent flash
-        if (defaultTheme !== 'light') {
-            document.documentElement.setAttribute('data-theme', defaultTheme);
-        }
-        
-        // Set in localStorage if not already set
-        if (!localStorage.getItem('theme')) {
-            localStorage.setItem('theme', defaultTheme);
-        }
-    </script>
-    
-    <!-- Theme Switcher -->
-    <script src="~/js/theme-switcher.js"></script>
+    <!-- Moved inline theme script to external file -->
+
 
     @RenderSection("scripts", required: false)
 </body>

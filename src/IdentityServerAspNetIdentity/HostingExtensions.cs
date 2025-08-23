@@ -204,6 +204,14 @@ internal static class HostingExtensions
 
 
         InitializeDatabase(app);
+        // Add a Content-Security-Policy header allowing styles from cdnjs.cloudflare.com
+        app.Use(async (context, next) =>
+        {
+            // Keep a restrictive default-src to 'self' and allow styles from the CDN used for Font Awesome
+            var csp = "default-src 'self'; style-src 'self' https://cdnjs.cloudflare.com; script-src 'self' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com;";
+            context.Response.Headers["Content-Security-Policy"] = csp;
+            await next();
+        });
 
         app.UseStaticFiles();
         app.UseRouting();
