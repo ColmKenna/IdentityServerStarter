@@ -11,7 +11,7 @@ using System.Security.Claims;
 using IdentityServerAspNetIdentity.Pages.Components;
 using Duende.IdentityServer.Models;
 using IdentityServer.EF.DataAccess.DataMigrations;
-using IdentityServerAspNetIdentity.Services;
+using IdentityServerServices;
 using Microsoft.AspNetCore.Identity.UI.Services;
 
 namespace IdentityServerAspNetIdentity;
@@ -189,6 +189,7 @@ internal static class HostingExtensions
 
         builder.Services.AddScoped<IScriptHolder,ScriptHolder>();
         builder.Services.AddScoped<IEmailSender, EmailSenderConsole>();
+        builder.Services.AddScoped<IClientEditor, ClientEditor>();
 
         return builder.Build();
     }
