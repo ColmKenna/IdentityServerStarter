@@ -369,3 +369,6 @@ FodyWeavers.xsd
 site.css
 site.min.css
 site.css.map
+
+# Client-side libraries (LibMan/NPM)
+**/wwwroot/lib/
