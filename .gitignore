@@ -364,3 +364,8 @@ FodyWeavers.xsd
 
 # Kiro IDE files
 .kiro/
+
+# Generated site CSS (bundled outputs)
+site.css
+site.min.css
+site.css.map
