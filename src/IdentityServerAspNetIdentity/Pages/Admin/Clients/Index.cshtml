@@ -1,0 +1,73 @@
+@page "/admin/clients"
+@model IdentityServerAspNetIdentity.Pages.Admin.Clients.IndexModel
+@{
+    ViewData["Title"] = "Clients";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fas fa-cog"></i> IdentityServer Clients</h2>
+            
+            <div class="card">
+                <div class="card-body">
+                    @if (Model.Clients.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Client ID</th>
+                                        <th>Client Name</th>
+                                        <th>Description</th>
+                                        <th>Enabled</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var client in Model.Clients)
+                                    {
+                                        <tr>
+                                            <td>@client.Id</td>
+                                            <td><code>@client.ClientId</code></td>
+                                            <td>@client.ClientName</td>
+                                            <td>@(client.Description ?? "No description")</td>
+                                            <td>
+                                                @if (client.Enabled)
+                                                {
+                                                    <span class="badge bg-success">Enabled</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">Disabled</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <a href="/admin/clients/@client.Id/edit" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No clients found.
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <a href="/" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

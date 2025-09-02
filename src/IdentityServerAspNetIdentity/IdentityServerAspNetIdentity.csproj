@@ -7,6 +7,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="7.0.8" />
+		<PackageReference Include="IdentityModel" Version="6.2.0" />
 
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.0" />
 		<PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
@@ -24,6 +25,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\IdentityServer.EF.DataAccess\IdentityServer.EF.DataAccess.csproj" />
+	  <ProjectReference Include="..\IdentityServerServices\IdentityServerServices.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -46,5 +48,10 @@
 
 	<ItemGroup>
 	  <UpToDateCheckInput Remove="Pages\Components\CheckBoxGroup\Default.cshtml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Remove="wwwroot\css\site.css.map" />
+	  <Content Remove="wwwroot\css\site.css" />
 	</ItemGroup>
 </Project>

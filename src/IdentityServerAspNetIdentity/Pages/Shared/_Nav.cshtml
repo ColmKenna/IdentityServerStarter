@@ -45,6 +45,12 @@
                 <ul id="menu" class="dropdown" role="menu">
                     @if (!string.IsNullOrWhiteSpace(name))
                     {
+                        @if (User.IsInRole("ADMIN"))
+                        {
+                            <li>
+                                <a asp-page="/Admin/Clients/Index">Manage Clients</a>
+                            </li>
+                        }
                         <li>
                             <a asp-page="/Account/Logout/Index">Logout</a>
                         </li>

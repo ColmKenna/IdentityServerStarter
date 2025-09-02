@@ -1,9 +1,8 @@
 ﻿
-
 using System.Web;
 using Microsoft.AspNetCore.Identity.UI.Services;
 
-namespace IdentityServerAspNetIdentity.Services;
+namespace IdentityServerServices;
 
 public class EmailSenderConsole : IEmailSender
 {
@@ -14,7 +13,7 @@ public class EmailSenderConsole : IEmailSender
         System.Console.WriteLine("---New Email----");
         System.Console.WriteLine($"To: {emailAddress}");
         System.Console.WriteLine($"Subject: {subject}");
-        System.Console.WriteLine(HttpUtility.HtmlDecode(htmlMessage));
+        System.Console.WriteLine(htmlMessage);
         System.Console.WriteLine("-------");
         return Task.CompletedTask;
     }
