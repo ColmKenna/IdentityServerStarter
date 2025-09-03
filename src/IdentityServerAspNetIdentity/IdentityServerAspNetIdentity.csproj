@@ -50,8 +50,37 @@
 	  <UpToDateCheckInput Remove="Pages\Components\CheckBoxGroup\Default.cshtml" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Content Remove="wwwroot\css\site.css.map" />
-	  <Content Remove="wwwroot\css\site.css" />
-	</ItemGroup>
+  <ItemGroup>
+    <Content Remove="wwwroot\css\site.css.map" />
+    <Content Remove="wwwroot\css\site.css" />
+  </ItemGroup>
+
+  <!-- Node/npm build integration -->
+  <PropertyGroup>
+    <!-- Allow skipping npm from CLI: dotnet build -p:SkipNpm=true -->
+    <SkipNpm Condition=" '$(SkipNpm)' == '' ">false</SkipNpm>
+  </PropertyGroup>
+
+  <Target Name="EnsureNodeInstalled" BeforeTargets="NpmInstall" Condition=" '$(SkipNpm)' != 'true' ">
+    <Message Importance="High" Text="Checking for Node.js..." />
+    <Exec Command="node -v" ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="NodeExitCode" />
+    </Exec>
+    <Warning Condition=" '$(NodeExitCode)' != '0' " Text="Node.js is not installed or not on PATH. Skipping npm steps." />
+  </Target>
+
+  <Target Name="NpmInstall" DependsOnTargets="EnsureNodeInstalled" BeforeTargets="Build" Condition=" '$(SkipNpm)' != 'true' and '$(NodeExitCode)' == '0' ">
+    <Message Importance="High" Text="Running npm ci (IdentityServerAspNetIdentity)..." />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm ci" />
+  </Target>
+
+  <Target Name="NpmBuild" DependsOnTargets="NpmInstall" BeforeTargets="Build" Condition=" '$(SkipNpm)' != 'true' and '$(NodeExitCode)' == '0' ">
+    <Message Importance="High" Text="Building frontend assets via npm (IdentityServerAspNetIdentity)..." />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm run build" />
+  </Target>
+
+  <Target Name="NpmBuildOnPublish" DependsOnTargets="NpmInstall" BeforeTargets="Publish" Condition=" '$(SkipNpm)' != 'true' and '$(NodeExitCode)' == '0' ">
+    <Message Importance="High" Text="Building frontend assets for Publish via npm (IdentityServerAspNetIdentity)..." />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm run build" />
+  </Target>
 </Project>
