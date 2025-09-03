@@ -29,13 +29,16 @@
     <!-- add font awesome -->
       <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
 
-
+    @{
+        var address = "~/lib/@colmkenna/ck-tabs/dist/index.esm.js";
+    }
+    <script type="module" src="@address"></script> 
     <!-- Bootstrap removed - using custom CSS only -->
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
     <partial name="_Nav" />
-   
+    
     <div class="main-container">
         @RenderBody()
     </div>
