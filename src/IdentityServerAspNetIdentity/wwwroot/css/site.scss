@@ -4,7 +4,7 @@
 
 /* 1.1. Default (Light) Theme
    ========================================================================== */
-:root {
+:root { 
   // Colors
   --primary-color: #007bff;
   --primary-hover: #0056b3;
@@ -45,6 +45,17 @@
   // Scrollbar
   --scrollbar-track: #f4f4f4;
   --scrollbar-thumb: #007bff; 
+
+  // ck-tabs component variables
+  --tab-bg: var(--card-bg);
+  --tab-border: var(--border-color);
+  --tab-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --tab-text: var(--text-primary);
+  --tab-hover-bg: var(--surface-bg);
+  --tab-content-bg: var(--card-bg);
+  --tab-content-text: var(--text-primary);
+  --heading-font-family: Georgia, 'Times New Roman', serif;
+  --focus-color: var(--focus-border);  
 }
 
 /* 1.2. Dark Theme
@@ -90,6 +101,17 @@
   // Scrollbar
   --scrollbar-track: #2d2d2d;
   --scrollbar-thumb: #0d6efd;
+
+  // ck-tabs component variables (dark)
+  --tab-bg: var(--card-bg);
+  --tab-border: var(--border-color);
+  --tab-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --tab-text: var(--text-primary);
+  --tab-hover-bg: #242424; // slightly lighter than card for hover contrast
+  --tab-content-bg: var(--card-bg);
+  --tab-content-text: var(--text-primary);
+  --heading-font-family: Georgia, 'Times New Roman', serif;
+  --focus-color: var(--focus-border);
 }
 
 /* 1.3. Blue Theme
@@ -125,6 +147,17 @@
   --focus-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
   --scrollbar-track: #e2e8f0;
   --scrollbar-thumb: #2563eb;
+
+  // ck-tabs component variables (blue)
+  --tab-bg: var(--card-bg);
+  --tab-border: var(--border-color);
+  --tab-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --tab-text: var(--text-primary);
+  --tab-hover-bg: var(--surface-bg);
+  --tab-content-bg: var(--card-bg);
+  --tab-content-text: var(--text-primary);
+  --heading-font-family: Georgia, 'Times New Roman', serif;
+  --focus-color: var(--focus-border);
 }
 
 /* 1.4. Green Theme
@@ -160,6 +193,17 @@
   --focus-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25);
   --scrollbar-track: #dcfce7;
   --scrollbar-thumb: #059669;
+
+  // ck-tabs component variables (green)
+  --tab-bg: var(--card-bg);
+  --tab-border: var(--border-color);
+  --tab-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --tab-text: var(--text-primary);
+  --tab-hover-bg: var(--surface-bg);
+  --tab-content-bg: var(--card-bg);
+  --tab-content-text: var(--text-primary);
+  --heading-font-family: Georgia, 'Times New Roman', serif;
+  --focus-color: var(--focus-border);
 }
 
 /* 1.5. Purple Theme
@@ -195,6 +239,17 @@
   --focus-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
   --scrollbar-track: #e9d5ff;
   --scrollbar-thumb: #7c3aed;
+
+  // ck-tabs component variables (purple)
+  --tab-bg: var(--card-bg);
+  --tab-border: var(--border-color);
+  --tab-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --tab-text: var(--text-primary);
+  --tab-hover-bg: var(--surface-bg);
+  --tab-content-bg: var(--card-bg);
+  --tab-content-text: var(--text-primary);
+  --heading-font-family: Georgia, 'Times New Roman', serif;
+  --focus-color: var(--focus-border);
 }
 
 
