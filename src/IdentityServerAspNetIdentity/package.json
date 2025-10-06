@@ -4,17 +4,21 @@
   "version": "0.1.0",
   "scripts": {
     "clean": "rimraf wwwroot/lib",
-    "build:lib": "cpx \"node_modules/jquery/dist/jquery.min.js\" wwwroot/lib/jquery/dist && cpx \"node_modules/@colmkenna/ck-tabs/dist/**\" wwwroot/lib/@colmkenna/ck-tabs/dist && cpx \"node_modules/jquery-validation/dist/jquery.validate.min.js\" wwwroot/lib/jquery-validation && cpx \"node_modules/jquery-validation/dist/jquery.validate.js\" wwwroot/lib/jquery-validation && cpx \"node_modules/jquery-validation/dist/additional-methods.min.js\" wwwroot/lib/jquery-validation && cpx \"node_modules/jquery-validation/dist/additional-methods.js\" wwwroot/lib/jquery-validation && cpx \"node_modules/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js\" wwwroot/lib/jquery-validation-unobtrusive && cpx \"node_modules/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.js\" wwwroot/lib/jquery-validation-unobtrusive ",
+    "copy:vendor": "copyfiles -u 1 \"node_modules/{jquery,jquery-validation,jquery-validation-unobtrusive}/dist/**/*\" wwwroot/lib",
+    "copy:colmkenna": "copyfiles -u 1 \"node_modules/@colmkenna/*/dist/**/*\" wwwroot/lib",
+    "build:lib": "npm-run-all copy:*",
     "build": "npm run clean && npm run build:lib",
     "postinstall": "npm run build"
   },
   "dependencies": {
+    "@colmkenna/ck-responsive-table-webcomponent": "^1.0.0",
     "@colmkenna/ck-tabs": "^1.0.4",
     "jquery": "3.7.1",
     "jquery-validation": "1.21.0",
     "jquery-validation-unobtrusive": "4.0.0"
   },
   "devDependencies": {
+    "copyfiles": "^2.4.1",
     "cpx": "1.5.0",
     "rimraf": "5.0.5"
   }
