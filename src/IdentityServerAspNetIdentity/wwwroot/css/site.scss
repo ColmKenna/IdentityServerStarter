@@ -4,7 +4,7 @@
 
 /* 1.1. Default (Light) Theme
    ========================================================================== */
-:root { 
+:root {
   // Colors
   --primary-color: #007bff;
   --primary-hover: #0056b3;
@@ -44,7 +44,7 @@
 
   // Scrollbar
   --scrollbar-track: #f4f4f4;
-  --scrollbar-thumb: #007bff; 
+  --scrollbar-thumb: #007bff;
 
   // ck-tabs component variables
   --tab-bg: var(--card-bg);
@@ -55,7 +55,7 @@
   --tab-content-bg: var(--card-bg);
   --tab-content-text: var(--text-primary);
   --heading-font-family: Georgia, 'Times New Roman', serif;
-  --focus-color: var(--focus-border);  
+  --focus-color: var(--focus-border);
 }
 
 /* 1.2. Dark Theme
@@ -284,7 +284,8 @@ a:visited {
   color: var(--link-visited);
 }
 
-a:hover, a:focus {
+a:hover,
+a:focus {
   color: var(--primary-hover);
   outline: none;
 }
@@ -307,6 +308,11 @@ nav {
   color: var(--text-light);
   box-shadow: var(--box-shadow);
 
+  .burger-container {
+    display: flex;
+    justify-content: flex-start;
+  }
+
   .burger {
     grid-area: left;
     color: var(--text-light);
@@ -314,7 +320,14 @@ nav {
     display: flex;
     align-items: center;
     padding: 0 1rem;
+    transition: transform 0.3s ease;
+    transform: rotateY(180deg);
   }
+
+  .burger.closed {
+    transform: rotateY(0deg);
+  }
+
 
   .title {
     grid-area: title;
@@ -338,7 +351,8 @@ nav {
     height: 100%;
     color: var(--text-light);
 
-    &:hover, &:focus {
+    &:hover,
+    &:focus {
       color: var(--text-light);
       text-decoration: none;
       outline: none;
@@ -352,7 +366,7 @@ nav {
     align-items: center;
     height: 100%;
 
-    > div {
+    >div {
       position: relative;
       height: 100%;
     }
@@ -390,7 +404,7 @@ nav {
           transform: rotate(180deg);
         }
 
-        ~ .dropdown {
+        ~.dropdown {
           max-height: 300px;
         }
       }
@@ -418,7 +432,8 @@ nav {
         color: var(--text-primary);
         text-decoration: none;
 
-        &:hover, &:focus {
+        &:hover,
+        &:focus {
           background: var(--body-bg);
           outline: none;
         }
@@ -426,8 +441,10 @@ nav {
     }
   }
 
+
   @media (max-width: 768px) {
     .menu-container {
+
       /* Apply small-screen compact behavior to all menu buttons (user + theme) */
       button {
         min-width: 60px;
@@ -455,6 +472,101 @@ nav {
     }
   }
 }
+
+
+.sidebar {
+  width: 250px;
+  background-color: var(--navbar-bg);
+  color: var(--text-light);
+  padding: 1rem;
+  transition: width 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+  border-right: 1px solid var(--border-color);
+}
+
+.sidebar ul {
+  list-style: none;
+  margin-top: 1rem;
+}
+
+.sidebar ul li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background-color: var(--surface-bg);
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.sidebar ul li:hover {
+  background-color: var(--card-bg);
+}
+
+.sidebar ul li svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--text-primary);
+  flex-shrink: 0;
+  transition: fill 0.3s ease;
+}
+
+.sidebar.open {
+  left: 0;
+}
+
+.sidebar.collapsed {
+  width: 68px;
+}
+
+.sidebar.collapsed ul span {
+  display: none;
+}
+
+.sidebar.collapsed ul li {
+  position: relative;
+}
+
+.sidebar.collapsed ul li::after {
+  content: attr(data-title);
+  position: absolute;
+  left: 74px;
+  background: var(--navbar-bg);
+  color: var(--text-light);
+  border: 1px solid var(--border-color);
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  top: 50%;
+  transition: opacity 0.2s, transform 0.2s, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  font-size: 1.125rem;
+  z-index: 1001;
+  box-shadow: var(--box-shadow);
+}
+
+.sidebar.collapsed ul li:hover::after {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.03);
+}
+
+.main-container {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.content {
+  flex-grow: 1;
+  padding: 1rem;
+  transition: padding-left 0.3s ease;
+  width: 100%;
+}
+
 
 /* 3.2. Images
    ========================================================================== */
@@ -641,7 +753,8 @@ img.icon-banner {
 .alert-warning {
   display: block;
   padding: 0.75rem 1rem;
-  background-color: rgba(255, 193, 7, 0.15); /* based on --warning-color */
+  background-color: rgba(255, 193, 7, 0.15);
+  /* based on --warning-color */
   border-left: 4px solid var(--warning-color);
   border-radius: 4px;
   color: var(--text-primary);

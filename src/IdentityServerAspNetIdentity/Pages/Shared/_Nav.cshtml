@@ -9,6 +9,7 @@
 
 <div class="header-grid">
     <nav>
+        <div class="burger-container">
         <div class="burger" id="burger">
             <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
                 <rect x="4" y="6" width="24" height="3" fill="white"/>
@@ -17,13 +18,14 @@
                 <path d="M26 16l-5 5V11l5 5z" fill="white"/>
             </svg>
         </div>
+        </div>
         <div class="title">
             <a href="~/" class="nav-brand">
                 <img src="~/duende-logo.svg" class="icon-banner" alt="Duende IdentityServer">
                 Duende IdentityServer
             </a>
         </div>
-        
+
         <div class="menu-container">
             <div class="theme-menu">
                 <button id="theme-button" aria-haspopup="true" aria-expanded="false" aria-controls="theme-menu-list">
@@ -58,6 +60,7 @@
                                 <a asp-page="/Admin/Clients/Index">Manage Clients</a>
                             </li>
                         }
+
                         <li>
                             <a asp-page="/Account/Logout/Index">Logout</a>
                         </li>
