@@ -256,12 +256,20 @@
 /* ==========================================================================
    2. Global Styles
    ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   background-color: var(--body-bg);
   color: var(--text-primary);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
   padding: 0;
+  height: 100vh;
+  min-height: 100vh;
   box-sizing: border-box;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
