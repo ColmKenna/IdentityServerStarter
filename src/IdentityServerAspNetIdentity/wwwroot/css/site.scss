@@ -613,13 +613,13 @@ nav {
   display: flex;
   height: 100%;
   overflow: hidden;
-}
 
-.content {
-  flex-grow: 1;
-  padding: 1rem;
-  transition: padding-left 0.3s ease;
-  width: 100%;
+  > .content {
+    flex-grow: 1;
+    padding: 1rem;
+    transition: padding-left 0.3s ease;
+    width: 100%;
+  }
 }
 
 
