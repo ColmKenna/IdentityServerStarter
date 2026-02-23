@@ -1,0 +1,12 @@
+global using Xunit;
+global using Moq;
+global using FluentAssertions;
+global using AngleSharp;
+global using AngleSharp.Dom;
+global using AngleSharp.Html.Dom;
+global using Microsoft.AspNetCore.Mvc.Testing;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.DependencyInjection;
+global using IdentityServerAspNetIdentity;
+global using IdentityServerAspNetIdentity.Pages;
+global using System.Net;

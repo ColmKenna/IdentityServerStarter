@@ -230,7 +230,10 @@ internal static class HostingExtensions
         }
 
 
-        InitializeDatabase(app);
+        if (!app.Environment.IsEnvironment("Testing"))
+        {
+            InitializeDatabase(app);
+        }
         // Add a Content-Security-Policy header allowing styles from cdnjs.cloudflare.com
         app.Use(async (context, next) =>
         {

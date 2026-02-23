@@ -46,3 +46,6 @@ finally
     Log.Information("Shut down complete");
     Log.CloseAndFlush();
 }
+
+// Make the auto-generated Program class public so test projects can reference it
+public partial class Program { }

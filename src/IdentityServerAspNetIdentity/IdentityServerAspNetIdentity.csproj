@@ -6,7 +6,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="CK.Taghelpers" Version="1.0.0-beta.1" />
+		<InternalsVisibleTo Include="IdentityServerAspNetIdentity.Tests" />
+		<InternalsVisibleTo Include="IdentityServerAspNetIdentity.UnitTests" />
+		<InternalsVisibleTo Include="IdentityServerAspNetIdentity.IntegrationTests" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CK.Taghelpers" Version="1.0.0-beta.1" Condition="'$(SkipCkTaghelpers)' != 'true'" />
 		<PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="7.0.8" />
 		<PackageReference Include="IdentityModel" Version="6.2.0" />
 
