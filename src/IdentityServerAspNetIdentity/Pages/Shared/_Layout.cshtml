@@ -30,11 +30,20 @@
       <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
 
     @{
-        var address = "~/lib/@colmkenna/ck-tabs/dist/index.esm.js";
+        var tabsModule = "~/lib/@colmkenna/ck-tabs/dist/index.esm.js";
+        var responsiveTableModule = "~/lib/@colmkenna/ck-responsive-table-webcomponent/dist/index.esm.js";
+        var editArrayModule = "~/lib/@colmkenna/ck-edit-array/dist/ck-edit-array.js";
     }
-    <script type="module" src="@address"></script> 
+    <script type="module" src="@tabsModule"></script>
+    <script type="module" src="@responsiveTableModule"></script> 
+    <script type="module" src="@editArrayModule"></script>
+
     <!-- Bootstrap removed - using custom CSS only -->
     <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/css/forms.css" />
+    <link rel="stylesheet" href="~/css/multiselect.css"/>
+
+
     <script src="~/js/sideMenu.js"></script> 
 </head>
 <body>

@@ -6,6 +6,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="CK.Taghelpers" Version="1.0.0-beta.1" />
 		<PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="7.0.8" />
 		<PackageReference Include="IdentityModel" Version="6.2.0" />
 
@@ -30,6 +31,7 @@
 
 	<ItemGroup>
 	  <Folder Include="Pages\Shared\Components\List\" />
+	  <Folder Include="types\" />
 	  <Folder Include="ViewModels\" />
 	</ItemGroup>
 

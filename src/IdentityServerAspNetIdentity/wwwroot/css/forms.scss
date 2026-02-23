@@ -1,0 +1,252 @@
+﻿.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+
+  .form-label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+ 
+  & :is(.form-control, .form-select) {
+    padding: 0.625rem 0.875rem;
+    background: var(--form-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--input-border);
+    border-radius: 0.375rem;
+    transition: border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out,
+    background-color 0.3s ease;
+
+    &:focus {
+      border-color: var(--focus-border);
+      outline: 0;
+      box-shadow: var(--focus-shadow);
+    }
+
+    &:disabled {
+      background-color: var(--surface-bg);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+  }
+
+  // Scoped textarea variant
+  & textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+  }
+
+  // Helper and error text
+  & :is(.form-text, .text-danger) {
+    margin-top: 0.375rem;
+    font-size: 0.875rem;
+  }
+
+  & .form-text {
+    color: var(--text-secondary);
+  }
+
+  & .text-danger {
+    color: var(--text-danger);
+  }
+}
+
+.input-group {
+  display: flex;
+  gap: 0.5rem;
+
+  .form-control,
+  .form-select {
+    flex: 1;
+  }
+
+  .btn {
+    flex-shrink: 0;
+  }
+}
+
+.alert {
+  padding: 1rem 1.25rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid transparent;
+
+  &.alert-success {
+    background-color: rgba(40, 167, 69, 0.15);
+    border-color: var(--success-color);
+    color: var(--text-primary);
+  }
+
+  &.alert-danger {
+    background-color: rgba(220, 53, 69, 0.15);
+    border-color: var(--danger-color);
+    color: var(--text-primary);
+  }
+
+  .btn-close {
+    padding: 0.5rem;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    opacity: 0.5;
+    color: var(--text-primary);
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+h5 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+
+  i {
+    margin-right: 0.5rem;
+    color: var(--text-secondary);
+  }
+}
+
+.form-group.form-switch-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  .form-label {
+    margin-bottom: 0;
+  }
+}
+
+.form-switch {
+  position: relative;
+  display: inline-block;
+  width: 2.75rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+
+  .form-switch-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .form-slider {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    background-color: var(--switch-off-bg, #c7c7c7);
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px var(--input-border);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .form-slider::before {
+    content: "";
+    position: absolute;
+    top: 0.125rem;
+    left: 0.125rem;
+    width: 1.25rem;
+    height: calc(100% - 0.25rem);
+    background-color: var(--surface-bg, #fff);
+    border-radius: 999px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, background-color 0.3s ease;
+  }
+
+  .form-switch-input:checked+.form-slider {
+    background-color: var(--primary-color);
+    box-shadow: inset 0 0 0 1px var(--primary-color);
+  }
+
+  .form-switch-input:checked+.form-slider::before {
+    transform: translateX(1.25rem);
+  }
+
+  .form-switch-input:focus-visible+.form-slider {
+    box-shadow: inset 0 0 0 1px var(--focus-border, var(--input-border)), var(--focus-shadow, 0 0 0 0.2rem rgba(58, 105, 225, 0.35));
+  }
+
+  .form-switch-input:checked:focus-visible+.form-slider {
+    box-shadow: inset 0 0 0 1px var(--primary-color), var(--focus-shadow, 0 0 0 0.2rem rgba(58, 105, 225, 0.35));
+  }
+
+  .form-switch-input:disabled+.form-slider {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.multi-select {
+  border: 1px solid var(--option-border);
+  padding: 1rem;
+  border-radius: 6px
+}
+
+.options-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem
+}
+
+/* Hidden native checkboxes but keep accessible */
+.option-input {
+  position: absolute;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  width: 1px;
+  border: 0;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap
+}
+
+/* Wrapper that keeps the input and pill grouped */
+.option-label {
+  display: inline-flex;
+}
+
+/* Visual pill toggle */
+.option-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--option-border);
+  cursor: pointer;
+  user-select: none;
+  background: var(--option-pill-bg);
+  color: var(--option-pill-color);
+  transition: background .15s, color .15s, border-color .15s
+}
+
+.option-label:hover .option-pill {
+  background: var(--option-pill-hover-bg);
+  color: var(--option-pill-hover-color);
+  border-color: var(--option-pill-hover-border)
+}
+
+.option-input:focus + .option-pill,
+.option-input:focus-visible + .option-pill {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px
+}
+
+.option-input:checked + .option-pill {
+  background: var(--option-pill-active-bg);
+  border-color: var(--option-pill-active-border);
+  color: var(--option-pill-active-color)
+}

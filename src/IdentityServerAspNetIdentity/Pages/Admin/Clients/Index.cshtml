@@ -4,6 +4,8 @@
     ViewData["Title"] = "Clients";
 }
 
+
+
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-12">
@@ -13,27 +15,27 @@
                 <div class="card-body">
                     @if (Model.Clients.Any())
                     {
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Client ID</th>
-                                        <th>Client Name</th>
-                                        <th>Description</th>
-                                        <th>Enabled</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                        
+                            <ck-responsive-table class="table table-striped" mobile-breakpoint="768px">
+                                <ck-responsive-thead>
+                                    <ck-responsive-col-head align="left">ID</ck-responsive-col-head>
+                                    <ck-responsive-col-head align="left">Client ID</ck-responsive-col-head>
+                                    <ck-responsive-col-head align="left">Client Name</ck-responsive-col-head>
+                                    <ck-responsive-col-head align="left">Description</ck-responsive-col-head>
+                                    <ck-responsive-col-head align="center" mobile-align="center">Enabled</ck-responsive-col-head>
+                                    <ck-responsive-col-head align="center" mobile-align="center" mobile-no-label="true">Actions</ck-responsive-col-head>
+                                </ck-responsive-thead>
+                                <ck-responsive-tbody>
                                     @foreach (var client in Model.Clients)
                                     {
-                                        <tr>
-                                            <td>@client.Id</td>
-                                            <td><code>@client.ClientId</code></td>
-                                            <td>@client.ClientName</td>
-                                            <td>@(client.Description ?? "No description")</td>
-                                            <td>
+                                        <ck-responsive-row>
+                                            <ck-responsive-col>@client.Id</ck-responsive-col>
+                                            <ck-responsive-col>
+                                                <code>@client.ClientId</code>
+                                            </ck-responsive-col>
+                                            <ck-responsive-col>@client.ClientName</ck-responsive-col>
+                                            <ck-responsive-col>@(client.Description ?? "No description")</ck-responsive-col>
+                                            <ck-responsive-col class="align-center mobile-align-center">
                                                 @if (client.Enabled)
                                                 {
                                                     <span class="badge bg-success">Enabled</span>
@@ -42,17 +44,17 @@
                                                 {
                                                     <span class="badge bg-danger">Disabled</span>
                                                 }
-                                            </td>
-                                            <td>
+                                            </ck-responsive-col>
+                                            <ck-responsive-col class="align-center mobile-align-center" mobile-direction="row" mobile-justify="center">
                                                 <a href="/admin/clients/@client.Id/edit" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-edit"></i> Edit
                                                 </a>
-                                            </td>
-                                        </tr>
+                                            </ck-responsive-col>
+                                        </ck-responsive-row>
                                     }
-                                </tbody>
-                            </table>
-                        </div>
+                                </ck-responsive-tbody>
+                            </ck-responsive-table>
+                        
                     }
                     else
                     {

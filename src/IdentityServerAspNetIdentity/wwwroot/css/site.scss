@@ -56,6 +56,17 @@
   --tab-content-text: var(--text-primary);
   --heading-font-family: Georgia, 'Times New Roman', serif;
   --focus-color: var(--focus-border);
+
+  // Multi-select option pills
+  --option-border: var(--input-border);
+  --option-pill-bg: rgba(0, 0, 0, 0.03);
+  --option-pill-color: var(--text-primary);
+  --option-pill-hover-bg: rgba(0, 123, 255, 0.08);
+  --option-pill-hover-color: var(--primary-color);
+  --option-pill-hover-border: var(--primary-color);
+  --option-pill-active-bg: var(--primary-color);
+  --option-pill-active-color: var(--text-light);
+  --option-pill-active-border: var(--primary-color);
 }
 
 /* 1.2. Dark Theme
@@ -112,6 +123,17 @@
   --tab-content-text: var(--text-primary);
   --heading-font-family: Georgia, 'Times New Roman', serif;
   --focus-color: var(--focus-border);
+
+  // Multi-select option pills (dark)
+  --option-border: var(--input-border);
+  --option-pill-bg: rgba(255, 255, 255, 0.06);
+  --option-pill-color: var(--text-primary);
+  --option-pill-hover-bg: rgba(13, 110, 253, 0.2);
+  --option-pill-hover-color: var(--text-light);
+  --option-pill-hover-border: var(--primary-color);
+  --option-pill-active-bg: var(--primary-color);
+  --option-pill-active-color: var(--text-light);
+  --option-pill-active-border: var(--primary-color);
 }
 
 /* 1.3. Blue Theme
@@ -158,6 +180,17 @@
   --tab-content-text: var(--text-primary);
   --heading-font-family: Georgia, 'Times New Roman', serif;
   --focus-color: var(--focus-border);
+
+  // Multi-select option pills (blue)
+  --option-border: var(--input-border);
+  --option-pill-bg: rgba(37, 99, 235, 0.08);
+  --option-pill-color: var(--text-primary);
+  --option-pill-hover-bg: rgba(37, 99, 235, 0.16);
+  --option-pill-hover-color: var(--primary-hover);
+  --option-pill-hover-border: var(--primary-hover);
+  --option-pill-active-bg: var(--primary-color);
+  --option-pill-active-color: var(--text-light);
+  --option-pill-active-border: var(--primary-color);
 }
 
 /* 1.4. Green Theme
@@ -204,6 +237,17 @@
   --tab-content-text: var(--text-primary);
   --heading-font-family: Georgia, 'Times New Roman', serif;
   --focus-color: var(--focus-border);
+
+  // Multi-select option pills (green)
+  --option-border: var(--input-border);
+  --option-pill-bg: rgba(5, 150, 105, 0.1);
+  --option-pill-color: var(--text-primary);
+  --option-pill-hover-bg: rgba(5, 150, 105, 0.18);
+  --option-pill-hover-color: var(--primary-hover);
+  --option-pill-hover-border: var(--primary-hover);
+  --option-pill-active-bg: var(--primary-color);
+  --option-pill-active-color: var(--text-light);
+  --option-pill-active-border: var(--primary-color);
 }
 
 /* 1.5. Purple Theme
@@ -250,6 +294,17 @@
   --tab-content-text: var(--text-primary);
   --heading-font-family: Georgia, 'Times New Roman', serif;
   --focus-color: var(--focus-border);
+
+  // Multi-select option pills (purple)
+  --option-border: var(--input-border);
+  --option-pill-bg: rgba(124, 58, 237, 0.1);
+  --option-pill-color: var(--text-primary);
+  --option-pill-hover-bg: rgba(124, 58, 237, 0.2);
+  --option-pill-hover-color: var(--primary-hover);
+  --option-pill-hover-border: var(--primary-hover);
+  --option-pill-active-bg: var(--primary-color);
+  --option-pill-active-color: var(--text-light);
+  --option-pill-active-border: var(--primary-color);
 }
 
 
