@@ -87,7 +87,13 @@ public class SeedData
                     new Claim(JwtClaimTypes.WebSite, "http://bob.com"),
                     new Claim("location", "somewhere"),
                     new Claim("canViewEmployees", "true"),
-                    new Claim("canViewProducts", "true")
+                    new Claim("canViewProducts", "true"),
+                    // Admin claims — grant all user-admin policies
+                    new Claim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUsers),
+                    new Claim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserClaims),
+                    new Claim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserRoles),
+                    new Claim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserGrants),
+                    new Claim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserSessions),
                 }).Result;
                 if (!result.Succeeded)
                 {

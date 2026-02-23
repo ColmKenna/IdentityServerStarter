@@ -44,7 +44,8 @@
     <link rel="stylesheet" href="~/css/multiselect.css"/>
 
 
-    <script src="~/js/sideMenu.js"></script> 
+    <script src="~/js/sideMenu.js"></script>
+    <script type="module" src="~/js/confirmModal.js"></script>
 </head>
 <body>
     <partial name="_Nav" />
@@ -87,6 +88,7 @@
     <!-- Moved inline theme script to external file -->
 
 
+    <partial name="_ConfirmModal" />
     @RenderSection("scripts", required: false)
 </body>
 </html>

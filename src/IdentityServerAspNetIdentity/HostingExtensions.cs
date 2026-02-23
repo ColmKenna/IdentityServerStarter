@@ -145,6 +145,32 @@ internal static class HostingExtensions
 
         builder.Services.AddRazorPages();
 
+        builder.Services.AddAuthorization(options =>
+        {
+            // ── Users ─────────────────────────────────────────────────────
+            options.AddPolicy(UserPolicyConstants.UsersRead,   p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUsers));
+            options.AddPolicy(UserPolicyConstants.UsersWrite,  p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUsers));
+            options.AddPolicy(UserPolicyConstants.UsersDelete, p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUsers));
+
+            // ── User Claims ───────────────────────────────────────────────
+            options.AddPolicy(UserPolicyConstants.UserClaimsRead,   p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserClaims));
+            options.AddPolicy(UserPolicyConstants.UserClaimsWrite,  p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserClaims));
+            options.AddPolicy(UserPolicyConstants.UserClaimsDelete, p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserClaims));
+
+            // ── User Roles ─────────────────────────────────────────────────
+            options.AddPolicy(UserPolicyConstants.UserRolesRead,   p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserRoles));
+            options.AddPolicy(UserPolicyConstants.UserRolesWrite,  p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserRoles));
+            options.AddPolicy(UserPolicyConstants.UserRolesDelete, p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserRoles));
+
+            // ── Grants ─────────────────────────────────────────────────────
+            options.AddPolicy(UserPolicyConstants.UserGrantsRead,   p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserGrants));
+            options.AddPolicy(UserPolicyConstants.UserGrantsDelete, p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserGrants));
+
+            // ── Sessions ───────────────────────────────────────────────────
+            options.AddPolicy(UserPolicyConstants.UserSessionsRead,   p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserSessions));
+            options.AddPolicy(UserPolicyConstants.UserSessionsDelete, p => p.RequireClaim(UserPolicyConstants.AdminClaimType, UserPolicyConstants.ClaimUserSessions));
+        });
+
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString(DefaultConnectionDocker)));
 
