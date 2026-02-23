@@ -18,8 +18,8 @@ namespace IdentityServerAspNetIdentity;
 
 internal static class HostingExtensions
 {
-    ///private const string DefaultConnectionDocker = "DefaultConnection";
-    private const string DefaultConnectionDocker = "DefaultConnectionDocker";
+    private const string DefaultConnectionDocker = "DefaultConnection";
+    ///private const string DefaultConnectionDocker = "DefaultConnectionDocker";
 
     private static void InitializeDatabase(IApplicationBuilder app)
     {
