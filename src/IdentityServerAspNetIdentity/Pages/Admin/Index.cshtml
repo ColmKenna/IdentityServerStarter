@@ -1,0 +1,53 @@
+@page "/Admin"
+@model IdentityServerAspNetIdentity.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h2>
+
+            <div class="card-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+
+                <div class="card">
+                    <div class="card-body" style="padding: 1.5rem;">
+                        <h3 style="margin-top: 0;">
+                            <i class="fas fa-users"></i> Users
+                        </h3>
+                        <p>Manage user accounts, roles, and claims.</p>
+                        <a asp-page="/Admin/Users/Index" class="button button-primary">
+                            <i class="fas fa-arrow-right"></i> Manage Users
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body" style="padding: 1.5rem;">
+                        <h3 style="margin-top: 0;">
+                            <i class="fas fa-cog"></i> Clients
+                        </h3>
+                        <p>Manage IdentityServer client applications.</p>
+                        <a asp-page="/Admin/Clients/Index" class="button button-primary">
+                            <i class="fas fa-arrow-right"></i> Manage Clients
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body" style="padding: 1.5rem;">
+                        <h3 style="margin-top: 0;">
+                            <i class="fas fa-star"></i> Roles
+                        </h3>
+                        <p>Manage application roles and permissions.</p>
+                        <a href="#" class="button button-secondary" data-title="Roles">
+                            <i class="fas fa-arrow-right"></i> Manage Roles
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
