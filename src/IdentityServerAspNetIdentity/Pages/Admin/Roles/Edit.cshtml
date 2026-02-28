@@ -1,0 +1,109 @@
+@page "/Admin/Roles/{roleId}"
+@model IdentityServerAspNetIdentity.Pages.Admin.Roles.EditModel
+@{
+    ViewData["Title"] = $"Edit Role — {Model.RoleName}";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fas fa-star"></i> Role: @Model.RoleName</h2>
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            @* ── Add User to Role ────────────────────────────────── *@
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3><i class="fas fa-user-plus"></i> Add User to Role</h3>
+                    @if (Model.AvailableUsers.Any())
+                    {
+                        <form method="post" asp-page-handler="AddUser" id="add-user-form">
+                            <input type="hidden" asp-for="RoleId" />
+                            <div class="form-group">
+                                <label for="SelectedUserId" class="form-label">Select User</label>
+                                <select asp-for="SelectedUserId" class="form-control" id="SelectedUserId">
+                                    <option value="">-- Select a user --</option>
+                                    @foreach (var user in Model.AvailableUsers)
+                                    {
+                                        <option value="@user.Id">@user.UserName (@user.Email)</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="SelectedUserId" class="text-danger"></span>
+                            </div>
+                            <div class="mt-2">
+                                <button type="submit" class="button button-primary">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <p class="text-muted">All users are already in this role.</p>
+                    }
+                </div>
+            </div>
+
+            @* ── Users in Role ───────────────────────────────────── *@
+            <div class="card">
+                <div class="card-body">
+                    <h3><i class="fas fa-users"></i> Users in Role</h3>
+
+                    @if (Model.UsersInRole.Any())
+                    {
+                        <table class="table table-striped" id="users-in-role-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in Model.UsersInRole)
+                                {
+                                    <tr>
+                                        <td>@user.UserName</td>
+                                        <td>@user.Email</td>
+                                        <td>
+                                            <form method="post"
+                                                  asp-page-handler="RemoveUser"
+                                                  id="remove-user-form-@user.Id"
+                                                  style="display:inline;">
+                                                <input type="hidden" asp-for="RoleId" />
+                                                <input type="hidden" name="SelectedUserId" value="@user.Id" />
+                                                <button type="submit" class="button button-sm button-danger">
+                                                    <i class="fas fa-trash"></i> Remove
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info" id="no-users-message">
+                            <i class="fas fa-info-circle"></i> No users are currently in this role.
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <a asp-page="/Admin/Roles/Index" class="button button-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Roles
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

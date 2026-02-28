@@ -19,6 +19,7 @@
                             <thead>
                                 <tr>
                                     <th>Name</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -26,6 +27,11 @@
                                 {
                                     <tr>
                                         <td>@role.Name</td>
+                                        <td>
+                                            <a asp-page="/Admin/Roles/Edit" asp-route-roleId="@role.Id" class="button button-sm button-primary">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
