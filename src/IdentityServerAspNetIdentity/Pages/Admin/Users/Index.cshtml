@@ -1,0 +1,103 @@
+@page "/Admin/Users"
+@using IdentityServerAspNetIdentity
+@using Microsoft.AspNetCore.Authorization
+@model IdentityServerAspNetIdentity.Pages.Admin.Users.Index
+@inject IAuthorizationService AuthorizationService
+@{
+    ViewData["Title"] = "Users";
+    var canWrite = (await AuthorizationService.AuthorizeAsync(User, UserPolicyConstants.UsersWrite)).Succeeded;
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2><i class="fas fa-users"></i> Users</h2>
+                @if (canWrite)
+                {
+                    <a asp-page="/Admin/Users/Create" class="btn btn-primary" id="create-user-btn">
+                        <i class="fas fa-plus"></i> Create User
+                    </a>
+                }
+            </div>
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (Model.Users.Any())
+            {
+                <table class="table table-striped" id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Email Confirmed</th>
+                            <th>Lockout Status</th>
+                            <th>2FA Enabled</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model.Users)
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-page="/Admin/Users/Edit" asp-route-userId="@user.Id">@user.UserName</a>
+                                </td>
+                                <td>@user.Email</td>
+                                <td>
+                                    @if (user.EmailConfirmed)
+                                    {
+                                        <span class="badge bg-success">Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">No</span>
+                                    }
+                                </td>
+                                <td>
+                                    @switch (user.LockoutStatus)
+                                    {
+                                        case "Active":
+                                            <span class="badge bg-success">Active</span>
+                                            break;
+                                        case "Locked Out":
+                                            <span class="badge bg-warning">Locked Out</span>
+                                            break;
+                                        case "Disabled":
+                                            <span class="badge bg-danger">Disabled</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (user.TwoFactorEnabled)
+                                    {
+                                        <span class="badge bg-success">Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">No</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-page="/Admin/Users/Edit" asp-route-userId="@user.Id" class="btn btn-sm btn-outline-primary">
+                                        Edit
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p id="no-users" class="text-muted">No users found.</p>
+            }
+        </div>
+    </div>
+</div>

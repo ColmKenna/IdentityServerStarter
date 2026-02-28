@@ -1,0 +1,15 @@
+@model IdentityServerAspNetIdentity.Pages.Admin.Users.UserDetailPageModel
+@{
+    var userId = ViewContext.RouteData.Values["userId"]?.ToString() ?? string.Empty;
+    var username = Model.TargetUser?.UserName ?? "Unknown User";
+    var currentTab = ViewData["Title"]?.ToString() ?? "Profile";
+}
+
+<div class="user-breadcrumb" role="navigation" aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Home</a></li>
+        <li class="breadcrumb-item"><a href="/Admin/Users">Users</a></li>
+        <li class="breadcrumb-item"><a href="/Admin/Users/@userId">@username</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@currentTab</li>
+    </ol>
+</div>

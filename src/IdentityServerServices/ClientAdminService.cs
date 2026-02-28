@@ -7,11 +7,11 @@ using IdentityServerServices.ViewModels;
 
 namespace IdentityServerServices;
 
-public class ClientEditor : IClientEditor
+public class ClientAdminService : IClientAdminService
 {
     private readonly ConfigurationDbContext _context;
 
-    public ClientEditor(ConfigurationDbContext context)
+    public ClientAdminService(ConfigurationDbContext context)
     {
         _context = context;
     }

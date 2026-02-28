@@ -24,6 +24,12 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
             new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
             new Claim(ClaimTypes.Email, "admin@test.com"),
             new Claim(ClaimTypes.Role, "ADMIN"),
+            // User admin claims
+            new Claim("admin", "admin:users"),
+            new Claim("admin", "admin:user_claims"),
+            new Claim("admin", "admin:user_roles"),
+            new Claim("admin", "admin:user_grants"),
+            new Claim("admin", "admin:user_sessions"),
         };
 
         var identity = new ClaimsIdentity(claims, "TestScheme");

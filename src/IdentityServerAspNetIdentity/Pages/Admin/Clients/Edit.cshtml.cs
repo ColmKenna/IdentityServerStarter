@@ -9,11 +9,11 @@ namespace IdentityServerAspNetIdentity.Pages.Admin.Clients;
 [Authorize(Roles = "ADMIN")]
 public class EditModel : PageModel
 {
-    private readonly IClientEditor _clientEditor;
+    private readonly IClientAdminService _clientAdminService;
 
-    public EditModel(IClientEditor clientEditor)
+    public EditModel(IClientAdminService clientAdminService)
     {
-        _clientEditor = clientEditor;
+        _clientAdminService = clientAdminService;
     }
 
     [BindProperty]
@@ -24,7 +24,7 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var client = await _clientEditor.GetClientForEditAsync(Id);
+        var client = await _clientAdminService.GetClientForEditAsync(Id);
         if (client == null)
         {
             return NotFound();
@@ -39,7 +39,7 @@ public class EditModel : PageModel
         if (!ModelState.IsValid)
         {
             // Re-populate available options in case of validation failure
-            var existingClient = await _clientEditor.GetClientForEditAsync(Id);
+            var existingClient = await _clientAdminService.GetClientForEditAsync(Id);
             if (existingClient != null)
             {
                 Input.AvailableScopes = existingClient.AvailableScopes;
@@ -48,7 +48,7 @@ public class EditModel : PageModel
             return Page();
         }
 
-        var success = await _clientEditor.UpdateClientAsync(Id, Input);
+        var success = await _clientAdminService.UpdateClientAsync(Id, Input);
         if (!success)
         {
             return NotFound();

@@ -44,17 +44,24 @@ public static class AngleSharpHelpers
         }
 
         var documentRequest = form.GetSubmission(submitButton);
-        if (documentRequest == null)
+
+        var requestUrl = documentRequest?.Target.Href ?? form.Action;
+        var requestMethod = documentRequest?.Method.ToString() ?? form.Method;
+        if (string.IsNullOrWhiteSpace(requestUrl))
         {
-            throw new InvalidOperationException("Could not create form submission.");
+            throw new InvalidOperationException("Could not determine form action URL.");
         }
 
-        var requestUrl = documentRequest.Target.Href;
+        if (string.IsNullOrWhiteSpace(requestMethod))
+        {
+            requestMethod = "POST";
+        }
+
         var request = new HttpRequestMessage(
-            new System.Net.Http.HttpMethod(documentRequest.Method.ToString()),
+            new System.Net.Http.HttpMethod(requestMethod),
             requestUrl);
 
-        if (documentRequest.Method.ToString().Equals("POST", StringComparison.OrdinalIgnoreCase))
+        if (requestMethod.Equals("POST", StringComparison.OrdinalIgnoreCase))
         {
             var formData = new List<KeyValuePair<string, string>>();
 

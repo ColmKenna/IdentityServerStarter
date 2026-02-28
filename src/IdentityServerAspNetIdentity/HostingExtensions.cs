@@ -18,8 +18,8 @@ namespace IdentityServerAspNetIdentity;
 
 internal static class HostingExtensions
 {
-    private const string DefaultConnectionDocker = "DefaultConnection";
-    ///private const string DefaultConnectionDocker = "DefaultConnectionDocker";
+    ///private const string DefaultConnectionDocker = "DefaultConnection";
+    private const string DefaultConnectionDocker = "DefaultConnectionDocker";
 
     private static void InitializeDatabase(IApplicationBuilder app)
     {
@@ -215,7 +215,8 @@ internal static class HostingExtensions
 
         builder.Services.AddScoped<IScriptHolder,ScriptHolder>();
         builder.Services.AddScoped<IEmailSender, EmailSenderConsole>();
-        builder.Services.AddScoped<IClientEditor, ClientEditor>();
+        builder.Services.AddScoped<IClientAdminService, ClientAdminService>();
+        builder.Services.AddScoped<IUserEditor, UserEditor>();
 
         return builder.Build();
     }

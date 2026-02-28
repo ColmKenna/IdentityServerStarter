@@ -1,0 +1,857 @@
+@page "/Admin/Users/{userId}"
+@model IdentityServerAspNetIdentity.Pages.Admin.Users.EditModel
+@{
+    ViewData["Title"] = "Edit User";
+
+    var canReadUsers = Model.CanReadUsers;
+    var canWriteUsers = Model.CanWriteUsers;
+    var canDeleteUsers = Model.CanDeleteUsers;
+
+    var canReadClaims = Model.CanReadClaims;
+    var canWriteClaims = Model.CanWriteClaims;
+    var canDeleteClaims = Model.CanDeleteClaims;
+
+    var canReadRoles = Model.CanReadRoles;
+    var canWriteRoles = Model.CanWriteRoles;
+    var canDeleteRoles = Model.CanDeleteRoles;
+
+    var canReadGrants = Model.CanReadGrants;
+    var canDeleteGrants = Model.CanDeleteGrants;
+    var canReadSessions = Model.CanReadSessions;
+    var canDeleteSessions = Model.CanDeleteSessions;
+    var userData = Model.UserData;
+    
+    var activeTab = (Model.Tab ?? "profile").Trim().ToLowerInvariant();
+    if (activeTab != "profile" &&
+        activeTab != "security" &&
+        activeTab != "claims" &&
+        activeTab != "roles" &&
+        activeTab != "externallogins" &&
+        activeTab != "grantssessions")
+    {
+        activeTab = "profile";
+    }
+    bool IsVisible(string tab) => tab switch
+    {
+        "profile" or "security" or "externallogins" => canReadUsers,
+        "claims" => canReadClaims,
+        "roles" => canReadRoles,
+        "grantssessions" => canReadGrants || canReadSessions,
+        _ => false
+    };
+
+    if (!IsVisible(activeTab))
+    {
+        if (canReadUsers) activeTab = "profile";
+
+        else if (canReadClaims) activeTab = "claims";
+        else if (canReadRoles) activeTab = "roles";
+        else if (canReadGrants || canReadSessions) activeTab = "grantssessions";
+    }
+
+    var isProfileActive = activeTab == "profile";
+    var isSecurityActive = activeTab == "security";
+    var isClaimsActive = activeTab == "claims";
+    var isRolesActive = activeTab == "roles";
+    var isExternalLoginsActive = activeTab == "externallogins";
+    var isGrantsSessionsActive = activeTab == "grantssessions";
+
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fas fa-user-edit"></i> Edit User</h2>
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <partial name="_UserDetailBreadcrumb" model="Model" />
+<form method="post" asp-page="/Admin/Users/Edit" asp-route-userId="@Model.UserId" id="edit-user-page-form">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="UserId" />
+<ck-tabs>
+    @if (canReadUsers)
+    {
+                <ck-tab label="Profile" active="@isProfileActive">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <input type="hidden" asp-for="Input.UserId" />
+            <input type="hidden" asp-for="Input.ConcurrencyStamp" />
+
+            <div class="profile-card">
+                <div class="profile-card__header">
+                    <i class="fas fa-id-card"></i>
+                    <h5>Account Information</h5>
+                </div>
+                <div class="profile-card__body">
+                    <div class="form-group">
+                        <label asp-for="Input.Username" class="form-label"></label>
+                        <input asp-for="Input.Username" class="form-control" />
+                        <span asp-validation-for="Input.Username" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="Input.Email" class="form-label"></label>
+                        <input asp-for="Input.Email" class="form-control" />
+                        <span asp-validation-for="Input.Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group form-switch-row">
+                        <label asp-for="Input.EmailConfirmed" class="form-label"></label>
+                        <label class="form-switch">
+                            <input asp-for="Input.EmailConfirmed" class="form-switch-input" type="checkbox" />
+                            <span class="form-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="Input.PhoneNumber" class="form-label"></label>
+                        <input asp-for="Input.PhoneNumber" class="form-control" />
+                        <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group form-switch-row">
+                        <label asp-for="Input.PhoneNumberConfirmed" class="form-label"></label>
+                        <label class="form-switch">
+                            <input asp-for="Input.PhoneNumberConfirmed" class="form-switch-input" type="checkbox" />
+                            <span class="form-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="profile-card__actions">
+                        @if (canWriteUsers)
+                        {
+                            <button type="submit" class="button button-primary">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        }
+                        <a asp-page="/Admin/Users/Index" class="button button-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            @if (canDeleteUsers)
+            {
+                <div class="danger-zone">
+                    <div class="danger-zone__header">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h5>Danger Zone</h5>
+                    </div>
+                    <div class="danger-zone__body">
+                        <p>Permanently delete this user account and all associated data.</p>
+                        <button id="delete-user-button"
+                                type="submit"
+                                class="button button-danger"
+                                asp-page="/Admin/Users/Edit"
+                                asp-page-handler="Delete"
+                                asp-route-userId="@Model.UserId"
+                                formnovalidate>
+                            <i class="fas fa-trash"></i> Delete User
+                        </button>
+                    </div>
+                </div>
+            }
+        </ck-tab>
+
+        <ck-tab label="Security" active="@isSecurityActive">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="security-card">
+                <div class="security-card__header">
+                    <i class="fas fa-key"></i>
+                    <h5>Password</h5>
+                </div>
+                <div class="security-card__body">
+                    <div class="security-status">
+                        <div class="security-status__row">
+                            <span class="security-status__label">Has Password</span>
+                            <span class="security-status__value">
+                                <span id="has-password" class="status-badge @(userData.HasPassword ? "status-badge--yes" : "status-badge--no")">
+                                    <i class="fas @(userData.HasPassword ? "fa-check-circle" : "fa-times-circle")"></i>
+                                    @(userData.HasPassword ? "Yes" : "No")
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+
+                    @if (canWriteUsers)
+                    {
+                        <div class="form-group">
+                            <label for="NewPassword" class="form-label">New Password</label>
+                            <input type="password" id="NewPassword" name="NewPassword" class="form-control" required />
+                            <span asp-validation-for="NewPassword" class="text-danger"></span>
+                        </div>
+                        <div class="security-actions">
+                            <button type="submit"
+                                    class="button button-warning"
+                                    id="reset-password-btn"
+                                    asp-page="/Admin/Users/Edit"
+                                    asp-page-handler="SecurityResetPassword"
+                                    asp-route-userId="@Model.UserId">
+                                <i class="fas fa-sync-alt"></i> Reset Password
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="security-card">
+                <div class="security-card__header">
+                    <i class="fas fa-lock"></i>
+                    <h5>Lockout</h5>
+                </div>
+                <div class="security-card__body">
+                    <div class="security-status">
+                        <div class="security-status__row">
+                            <span class="security-status__label">Account Status</span>
+                            <span class="security-status__value">
+                                @{
+                                    var statusClass = userData.AccountStatus == "Active"
+                                        ? "status-badge--active"
+                                        : userData.AccountStatus.StartsWith("Locked")
+                                            ? "status-badge--locked"
+                                            : "status-badge--disabled";
+                                    var statusIcon = userData.AccountStatus == "Active"
+                                        ? "fa-check-circle"
+                                        : userData.AccountStatus.StartsWith("Locked")
+                                            ? "fa-ban"
+                                            : "fa-minus-circle";
+                                }
+                                <span id="account-status" class="status-badge @statusClass">
+                                    <i class="fas @statusIcon"></i> @userData.AccountStatus
+                                </span>
+                            </span>
+                        </div>
+                        <div class="security-status__row">
+                            <span class="security-status__label">Lockout Enabled</span>
+                            <span class="security-status__value">
+                                <span id="lockout-enabled" class="status-badge @(userData.LockoutEnabled ? "status-badge--yes" : "status-badge--no")">
+                                    <i class="fas @(userData.LockoutEnabled ? "fa-check-circle" : "fa-times-circle")"></i>
+                                    @userData.LockoutEnabled
+                                </span>
+                            </span>
+                        </div>
+                        <div class="security-status__row">
+                            <span class="security-status__label">Failed Access Count</span>
+                            <span class="security-status__value">
+                                <strong id="failed-count">@userData.AccessFailedCount</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    @if (canWriteUsers)
+                    {
+                        <div class="security-actions">
+                            @if (userData.AccountStatus == "Active" || userData.AccountStatus.StartsWith("Locked"))
+                            {
+                                <button type="submit"
+                                        class="button button-danger"
+                                        id="disable-account-btn"
+                                        asp-page="/Admin/Users/Edit"
+                                        asp-page-handler="SecurityDisableAccount"
+                                        asp-route-userId="@Model.UserId"
+                                        formnovalidate>
+                                    <i class="fas fa-ban"></i> Disable Account
+                                </button>
+                            }
+
+                            @if (userData.AccountStatus != "Active")
+                            {
+                                <button type="submit"
+                                        class="button button-success"
+                                        id="enable-account-btn"
+                                        asp-page="/Admin/Users/Edit"
+                                        asp-page-handler="SecurityEnableAccount"
+                                        asp-route-userId="@Model.UserId"
+                                        formnovalidate>
+                                    <i class="fas fa-check"></i> Enable Account
+                                </button>
+                            }
+
+                            @if (userData.AccountStatus.StartsWith("Locked"))
+                            {
+                                <button type="submit"
+                                        class="button button-warning"
+                                        id="clear-lockout-btn"
+                                        asp-page="/Admin/Users/Edit"
+                                        asp-page-handler="SecurityClearLockout"
+                                        asp-route-userId="@Model.UserId"
+                                        formnovalidate>
+                                    <i class="fas fa-unlock"></i> Clear Lockout
+                                </button>
+                            }
+
+                            <button type="submit"
+                                    class="button button-outline-secondary"
+                                    id="toggle-lockout-btn"
+                                    asp-page="/Admin/Users/Edit"
+                                    asp-page-handler="SecurityToggleLockoutEnabled"
+                                    asp-route-userId="@Model.UserId"
+                                    name="LockoutEnabledInput"
+                                    value="@(!userData.LockoutEnabled)"
+                                    formnovalidate>
+                                <i class="fas @(userData.LockoutEnabled ? "fa-lock-open" : "fa-lock")"></i>
+                                @(userData.LockoutEnabled ? "Disable Lockout" : "Enable Lockout")
+                            </button>
+
+                            @if (userData.AccessFailedCount > 0)
+                            {
+                                <button type="submit"
+                                        class="button button-outline-warning"
+                                        id="reset-failed-btn"
+                                        asp-page="/Admin/Users/Edit"
+                                        asp-page-handler="SecurityResetFailedCount"
+                                        asp-route-userId="@Model.UserId"
+                                        formnovalidate>
+                                    <i class="fas fa-redo"></i> Reset Failed Count
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="security-card">
+                <div class="security-card__header">
+                    <i class="fas fa-shield-alt"></i>
+                    <h5>Two-Factor Authentication</h5>
+                </div>
+                <div class="security-card__body">
+                    <div class="security-status">
+                        <div class="security-status__row">
+                            <span class="security-status__label">2FA Enabled</span>
+                            <span class="security-status__value">
+                                <span id="two-factor-enabled" class="status-badge @(userData.TwoFactorEnabled ? "status-badge--yes" : "status-badge--no")">
+                                    <i class="fas @(userData.TwoFactorEnabled ? "fa-check-circle" : "fa-times-circle")"></i>
+                                    @userData.TwoFactorEnabled
+                                </span>
+                            </span>
+                        </div>
+                        <div class="security-status__row">
+                            <span class="security-status__label">Registered Providers</span>
+                            <span class="security-status__value">
+                                <strong id="two-factor-providers">
+                                    @(userData.TwoFactorProviders.Any() ? string.Join(", ", userData.TwoFactorProviders) : "None")
+                                </strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    @if (canWriteUsers)
+                    {
+                        <div class="security-actions">
+                            <button type="submit"
+                                    class="button button-outline-primary"
+                                    id="toggle-2fa-btn"
+                                    asp-page="/Admin/Users/Edit"
+                                    asp-page-handler="SecurityToggleTwoFactor"
+                                    asp-route-userId="@Model.UserId"
+                                    name="TwoFactorEnabledInput"
+                                    value="@(!userData.TwoFactorEnabled)"
+                                    formnovalidate>
+                                <i class="fas @(userData.TwoFactorEnabled ? "fa-toggle-off" : "fa-toggle-on")"></i>
+                                @(userData.TwoFactorEnabled ? "Disable 2FA" : "Enable 2FA")
+                            </button>
+
+                            <button type="submit"
+                                    class="button button-warning"
+                                    id="reset-authenticator-btn"
+                                    asp-page="/Admin/Users/Edit"
+                                    asp-page-handler="SecurityResetAuthenticator"
+                                    asp-route-userId="@Model.UserId"
+                                    formnovalidate>
+                                <i class="fas fa-sync-alt"></i> Reset Authenticator Key
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (canWriteUsers)
+            {
+                <div class="danger-zone">
+                    <div class="danger-zone__header">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <h5>Force Sign-Out</h5>
+                    </div>
+                    <div class="danger-zone__body">
+                        <p>Invalidate all active sessions for this user, forcing them to sign in again.</p>
+                        <button type="submit"
+                                class="button button-danger"
+                                id="force-signout-btn"
+                                asp-page="/Admin/Users/Edit"
+                                asp-page-handler="SecurityForceSignOut"
+                                asp-route-userId="@Model.UserId"
+                                formnovalidate>
+                            <i class="fas fa-sign-out-alt"></i> Force Sign-Out
+                        </button>
+                    </div>
+                </div>
+            }
+        </ck-tab>
+    }
+
+    @if (canReadClaims)
+    {
+        <ck-tab label="Claims" active="@isClaimsActive">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            @if (userData.Claims.Any())
+            {
+                <div class="claims-list" id="claims-table">
+                    <div class="claims-list__header">
+                        @if (canDeleteClaims)
+                        {
+                            <label class="claims-list__checkbox">
+                                <input type="checkbox" id="select-all-claims" />
+                            </label>
+                        }
+                        <span class="claims-list__col-type"><strong>Claim Type</strong></span>
+                        <span class="claims-list__col-value"><strong>Claim Value</strong></span>
+                    </div>
+
+                    @foreach (var claim in userData.Claims)
+                    {
+                        <div class="claims-list__row">
+                            @if (canDeleteClaims)
+                            {
+                                <label class="claims-list__checkbox">
+                                    <input type="checkbox" name="SelectedClaims" value="@claim.Type:@claim.Value" class="claim-checkbox" />
+                                </label>
+                            }
+                            <span class="claims-list__type">@claim.Type</span>
+                            <span class="claims-list__value">@claim.Value</span>
+                            @if (canWriteClaims)
+                            {
+                                <button type="button" class="claims-list__edit-btn edit-claim-btn"
+                                        data-claim-type="@claim.Type"
+                                        data-claim-value="@claim.Value"
+                                        title="Edit claim">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (canDeleteClaims)
+                {
+                    <button type="submit"
+                            class="btn btn-outline-danger mt-3 mb-3"
+                            id="remove-selected-btn"
+                            asp-page="/Admin/Users/Edit"
+                            asp-page-handler="ClaimsRemove"
+                            asp-route-userId="@Model.UserId"
+                            formnovalidate>
+                        Remove Selected
+                    </button>
+                }
+            }
+            else
+            {
+                <p class="text-muted" id="no-claims-message">No claims assigned to this user</p>
+            }
+
+            @if (canWriteClaims)
+            {
+                <button type="button" class="button button-primary mt-3" id="open-add-claim-modal-btn">
+                    <i class="fa-solid fa-plus"></i> Add Claim
+                </button>
+            }
+        </ck-tab>
+    }
+
+    @if (canReadRoles)
+    {
+        <ck-tab label="Roles" active="@isRolesActive">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            @if (userData.Roles.Any())
+            {
+                <div class="multi-select" id="assigned-roles-list">
+                    <h5>Current Roles</h5>
+                @if (canDeleteRoles)
+                    {
+                        <label class="option-label">
+                            <input type="checkbox" id="select-all-assigned-roles" class="option-input" />
+                            <span class="option-pill">Select All</span>
+                        </label>
+                    }
+                    <div class="options-list">
+                        @foreach (var role in userData.Roles)
+                        {
+                            @if (canDeleteRoles)
+                            {
+                                <label class="option-label">
+                                    <input type="checkbox" name="SelectedRolesToRemove" value="@role" class="option-input role-checkbox" />
+                                    <span class="option-pill">@role</span>
+                                </label>
+                            }
+                            else
+                            {
+                                <span class="option-pill">@role</span>
+                            }
+                        }
+                    </div>
+                </div>
+
+                @if (canDeleteRoles)
+                {
+                    <div class="d-flex align-items-center gap-2 mt-3 mb-3">
+                        <button type="submit"
+                                class="btn-outline-danger"
+                                id="remove-roles-btn"
+                                asp-page="/Admin/Users/Edit"
+                                asp-page-handler="RolesRemove"
+                                asp-route-userId="@Model.UserId"
+                                formnovalidate>
+                            Remove Selected
+                        </button>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted" id="no-roles-message">This user is not assigned to any roles</p>
+            }
+
+            @if (canWriteRoles && userData.AvailableRoles.Any())
+            {
+                <div class="multi-select mt-4" id="available-roles-list">
+                    <h5>Add to Roles</h5>
+                    <div class="options-list"><label class="option-label">
+                            <input type="checkbox" id="select-all-available-roles" class="option-input" />
+                            <span class="option-pill">Select All</span>
+                        </label>
+                    </div>
+                    <div class="options-list">
+                        @foreach (var role in userData.AvailableRoles)
+                        {
+                            <label class="option-label">
+                                <input type="checkbox" name="SelectedRolesToAdd" value="@role" class="option-input" id="role-@role" />
+                                <span class="option-pill">@role</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-3">
+
+                        <button type="submit"
+                                class="button button-primary"
+                                id="add-roles-btn"
+                                asp-page="/Admin/Users/Edit"
+                                asp-page-handler="RolesAdd"
+                                asp-route-userId="@Model.UserId"
+                                formnovalidate>
+                            Add to Selected Roles
+                        </button>
+                    </div>
+                </div>
+            }
+            else if (canWriteRoles && !userData.AvailableRoles.Any() && userData.Roles.Any())
+            {
+                <p class="text-muted mt-4" id="all-roles-assigned">User is in all available roles</p>
+            }
+        </ck-tab>
+    }
+
+    @if (canReadUsers)
+    {
+        <ck-tab label="External Logins" active="@isExternalLoginsActive">
+            <div class="security-card">
+                <div class="security-card__header">
+                    <i class="fas fa-plug"></i>
+                    <h5>Linked Providers</h5>
+                    <span class="count-badge">@userData.ExternalLogins.Count</span>
+                </div>
+                <div class="security-card__body">
+                    @if (userData.ExternalLogins.Any())
+                    {
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Provider Key</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var login in userData.ExternalLogins)
+                                {
+                                    <tr>
+                                        <td>@(login.ProviderDisplayName ?? login.LoginProvider)</td>
+                                        <td>@login.ProviderKey</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-unlink empty-state__icon"></i>
+                            <p class="empty-state__text">No external logins linked to this user.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </ck-tab>
+    }
+
+    @if (canReadGrants || canReadSessions)
+    {
+        <ck-tab label="Grants &amp; Sessions" active="@isGrantsSessionsActive">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            @if (canReadGrants)
+            {
+                <div class="security-card">
+                    <div class="security-card__header">
+                        <i class="fas fa-ticket-alt"></i>
+                        <h5>Persisted Grants</h5>
+                        <span class="count-badge">@userData.Grants.Count</span>
+
+                        @if (canDeleteGrants && userData.Grants.Any())
+                        {
+                            <span style="margin-left:auto">
+                                <button type="submit"
+                                        class="button button-danger"
+                                        id="revoke-all-grants-btn"
+                                        asp-page="/Admin/Users/Edit"
+                                        asp-page-handler="GrantsSessionsRevokeAllGrants"
+                                        asp-route-userId="@Model.UserId"
+                                        onclick="return confirm('Are you sure you want to revoke all grants?')"
+                                        formnovalidate>
+                                    <i class="fas fa-trash"></i> Revoke All
+                                </button>
+                            </span>
+                        }
+                    </div>
+                    <div class="security-card__body">
+                        @if (userData.Grants.Any())
+                        {
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Client</th>
+                                        <th>Type</th>
+                                        <th>Created</th>
+                                        <th>Expiration</th>
+                                        @if (canDeleteGrants)
+                                        {
+                                            <th>Actions</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var grant in userData.Grants)
+                                    {
+                                        <tr>
+                                            <td>@grant.ClientId</td>
+                                            <td>@grant.Type</td>
+                                            <td>@grant.CreationTime.ToString("g")</td>
+                                            <td>@(grant.Expiration?.ToString("g") ?? "Never")</td>
+                                            @if (canDeleteGrants)
+                                            {
+                                                <td>
+                                                    <button type="submit"
+                                                            class="button button-outline-danger"
+                                                            asp-page="/Admin/Users/Edit"
+                                                            asp-page-handler="GrantsSessionsRevokeGrant"
+                                                            asp-route-userId="@Model.UserId"
+                                                            name="GrantKey"
+                                                            value="@grant.Key"
+                                                            onclick="return confirm('Revoke this grant?')"
+                                                            formnovalidate>
+                                                        <i class="fas fa-times"></i> Revoke
+                                                    </button>
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <i class="fas fa-ticket-alt empty-state__icon"></i>
+                                <p class="empty-state__text">No persisted grants for this user.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (canReadSessions)
+            {
+                <div class="security-card">
+                    <div class="security-card__header">
+                        <i class="fas fa-desktop"></i>
+                        <h5>Server-Side Sessions</h5>
+                        <span class="count-badge">@userData.Sessions.Count</span>
+
+                        @if (canDeleteSessions && userData.Sessions.Any())
+                        {
+                            <span style="margin-left:auto">
+                                <button type="submit"
+                                        class="button button-danger"
+                                        id="end-all-sessions-btn"
+                                        asp-page="/Admin/Users/Edit"
+                                        asp-page-handler="GrantsSessionsEndAllSessions"
+                                        asp-route-userId="@Model.UserId"
+                                        onclick="return confirm('Are you sure you want to end all sessions?')"
+                                        formnovalidate>
+                                    <i class="fas fa-trash"></i> End All
+                                </button>
+                            </span>
+                        }
+                    </div>
+                    <div class="security-card__body">
+                        @if (userData.Sessions.Any())
+                        {
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Session ID</th>
+                                        <th>Display Name</th>
+                                        <th>Created</th>
+                                        <th>Expires</th>
+                                        @if (canDeleteSessions)
+                                        {
+                                            <th>Actions</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var session in userData.Sessions)
+                                    {
+                                        <tr>
+                                            <td>@session.SessionId</td>
+                                            <td>@(session.DisplayName ?? "-")</td>
+                                            <td>@session.Created.ToString("g")</td>
+                                            <td>@(session.Expires?.ToString("g") ?? "Never")</td>
+                                            @if (canDeleteSessions)
+                                            {
+                                                <td>
+                                                    <button type="submit"
+                                                            class="button button-outline-danger"
+                                                            asp-page="/Admin/Users/Edit"
+                                                            asp-page-handler="GrantsSessionsEndSession"
+                                                            asp-route-userId="@Model.UserId"
+                                                            name="SessionKey"
+                                                            value="@session.Key"
+                                                            onclick="return confirm('End this session?')"
+                                                            formnovalidate>
+                                                        <i class="fas fa-times"></i> End
+                                                    </button>
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <i class="fas fa-desktop empty-state__icon"></i>
+                                <p class="empty-state__text">No active server-side sessions for this user.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </ck-tab>
+    }
+</ck-tabs>
+</form>
+
+        </div>
+    </div>
+</div>
+
+@if (canWriteClaims)
+{
+    <dialog id="add-claim-modal" class="claim-modal" aria-modal="true" aria-labelledby="add-claim-modal-title">
+        <div class="claim-modal__content">
+            <div class="claim-modal__header">
+                <h2 id="add-claim-modal-title" class="claim-modal__title">Add Claim</h2>
+                <button type="button" class="claim-modal__close" id="close-add-claim-btn" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="claim-modal__body">
+                <div class="form-group">
+                    <label for="NewClaimType" class="form-label">Claim Type</label>
+                    <input type="text" id="NewClaimType" name="NewClaimType" form="edit-user-page-form" class="form-control" required maxlength="256" value="@Model.NewClaimType" />
+                    <span asp-validation-for="NewClaimType" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label for="NewClaimValue" class="form-label">Claim Value</label>
+                    <input type="text" id="NewClaimValue" name="NewClaimValue" form="edit-user-page-form" class="form-control" maxlength="1024" value="@Model.NewClaimValue" />
+                </div>
+            </div>
+            <div class="claim-modal__footer">
+                <button type="button" class="button button-secondary" id="cancel-add-claim-btn">Cancel</button>
+                <button type="submit"
+                        class="button button-primary"
+                        id="add-claim-btn"
+                        form="edit-user-page-form"
+                        asp-page="/Admin/Users/Edit"
+                        asp-page-handler="ClaimsAdd"
+                        asp-route-userId="@Model.UserId"
+                        formnovalidate>
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="edit-claim-modal" class="claim-modal" aria-modal="true" aria-labelledby="edit-claim-modal-title">
+        <div class="claim-modal__content">
+            <div class="claim-modal__header">
+                <h2 id="edit-claim-modal-title" class="claim-modal__title">Edit Claim</h2>
+                <button type="button" class="claim-modal__close" id="close-edit-claim-btn" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="claim-modal__body">
+                <input type="hidden" id="OldClaimType" name="OldClaimType" form="edit-user-page-form" value="@Model.OldClaimType" />
+                <input type="hidden" id="OldClaimValue" name="OldClaimValue" form="edit-user-page-form" value="@Model.OldClaimValue" />
+                <div class="form-group">
+                    <label for="ReplacementClaimType" class="form-label">Claim Type</label>
+                    <input type="text" id="ReplacementClaimType" name="ReplacementClaimType" form="edit-user-page-form" class="form-control" required maxlength="256" value="@Model.ReplacementClaimType" />
+                </div>
+                <div class="form-group">
+                    <label for="ReplacementClaimValue" class="form-label">Claim Value</label>
+                    <input type="text" id="ReplacementClaimValue" name="ReplacementClaimValue" form="edit-user-page-form" class="form-control" maxlength="1024" value="@Model.ReplacementClaimValue" />
+                </div>
+            </div>
+            <div class="claim-modal__footer">
+                <button type="button" class="button button-secondary" id="cancel-replace-btn">Cancel</button>
+                <button type="submit"
+                        class="button button-primary"
+                        id="replace-claim-btn"
+                        form="edit-user-page-form"
+                        asp-page="/Admin/Users/Edit"
+                        asp-page-handler="ClaimsReplace"
+                        asp-route-userId="@Model.UserId"
+                        formnovalidate>
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </dialog>
+}
+
+
+@section Scripts {
+    <script type="module" src="~/js/users-edit.js"></script>
+}

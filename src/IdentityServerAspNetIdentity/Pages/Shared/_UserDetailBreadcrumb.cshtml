@@ -1,0 +1,11 @@
+@model IdentityServerAspNetIdentity.Pages.Admin.Users.EditModel
+
+<div class="user-breadcrumb" role="navigation" aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="/Admin/Users/Index">Users</a></li>
+        <li class="breadcrumb-item">
+            <a asp-page="/Admin/Users/Edit" asp-route-userId="@Model.UserId">@((Model.Input?.Username) ?? (Model.TargetUser?.UserName) ?? "User")</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Profile</li>
+    </ol>
+</div>

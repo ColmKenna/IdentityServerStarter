@@ -1,11 +1,14 @@
 using System.Security.Claims;
 using Duende.IdentityServer.EntityFramework.DbContexts;
 using Duende.IdentityServer.EntityFramework.Options;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
 using IdentityServer.EF.DataAccess.DataMigrations;
 using IdentityServerAspNetIdentity.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -93,6 +96,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.AddDbContext<PersistedGrantDbContext>(options =>
                 options.UseInMemoryDatabase($"TestGrantDb-{_dbName}"));
 
+            services.AddRazorPages(options =>
+            {
+                options.Conventions.ConfigureFilter(new IgnoreAntiforgeryTokenAttribute());
+            });
+
             // Replace authentication with a test scheme
             services.AddAuthentication("TestScheme")
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestScheme", _ => { });
@@ -103,6 +111,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 options.DefaultChallengeScheme = "TestScheme";
                 options.DefaultScheme = "TestScheme";
             });
+
+            // Register a no-op IServerSideSessionStore for GrantsSessions page
+            services.AddSingleton<IServerSideSessionStore, InMemoryServerSideSessionStore>();
         });
     }
 
@@ -117,5 +128,72 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         appDb.Database.EnsureCreated();
 
         return host;
+    }
+}
+
+/// <summary>
+/// Simple in-memory IServerSideSessionStore for integration tests.
+/// </summary>
+internal class InMemoryServerSideSessionStore : IServerSideSessionStore
+{
+    private readonly List<ServerSideSession> _sessions = new();
+
+    public Task CreateSessionAsync(ServerSideSession session, CancellationToken cancellationToken = default)
+    {
+        _sessions.Add(session);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteSessionAsync(string key, CancellationToken cancellationToken = default)
+    {
+        _sessions.RemoveAll(s => s.Key == key);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteSessionsAsync(SessionFilter filter, CancellationToken cancellationToken = default)
+    {
+        _sessions.RemoveAll(s =>
+            (filter.SubjectId == null || s.SubjectId == filter.SubjectId) &&
+            (filter.SessionId == null || s.SessionId == filter.SessionId));
+        return Task.CompletedTask;
+    }
+
+    public Task<ServerSideSession?> GetSessionAsync(string key, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(_sessions.FirstOrDefault(s => s.Key == key));
+    }
+
+    public Task<IReadOnlyCollection<ServerSideSession>> GetSessionsAsync(SessionFilter filter, CancellationToken cancellationToken = default)
+    {
+        var results = _sessions.Where(s =>
+            (filter.SubjectId == null || s.SubjectId == filter.SubjectId) &&
+            (filter.SessionId == null || s.SessionId == filter.SessionId))
+            .ToList();
+        return Task.FromResult<IReadOnlyCollection<ServerSideSession>>(results);
+    }
+
+    public Task UpdateSessionAsync(ServerSideSession session, CancellationToken cancellationToken = default)
+    {
+        DeleteSessionAsync(session.Key, cancellationToken);
+        _sessions.Add(session);
+        return Task.CompletedTask;
+    }
+
+    public Task<QueryResult<ServerSideSession>> QuerySessionsAsync(SessionQuery? filter = null, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new QueryResult<ServerSideSession>
+        {
+            Results = _sessions,
+            HasPrevResults = false,
+            HasNextResults = false,
+            TotalCount = _sessions.Count,
+            TotalPages = 1,
+            CurrentPage = 1
+        });
+    }
+
+    public Task<IReadOnlyCollection<ServerSideSession>> GetAndRemoveExpiredSessionsAsync(int count, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyCollection<ServerSideSession>>(Array.Empty<ServerSideSession>());
     }
 }

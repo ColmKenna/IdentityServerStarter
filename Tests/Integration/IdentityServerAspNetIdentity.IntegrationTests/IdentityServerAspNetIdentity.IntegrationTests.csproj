@@ -34,4 +34,8 @@
     <ProjectReference Include="..\..\..\src\DataTransferModels\DataTransferModels.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Pages\" />
+  </ItemGroup>
+
 </Project>
