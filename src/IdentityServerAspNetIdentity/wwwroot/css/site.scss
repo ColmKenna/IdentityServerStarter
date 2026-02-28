@@ -46,6 +46,20 @@
   --scrollbar-track: #f4f4f4;
   --scrollbar-thumb: #007bff;
 
+  // Semantic / Subtle Colors
+  --danger-hover: #bd2130;
+  --warning-hover: #e0a800;
+  --success-hover: #1e7e34;
+  --warning-text: #212529;
+  --success-bg-subtle: rgba(40, 167, 69, 0.15);
+  --danger-bg-subtle: rgba(220, 53, 69, 0.15);
+  --warning-bg-subtle: rgba(255, 193, 7, 0.15);
+  --secondary-bg-subtle: rgba(108, 117, 125, 0.15);
+  --info-bg-subtle: rgba(23, 162, 184, 0.15);
+  --warning-text-emphasis: #856404;
+  --hover-overlay: rgba(0, 0, 0, 0.05);
+  --table-stripe-bg: rgba(0, 0, 0, 0.02);
+
   // ck-tabs component variables
   --tab-bg: var(--card-bg);
   --tab-border: var(--border-color);
@@ -113,6 +127,20 @@
   --scrollbar-track: #2d2d2d;
   --scrollbar-thumb: #0d6efd;
 
+  // Semantic / Subtle Colors
+  --danger-hover: #bb2d3b;
+  --warning-hover: #ffca2c;
+  --success-hover: #157347;
+  --warning-text: #212529;
+  --success-bg-subtle: rgba(25, 135, 84, 0.25);
+  --danger-bg-subtle: rgba(220, 53, 69, 0.25);
+  --warning-bg-subtle: rgba(255, 193, 7, 0.2);
+  --secondary-bg-subtle: rgba(108, 117, 125, 0.25);
+  --info-bg-subtle: rgba(13, 202, 240, 0.2);
+  --warning-text-emphasis: #ffcd39;
+  --hover-overlay: rgba(255, 255, 255, 0.08);
+  --table-stripe-bg: rgba(255, 255, 255, 0.03);
+
   // ck-tabs component variables (dark)
   --tab-bg: var(--card-bg);
   --tab-border: var(--border-color);
@@ -169,6 +197,20 @@
   --focus-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
   --scrollbar-track: #e2e8f0;
   --scrollbar-thumb: #2563eb;
+
+  // Semantic / Subtle Colors
+  --danger-hover: #b91c1c;
+  --warning-hover: #b45309;
+  --success-hover: #047857;
+  --warning-text: #1e293b;
+  --success-bg-subtle: rgba(5, 150, 105, 0.15);
+  --danger-bg-subtle: rgba(220, 38, 38, 0.15);
+  --warning-bg-subtle: rgba(217, 119, 6, 0.15);
+  --secondary-bg-subtle: rgba(100, 116, 139, 0.15);
+  --info-bg-subtle: rgba(8, 145, 178, 0.15);
+  --warning-text-emphasis: #92400e;
+  --hover-overlay: rgba(0, 0, 0, 0.05);
+  --table-stripe-bg: rgba(0, 0, 0, 0.02);
 
   // ck-tabs component variables (blue)
   --tab-bg: var(--card-bg);
@@ -227,6 +269,20 @@
   --scrollbar-track: #dcfce7;
   --scrollbar-thumb: #059669;
 
+  // Semantic / Subtle Colors
+  --danger-hover: #dc2626;
+  --warning-hover: #d97706;
+  --success-hover: #047857;
+  --warning-text: #14532d;
+  --success-bg-subtle: rgba(16, 185, 129, 0.15);
+  --danger-bg-subtle: rgba(239, 68, 68, 0.15);
+  --warning-bg-subtle: rgba(245, 158, 11, 0.15);
+  --secondary-bg-subtle: rgba(107, 114, 128, 0.15);
+  --info-bg-subtle: rgba(6, 182, 212, 0.15);
+  --warning-text-emphasis: #78350f;
+  --hover-overlay: rgba(0, 0, 0, 0.05);
+  --table-stripe-bg: rgba(0, 0, 0, 0.02);
+
   // ck-tabs component variables (green)
   --tab-bg: var(--card-bg);
   --tab-border: var(--border-color);
@@ -283,6 +339,20 @@
   --focus-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
   --scrollbar-track: #e9d5ff;
   --scrollbar-thumb: #7c3aed;
+
+  // Semantic / Subtle Colors
+  --danger-hover: #dc2626;
+  --warning-hover: #d97706;
+  --success-hover: #059669;
+  --warning-text: #581c87;
+  --success-bg-subtle: rgba(16, 185, 129, 0.15);
+  --danger-bg-subtle: rgba(239, 68, 68, 0.15);
+  --warning-bg-subtle: rgba(245, 158, 11, 0.15);
+  --secondary-bg-subtle: rgba(107, 114, 128, 0.15);
+  --info-bg-subtle: rgba(6, 182, 212, 0.15);
+  --warning-text-emphasis: #78350f;
+  --hover-overlay: rgba(0, 0, 0, 0.05);
+  --table-stripe-bg: rgba(0, 0, 0, 0.02);
 
   // ck-tabs component variables (purple)
   --tab-bg: var(--card-bg);
@@ -435,11 +505,6 @@ nav {
       height: 100%;
     }
 
-    .menu-icon {
-      font-size: 1.2rem;
-      color: var(--text-light);
-    }
-
     button {
       background: none;
       border: none;
@@ -549,77 +614,77 @@ nav {
   padding: 1rem;
   transition: width 0.3s ease, background-color 0.3s ease, color 0.3s ease;
   border-right: 1px solid var(--border-color);
-}
 
-.sidebar ul {
-  list-style: none;
-  margin-top: 1rem;
-}
+  &__list {
+    list-style: none;
+    margin-top: 1rem;
+  }
 
-.sidebar ul li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.5rem 0;
-  padding: 0.5rem;
-  background-color: var(--surface-bg);
-  color: var(--text-primary);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background-color: var(--surface-bg);
+    color: var(--text-primary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
 
-.sidebar ul li:hover {
-  background-color: var(--card-bg);
-}
+    &:hover {
+      background-color: var(--card-bg);
+    }
+  }
 
-.sidebar ul li svg {
-  width: 20px;
-  height: 20px;
-  fill: var(--text-primary);
-  flex-shrink: 0;
-  transition: fill 0.3s ease;
-}
+  &__icon {
+    width: 20px;
+    height: 20px;
+    fill: var(--text-primary);
+    flex-shrink: 0;
+    transition: fill 0.3s ease;
+  }
 
-.sidebar.open {
-  left: 0;
-}
+  &.open {
+    left: 0;
+  }
 
-.sidebar.collapsed {
-  width: 68px;
-}
+  &.collapsed {
+    width: 68px;
 
-.sidebar.collapsed ul span {
-  display: none;
-}
+    .sidebar__text {
+      display: none;
+    }
 
-.sidebar.collapsed ul li {
-  position: relative;
-}
+    .sidebar__item {
+      position: relative;
 
-.sidebar.collapsed ul li::after {
-  content: attr(data-title);
-  position: absolute;
-  left: 74px;
-  background: var(--navbar-bg);
-  color: var(--text-light);
-  border: 1px solid var(--border-color);
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-50%);
-  top: 50%;
-  transition: opacity 0.2s, transform 0.2s, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-  font-size: 1.125rem;
-  z-index: 1001;
-  box-shadow: var(--box-shadow);
-}
+      &::after {
+        content: attr(data-title);
+        position: absolute;
+        left: 74px;
+        background: var(--navbar-bg);
+        color: var(--text-light);
+        border: 1px solid var(--border-color);
+        padding: 0.6rem 1.2rem;
+        border-radius: 6px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-50%);
+        top: 50%;
+        transition: opacity 0.2s, transform 0.2s, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        font-size: 1.125rem;
+        z-index: 1001;
+        box-shadow: var(--box-shadow);
+      }
 
-.sidebar.collapsed ul li:hover::after {
-  opacity: 1;
-  transform: translateY(-50%) scale(1.03);
+      &:hover::after {
+        opacity: 1;
+        transform: translateY(-50%) scale(1.03);
+      }
+    }
+  }
 }
 
 .main-container {
@@ -802,22 +867,22 @@ img.icon-banner {
 
   &:hover,
   &:focus {
-    background: #bd2130;
-    border-color: #bd2130;
+    background: var(--danger-hover);
+    border-color: var(--danger-hover);
     color: var(--text-light);
   }
 }
 
 .button-warning {
   background: var(--warning-color);
-  color: #212529;
+  color: var(--warning-text);
   border-color: var(--warning-color);
 
   &:hover,
   &:focus {
-    background: #e0a800;
-    border-color: #d39e00;
-    color: #212529;
+    background: var(--warning-hover);
+    border-color: var(--warning-hover);
+    color: var(--warning-text);
   }
 }
 
@@ -828,8 +893,8 @@ img.icon-banner {
 
   &:hover,
   &:focus {
-    background: #1e7e34;
-    border-color: #1c7430;
+    background: var(--success-hover);
+    border-color: var(--success-hover);
     color: var(--text-light);
   }
 }
@@ -866,7 +931,7 @@ img.icon-banner {
   &:hover,
   &:focus {
     background: var(--warning-color);
-    color: #212529;
+    color: var(--warning-text);
   }
 }
 
@@ -908,7 +973,7 @@ img.icon-banner {
 .alert-warning {
   display: block;
   padding: 0.75rem 1rem;
-  background-color: rgba(255, 193, 7, 0.15);
+  background-color: var(--warning-bg-subtle);
   /* based on --warning-color */
   border-left: 4px solid var(--warning-color);
   border-radius: 4px;
@@ -1266,7 +1331,7 @@ dialog.claim-modal {
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
-    background: rgba(220, 53, 69, 0.08);
+    background: var(--danger-bg-subtle);
     border-bottom: 1px solid var(--danger-color);
 
     h5 {
@@ -1372,27 +1437,27 @@ dialog.claim-modal {
   line-height: 1.5;
 
   &--active {
-    background: rgba(40, 167, 69, 0.15);
+    background: var(--success-bg-subtle);
     color: var(--success-color);
   }
 
   &--locked {
-    background: rgba(220, 53, 69, 0.15);
+    background: var(--danger-bg-subtle);
     color: var(--danger-color);
   }
 
   &--disabled {
-    background: rgba(108, 117, 125, 0.15);
+    background: var(--secondary-bg-subtle);
     color: var(--secondary-color);
   }
 
   &--yes {
-    background: rgba(40, 167, 69, 0.15);
+    background: var(--success-bg-subtle);
     color: var(--success-color);
   }
 
   &--no {
-    background: rgba(108, 117, 125, 0.15);
+    background: var(--secondary-bg-subtle);
     color: var(--secondary-color);
   }
 }
@@ -1584,7 +1649,7 @@ dialog.claim-modal {
 }
 
 .table-striped tbody tr:nth-child(odd) {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--table-stripe-bg);
 }
 
 .table-bordered {
@@ -1613,10 +1678,10 @@ dialog.claim-modal {
   line-height: 1.5;
 }
 
-.bg-success   { background: rgba(40, 167, 69, 0.15); color: var(--success-color); }
-.bg-warning   { background: rgba(255, 193, 7, 0.15); color: #856404; }
-.bg-danger    { background: rgba(220, 53, 69, 0.15); color: var(--danger-color); }
-.bg-secondary { background: rgba(108, 117, 125, 0.15); color: var(--secondary-color); }
+.bg-success   { background: var(--success-bg-subtle); color: var(--success-color); }
+.bg-warning   { background: var(--warning-bg-subtle); color: var(--warning-text-emphasis); }
+.bg-danger    { background: var(--danger-bg-subtle); color: var(--danger-color); }
+.bg-secondary { background: var(--secondary-bg-subtle); color: var(--secondary-color); }
 
 /* ==========================================================================
    8. Card Extensions
@@ -1685,7 +1750,7 @@ dialog.claim-modal {
 
   &:hover,
   &:focus {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--hover-overlay);
     color: var(--primary-hover, var(--primary-color));
     text-decoration: none;
   }

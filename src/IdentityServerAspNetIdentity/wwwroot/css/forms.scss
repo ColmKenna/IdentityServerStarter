@@ -81,19 +81,19 @@
   border: 1px solid transparent;
 
   &.alert-success {
-    background-color: rgba(40, 167, 69, 0.15);
+    background-color: var(--success-bg-subtle);
     border-color: var(--success-color);
     color: var(--text-primary);
   }
 
   &.alert-danger {
-    background-color: rgba(220, 53, 69, 0.15);
+    background-color: var(--danger-bg-subtle);
     border-color: var(--danger-color);
     color: var(--text-primary);
   }
 
   &.alert-info {
-    background-color: rgba(23, 162, 184, 0.15);
+    background-color: var(--info-bg-subtle);
     border-color: var(--info-color, #17a2b8);
     color: var(--text-primary);
   }
