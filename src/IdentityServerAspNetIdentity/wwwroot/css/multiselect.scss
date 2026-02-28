@@ -85,7 +85,9 @@ $font-size-mobile: 0.875rem;
     border: 1px solid $input-border;
     border-radius: $border-radius-md;
     background-color: $bg-card;
-    transition: all $transition-duration $transition-easing;
+    transition: background-color $transition-duration $transition-easing,
+               border-color $transition-duration $transition-easing,
+               box-shadow $transition-duration $transition-easing;
 
     &:hover {
         border-color: $primary-color;
@@ -136,7 +138,9 @@ $font-size-mobile: 0.875rem;
     border: 1px solid $input-border;
     border-radius: $border-radius-sm;
     background-color: $bg-card;
-    transition: all $transition-duration $transition-easing;
+    transition: background-color $transition-duration $transition-easing,
+               border-color $transition-duration $transition-easing,
+               box-shadow $transition-duration $transition-easing;
     flex-shrink: 0;
 
     &:checked {

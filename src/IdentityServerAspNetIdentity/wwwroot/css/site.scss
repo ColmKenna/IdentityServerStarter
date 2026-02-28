@@ -339,10 +339,14 @@ a:visited {
   color: var(--link-visited);
 }
 
-a:hover,
-a:focus {
+a:hover {
   color: var(--primary-hover);
-  outline: none;
+}
+
+a:focus-visible {
+  color: var(--primary-hover);
+  outline: 2px solid var(--focus-border);
+  outline-offset: 2px;
 }
 
 /* ==========================================================================
@@ -406,11 +410,16 @@ nav {
     height: 100%;
     color: var(--text-light);
 
-    &:hover,
-    &:focus {
+    &:hover {
       color: var(--text-light);
       text-decoration: none;
-      outline: none;
+    }
+
+    &:focus-visible {
+      color: var(--text-light);
+      text-decoration: none;
+      outline: 2px solid var(--focus-border);
+      outline-offset: 2px;
     }
   }
 
@@ -487,10 +496,14 @@ nav {
         color: var(--text-primary);
         text-decoration: none;
 
-        &:hover,
-        &:focus {
+        &:hover {
           background: var(--body-bg);
-          outline: none;
+        }
+
+        &:focus-visible {
+          background: var(--body-bg);
+          outline: 2px solid var(--focus-border);
+          outline-offset: -2px;
         }
       }
     }
@@ -906,8 +919,6 @@ img.icon-banner {
     margin-right: 0.35rem;
   }
 }
-
-/*# sourceMappingURL=site.scss.map */
 
 /* 3.4. Tables
    ========================================================================== */
@@ -1469,5 +1480,17 @@ dialog.claim-modal {
   &__text {
     font-size: 0.95rem;
     margin: 0;
+  }
+}
+
+/* ==========================================================================
+   4. Reduced Motion
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
