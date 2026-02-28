@@ -41,7 +41,7 @@ public class MultiselectCheckboxTagHelper : TagHelper
     /// The CSS class to apply to the fieldset element.
     /// </summary>
     [HtmlAttributeName("fieldset-class")]
-    public string FieldsetClass { get; set; } = "multiselect-fieldset";
+    public string FieldsetClass { get; set; } = "option-fieldset";
 
     /// <summary>
     /// The ID for the fieldset element.
@@ -123,7 +123,7 @@ public class MultiselectCheckboxTagHelper : TagHelper
         }
 
         var gridDiv = new TagBuilder("div");
-        gridDiv.AddCssClass("multiselect-grid");
+        gridDiv.AddCssClass("options-grid");
         gridDiv.Attributes["role"] = "group";
         if (!string.IsNullOrEmpty(FieldsetId))
         {
@@ -137,13 +137,13 @@ public class MultiselectCheckboxTagHelper : TagHelper
             var inputId = $"{IdPrefix}-{i}";
             var isSelected = selectedItems.Contains(item);
 
-            var optionDiv = new TagBuilder("div");
-            optionDiv.AddCssClass("multiselect-option");
+            var optionLabel = new TagBuilder("label");
+            optionLabel.AddCssClass("option-label");
 
             // Checkbox input
             var input = new TagBuilder("input");
             input.TagRenderMode = TagRenderMode.SelfClosing;
-            input.AddCssClass("multiselect-input");
+            input.AddCssClass("option-input");
             input.Attributes["type"] = "checkbox";
             input.Attributes["id"] = inputId;
             input.Attributes["name"] = inputName;
@@ -153,20 +153,15 @@ public class MultiselectCheckboxTagHelper : TagHelper
             {
                 input.Attributes["checked"] = "checked";
             }
-            optionDiv.InnerHtml.AppendHtml(input);
+            optionLabel.InnerHtml.AppendHtml(input);
 
-            // Label with pill
-            var labelTag = new TagBuilder("label");
-            labelTag.AddCssClass("multiselect-label");
-            labelTag.Attributes["for"] = inputId;
-            
+            // Pill span
             var pill = new TagBuilder("span");
-            pill.AddCssClass("multiselect-pill");
+            pill.AddCssClass("option-pill");
             pill.InnerHtml.Append(item);
-            labelTag.InnerHtml.AppendHtml(pill);
 
-            optionDiv.InnerHtml.AppendHtml(labelTag);
-            gridDiv.InnerHtml.AppendHtml(optionDiv);
+            optionLabel.InnerHtml.AppendHtml(pill);
+            gridDiv.InnerHtml.AppendHtml(optionLabel);
         }
 
         fieldset.InnerHtml.AppendHtml(gridDiv);
