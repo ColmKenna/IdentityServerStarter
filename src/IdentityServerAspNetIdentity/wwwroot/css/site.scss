@@ -689,14 +689,15 @@ nav {
 
 .main-container {
   display: flex;
-  height: 100%;
+  height: calc(100vh - 60px);
   overflow: hidden;
 
   >.content {
     flex-grow: 1;
-    padding: 1rem;
+    padding: 1.5rem 2rem;
     transition: padding-left 0.3s ease;
     width: 100%;
+    overflow-y: auto;
   }
 }
 
@@ -1553,7 +1554,7 @@ dialog.claim-modal {
    ========================================================================== */
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   margin-inline: auto;
   padding-inline: 1rem;
 }
@@ -1809,7 +1810,14 @@ dialog.claim-modal {
 }
 
 /* ==========================================================================
-   15. Reduced Motion
+   15. ck-tabs Web Component Overrides
+   ========================================================================== */
+ck-tabs {
+  width: 100%;
+}
+
+/* ==========================================================================
+   16. Reduced Motion
    ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
