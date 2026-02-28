@@ -21,7 +21,7 @@
                 <input class="col-md-2  col-12" type="text" id="@($"new{@keyName}")" placeholder="Enter Key">
             }
             <input class="col-md-8 col-12" type="text" id="@($"new{@valueName}")" placeholder="Enter Value">
-            <button class="col-md-2 col-12 btn btn-outline-primary float-right" type="button" onclick="@Html.Raw($"AddKeyValueItem('{@Model.ComponentID}','{@Model.Name}', 'new{@keyName}', 'new{@valueName}') ")">
+            <button class="col-md-2 col-12 button button-outline-primary float-right" type="button" onclick="@Html.Raw($"AddKeyValueItem('{@Model.ComponentID}','{@Model.Name}', 'new{@keyName}', 'new{@valueName}') ")">
                 <i class="bi bi-plus"></i>
             </button>
     </li>
@@ -33,7 +33,7 @@
             <input class="d-none" type="text"  name="@($"{@Model.Name}[{i}].Key")" id="@($"{@Model.Name.Replace('.','_')}{i}__Key")" value="@($"{@Model.Properties[i].Key}")">
             <input class="col-md-8 col-12" type="text"  name="@($"{@Model.Name}[{i}].Value")" id="@($"{@Model.Name.Replace('.','_')}{i}__Value")" value="@($"{@Model.Properties[i].Value}")">
             <span class="field-validation-valid" data-valmsg-for="@($"{@Model.Name}[{i}].Value")" data-valmsg-replace="true"></span>
-            <button class="col-md-2 col-12 btn btn-outline-danger delete float-right" onclick="@($"removeItem('{@Model.ComponentID}','{@Model.Name}',{i})")">
+            <button class="col-md-2 col-12 button button-outline-danger delete float-right" onclick="@($"removeItem('{@Model.ComponentID}','{@Model.Name}',{i})")">
                 <i class="bi bi-x"></i>
             </button>
         </li>

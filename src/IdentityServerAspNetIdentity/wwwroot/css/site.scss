@@ -1484,7 +1484,267 @@ dialog.claim-modal {
 }
 
 /* ==========================================================================
-   4. Reduced Motion
+   4. Layout Utilities
+   ========================================================================== */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-inline: -0.5rem;
+
+  > * {
+    padding-inline: 0.5rem;
+    width: 100%;
+  }
+}
+
+.col    { flex: 1 0 0%; }
+.col-2  { flex: 0 0 auto; width: 16.6667%; }
+.col-10 { flex: 0 0 auto; width: 83.3333%; }
+.col-12 { flex: 0 0 auto; width: 100%; }
+
+@media (min-width: 576px) {
+  .col-sm-2  { flex: 0 0 auto; width: 16.6667%; }
+  .col-sm-4  { flex: 0 0 auto; width: 33.3333%; }
+  .col-sm-6  { flex: 0 0 auto; width: 50%; }
+  .col-sm-8  { flex: 0 0 auto; width: 66.6667%; }
+}
+
+@media (min-width: 768px) {
+  .col-md-2  { flex: 0 0 auto; width: 16.6667%; }
+  .col-md-8  { flex: 0 0 auto; width: 66.6667%; }
+  .col-md-12 { flex: 0 0 auto; width: 100%; }
+}
+
+@media (min-width: 992px) {
+  .col-lg-6    { flex: 0 0 auto; width: 50%; }
+  .col-lg-auto { flex: 0 0 auto; width: auto; }
+}
+
+/* col-xs-12 is effectively always 100% (xs breakpoint = 0) */
+.col-xs-12 { flex: 0 0 auto; width: 100%; }
+
+/* ==========================================================================
+   5. Display & Flex Utilities
+   ========================================================================== */
+.d-flex  { display: flex; }
+.d-none  { display: none; }
+
+.justify-content-between { justify-content: space-between; }
+.align-items-center      { align-items: center; }
+.flex-wrap               { flex-wrap: wrap; }
+.gap-2                   { gap: 0.5rem; }
+.float-right             { float: right; }
+
+/* ==========================================================================
+   6. Table Styles
+   ========================================================================== */
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+
+  th {
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    background: var(--surface-bg);
+    border-bottom: 2px solid var(--border-color);
+    text-align: left;
+  }
+
+  td {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    transition: background-color 0.12s ease;
+
+    &:hover {
+      background-color: var(--surface-bg);
+    }
+
+    &:last-child td {
+      border-bottom: none;
+    }
+  }
+}
+
+.table-striped tbody tr:nth-child(odd) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.table-bordered {
+  th, td {
+    border: 1px solid var(--border-light);
+  }
+}
+
+.table-sm {
+  th, td {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* ==========================================================================
+   7. Badge
+   ========================================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.bg-success   { background: rgba(40, 167, 69, 0.15); color: var(--success-color); }
+.bg-warning   { background: rgba(255, 193, 7, 0.15); color: #856404; }
+.bg-danger    { background: rgba(220, 53, 69, 0.15); color: var(--danger-color); }
+.bg-secondary { background: rgba(108, 117, 125, 0.15); color: var(--secondary-color); }
+
+/* ==========================================================================
+   8. Card Extensions
+   ========================================================================== */
+.card-body {
+  padding: 1rem;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   9. List Group
+   ========================================================================== */
+.list-group {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.list-group-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--card-bg);
+  color: var(--text-primary);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.list-group-flush {
+  .list-group-item {
+    border-radius: 0;
+
+    &:first-child {
+      border-top: none;
+    }
+  }
+}
+
+/* ==========================================================================
+   10. Text Utilities
+   ========================================================================== */
+.text-muted   { color: var(--text-muted); }
+.text-primary { color: var(--primary-color); }
+.text-center  { text-align: center; }
+
+/* ==========================================================================
+   11. Nav Link
+   ========================================================================== */
+.nav-link {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  text-decoration: none;
+  color: var(--link-color, var(--primary-color));
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover,
+  &:focus {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--primary-hover, var(--primary-color));
+    text-decoration: none;
+  }
+}
+
+/* ==========================================================================
+   12. Form Check (standalone checkbox/radio)
+   ========================================================================== */
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-check-input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.form-check-label {
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-primary);
+}
+
+.control-label {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   13. Additional Spacing
+   ========================================================================== */
+.mb-0 { margin-bottom: 0; }
+
+/* ==========================================================================
+   14. Button Extensions
+   ========================================================================== */
+.button-sm {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.button-outline-info {
+  background: transparent;
+  color: var(--info-color, #17a2b8);
+  border-color: var(--info-color, #17a2b8);
+
+  &:hover,
+  &:focus {
+    background: var(--info-color, #17a2b8);
+    color: var(--text-light);
+  }
+}
+
+/* ==========================================================================
+   15. Reduced Motion
    ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

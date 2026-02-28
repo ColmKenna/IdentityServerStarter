@@ -9,7 +9,7 @@
     <ul class="list-group" id="@Model.Name">
         <li class="list-group-item d-flex">
             <input type="text" id="@Model.InputID" class="col-10" placeholder="Add new item"></input>
-            <button type="button" class="col-2 btn btn-outline-primary float-right" onclick='addButtonPressed(this, "@Model.InputID", "@Model.Name", "@Model.AddFunction")'><i class="bi bi-plus"></i></button>
+            <button type="button" class="col-2 button button-outline-primary float-right" onclick='addButtonPressed(this, "@Model.InputID", "@Model.Name", "@Model.AddFunction")'><i class="bi bi-plus"></i></button>
         </li>
 
         @foreach (var redirectUri in Model.Items)
@@ -17,7 +17,7 @@
             <li class="list-group-item d-flex">
                 <input name="@Model.Name" class="form-control d-none" value="@redirectUri"></input>
                 <label class="col-10"> @redirectUri </label>
-                <button type="button" class="col-2 btn btn-outline-danger delete float-right" onclick='removeButtonPressed(this, "@Model.RemoveFunction")'><i class="bi bi-x"></i></button>
+                <button type="button" class="col-2 button button-outline-danger delete float-right" onclick='removeButtonPressed(this, "@Model.RemoveFunction")'><i class="bi bi-x"></i></button>
             </li>
         }
     </ul>
