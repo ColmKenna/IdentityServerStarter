@@ -95,6 +95,16 @@ public class AdminIndexIntegrationTests : IDisposable
         claimsLink.Should().NotBeNull("page should contain a link to the Claims admin section");
     }
 
+    [Fact]
+    public async Task Get_AdminIndex_ContainsApiScopesLink()
+    {
+        var response = await _client.GetAsync("/Admin");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        var apiScopesLink = document.QuerySelector("a[href*='/Admin/ApiScopes']");
+        apiScopesLink.Should().NotBeNull("page should contain a link to the API Scopes admin section");
+    }
+
     // ── Step 3: Sidebar contains Admin dashboard link ────────────────────
 
     [Fact]
@@ -139,5 +149,19 @@ public class AdminIndexIntegrationTests : IDisposable
         var claimsItem = sidebar!.QuerySelector("li[data-title='Claims']");
         claimsItem.Should().NotBeNull("sidebar should contain a Claims link");
         claimsItem!.GetAttribute("data-url").Should().Contain("/Admin/Claims");
+    }
+
+    [Fact]
+    public async Task Get_AdminIndex_SidebarContainsApiScopesLink()
+    {
+        var response = await _client.GetAsync("/Admin");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        var sidebar = document.QuerySelector(".sidebar");
+        sidebar.Should().NotBeNull();
+
+        var apiScopesItem = sidebar!.QuerySelector("li[data-title='API Scopes']");
+        apiScopesItem.Should().NotBeNull("sidebar should contain an API Scopes link");
+        apiScopesItem!.GetAttribute("data-url").Should().Contain("/Admin/ApiScopes");
     }
 }
