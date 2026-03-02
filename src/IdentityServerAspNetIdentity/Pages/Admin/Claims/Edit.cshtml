@@ -1,0 +1,144 @@
+@page "/Admin/Claims/Edit"
+@model IdentityServerAspNetIdentity.Pages.Admin.Claims.EditModel
+@{
+    ViewData["Title"] = $"Manage Claim - {Model.ClaimType}";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fas fa-id-card"></i> Claim: @Model.ClaimType</h2>
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (TempData["Warning"] != null)
+            {
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    @TempData["Warning"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3><i class="fas fa-user-plus"></i> Add User to Claim</h3>
+                    @if (Model.AvailableUsers.Any())
+                    {
+                        <form method="post" asp-page-handler="AddUser" id="add-user-claim-form">
+                            <input type="hidden" asp-for="ClaimType" />
+                            <div class="form-group">
+                                <label for="SelectedUserId" class="form-label">Select User</label>
+                                <select asp-for="SelectedUserId" class="form-control" id="SelectedUserId">
+                                    <option value="">-- Select a user --</option>
+                                    @foreach (var user in Model.AvailableUsers)
+                                    {
+                                        <option value="@user.UserId">@user.UserName (@user.Email)</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="SelectedUserId" class="text-danger"></span>
+                            </div>
+                            <div class="form-group mt-2">
+                                <label for="NewClaimValue" class="form-label">Claim Value</label>
+                                <input asp-for="NewClaimValue" class="form-control" id="NewClaimValue" />
+                                <span asp-validation-for="NewClaimValue" class="text-danger"></span>
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="button button-primary">
+                                    <i class="fas fa-plus"></i> Add User
+                                </button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <p class="text-muted">All users are currently assigned to this claim type.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h3><i class="fas fa-users"></i> Users in Claim</h3>
+
+                    @if (Model.UsersInClaim.Any())
+                    {
+                        <table class="table table-striped" id="users-in-claim-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Claim Value</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    var rowIndex = 0;
+                                }
+                                @foreach (var assignment in Model.UsersInClaim)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-page="/Admin/Users/Edit" asp-route-userId="@assignment.UserId">@assignment.UserName</a>
+                                        </td>
+                                        <td>@assignment.Email</td>
+                                        <td>@assignment.ClaimValue</td>
+                                        <td>
+                                            <form method="post"
+                                                  asp-page-handler="RemoveUser"
+                                                  id="remove-user-claim-form-@rowIndex"
+                                                  style="display:inline;">
+                                                <input type="hidden" asp-for="ClaimType" />
+                                                <input type="hidden" name="RemoveUserId" value="@assignment.UserId" />
+                                                <input type="hidden" name="RemoveClaimValue" value="@assignment.ClaimValue" />
+                                                <button type="submit"
+                                                        class="button button-sm button-danger remove-user-claim-btn"
+                                                        data-user-name="@assignment.UserName"
+                                                        data-claim-type="@Model.ClaimType"
+                                                        data-claim-value="@assignment.ClaimValue"
+                                                        data-last-user="@assignment.IsLastUserAssignment.ToString().ToLowerInvariant()">
+                                                    <i class="fas fa-trash"></i> Remove
+                                                </button>
+                                            </form>
+                                            @if (assignment.IsLastUserAssignment)
+                                            {
+                                                <p class="text-warning mt-2 mb-0 last-user-warning">
+                                                    Removing this user will remove this claim from the system. Assign it to another user with a different value to keep this claim.
+                                                </p>
+                                            }
+                                        </td>
+                                    </tr>
+                                    rowIndex++;
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info" id="no-users-in-claim-message">
+                            <i class="fas fa-info-circle"></i> No users are currently assigned to this claim type.
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <a asp-page="/Admin/Claims/Index" class="button button-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Claims
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script type="module" src="~/js/claims-edit.js"></script>
+}

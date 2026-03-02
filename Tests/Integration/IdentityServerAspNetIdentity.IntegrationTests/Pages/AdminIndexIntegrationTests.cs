@@ -85,6 +85,16 @@ public class AdminIndexIntegrationTests : IDisposable
         rolesLink.Should().NotBeNull("page should contain a link or reference to the Roles admin section");
     }
 
+    [Fact]
+    public async Task Get_AdminIndex_ContainsClaimsLink()
+    {
+        var response = await _client.GetAsync("/Admin");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        var claimsLink = document.QuerySelector("a[href*='/Admin/Claims']");
+        claimsLink.Should().NotBeNull("page should contain a link to the Claims admin section");
+    }
+
     // ── Step 3: Sidebar contains Admin dashboard link ────────────────────
 
     [Fact]
@@ -115,5 +125,19 @@ public class AdminIndexIntegrationTests : IDisposable
 
         var dashboardItem = sidebar!.QuerySelector("li[data-title='Dashboard']");
         dashboardItem.Should().NotBeNull("sidebar should contain a Dashboard link on all pages");
+    }
+
+    [Fact]
+    public async Task Get_AdminIndex_SidebarContainsClaimsLink()
+    {
+        var response = await _client.GetAsync("/Admin");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        var sidebar = document.QuerySelector(".sidebar");
+        sidebar.Should().NotBeNull();
+
+        var claimsItem = sidebar!.QuerySelector("li[data-title='Claims']");
+        claimsItem.Should().NotBeNull("sidebar should contain a Claims link");
+        claimsItem!.GetAttribute("data-url").Should().Contain("/Admin/Claims");
     }
 }
