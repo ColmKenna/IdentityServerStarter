@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "checkJs": false,
+    "declaration": false,
+    "outDir": "./wwwroot/js",
+    "rootDir": "./",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "baseUrl": "./",
+    "paths": {
+      "@colmkenna/ck-tabs": ["./wwwroot/lib/@colmkenna/ck-tabs/dist/index"],
+      "@colmkenna/ck-tabs/*": ["./wwwroot/lib/@colmkenna/ck-tabs/dist/*"]
+    }
+  },
+  "include": [
+    "wwwroot/**/*.ts",
+    "wwwroot/**/*.js",
+    "wwwroot/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "wwwroot/lib/**/node_modules"
+  ]
+}
