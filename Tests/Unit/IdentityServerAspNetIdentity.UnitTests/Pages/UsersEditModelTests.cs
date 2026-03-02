@@ -97,6 +97,7 @@ public class UsersEditModelTests
                 ConcurrencyStamp = "concurrency-1"
             },
             Claims = new List<Claim>(),
+            AvailableClaims = new List<string> { "department", "location" },
             Roles = new List<string>(),
             AvailableRoles = new List<string> { "Admin", "User" },
             ExternalLogins = new List<UserLoginInfo>(),
@@ -161,6 +162,30 @@ public class UsersEditModelTests
         result.Should().BeOfType<PageResult>();
         _pageModel.UserData.Should().NotBeNull();
         _pageModel.UserData.Profile.UserId.Should().Be(user.Id);
+    }
+
+    [Fact]
+    public async Task Should_PreserveAvailableClaims_FromUserEditorData_OnGet()
+    {
+        var user = CreateTestUser();
+        var userData = CreateTestUserEditPageData();
+        SetupAllAuthorizationsAllowed();
+
+        _mockUserManager
+            .Setup(m => m.FindByIdAsync(user.Id))
+            .ReturnsAsync(user);
+
+        _mockUserEditor
+            .Setup(m => m.GetUserEditPageDataAsync(It.IsAny<UserEditPageDataRequest>()))
+            .ReturnsAsync(userData);
+
+        _pageModel.UserId = user.Id;
+
+        var result = await _pageModel.OnGetAsync();
+
+        result.Should().BeOfType<PageResult>();
+        _pageModel.UserData.AvailableClaims.Should().Contain("department");
+        _pageModel.UserData.AvailableClaims.Should().Contain("location");
     }
 
     [Fact]

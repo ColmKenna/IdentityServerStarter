@@ -1193,6 +1193,52 @@ img.icon-banner {
 
 /* 3.7. Modals
    ========================================================================== */
+dialog.confirm-modal {
+  border: none;
+  border-radius: 8px;
+  padding: 0;
+  max-width: 500px;
+  width: 100%;
+  margin: auto;
+  background: var(--card-bg, #fff);
+  color: var(--text-primary, #111);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+  }
+}
+
+.confirm-modal {
+  &__content {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  &__message {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-muted, #555);
+    white-space: pre-line;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+}
+
 dialog.claim-modal {
   border: none;
   border-radius: 8px;

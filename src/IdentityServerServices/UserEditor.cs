@@ -46,6 +46,7 @@ public class UserEditor : IUserEditor
 
         var profile = Map(user);
         var claims = new List<Claim>();
+        var availableClaims = new List<string>();
         var roles = new List<string>();
         var availableRoles = new List<string>();
         var externalLogins = new List<UserLoginInfo>();
@@ -72,6 +73,18 @@ public class UserEditor : IUserEditor
         if (request.IncludeClaims)
         {
             claims = (await _userManager.GetClaimsAsync(user)).ToList();
+            var claimTypes = claims
+                .Select(c => c.Type)
+                .Where(type => !string.IsNullOrWhiteSpace(type))
+                .ToList();
+
+            availableClaims = await _dbContext.UserClaims
+                .Where(c => c.UserId != user.Id && c.ClaimType != null && c.ClaimType != string.Empty)
+                .Select(c => c.ClaimType!)
+                .Where(claimType => !claimTypes.Contains(claimType))
+                .Distinct()
+                .OrderBy(claimType => claimType)
+                .ToListAsync();
         }
 
         if (request.IncludeRoles)
@@ -96,13 +109,11 @@ public class UserEditor : IUserEditor
             sessions = userSessions.ToList();
         }
 
-        var claimTypes = claims.Select(c => c.Type).ToList();
-        var availableClaims = await _dbContext.UserClaims.Where(c => c.UserId != user.Id && !claimTypes.Contains(c.ClaimType)   ).ToListAsync();
-        
         return new UserEditPageDataDto
         {
             Profile = profile,
             Claims = claims,
+            AvailableClaims = availableClaims,
             Roles = roles,
             AvailableRoles = availableRoles,
             ExternalLogins = externalLogins,

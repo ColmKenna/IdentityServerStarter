@@ -35,19 +35,66 @@ if (selectAllClaims) {
     });
 }
 
+function getClaimDetail(checkbox) {
+    let claimType = (checkbox.dataset.claimType ?? '').trim();
+    let claimValue = (checkbox.dataset.claimValue ?? '').trim();
+
+    if ((!claimType || !claimValue) && typeof checkbox.value === 'string') {
+        const separatorIndex = checkbox.value.indexOf(':');
+        if (separatorIndex >= 0) {
+            if (!claimType) {
+                claimType = checkbox.value.slice(0, separatorIndex).trim();
+            }
+            if (!claimValue) {
+                claimValue = checkbox.value.slice(separatorIndex + 1).trim();
+            }
+        } else if (!claimType) {
+            claimType = checkbox.value.trim();
+        }
+    }
+
+    if (claimType && claimValue) {
+        return `${claimType}: ${claimValue}`;
+    }
+
+    if (claimType) {
+        return claimType;
+    }
+
+    if (claimValue) {
+        return claimValue;
+    }
+
+    return '(claim details unavailable)';
+}
+
+function buildRemoveClaimsMessage(count, claimDetails) {
+    const messageHeader = `Remove ${count} claim(s) from this user?`;
+    if (!claimDetails.length) {
+        return messageHeader;
+    }
+
+    const detailLines = claimDetails.map((detail) => `- ${detail}`);
+
+    return `${messageHeader}\n${detailLines.join('\n')}`;
+}
+
 const removeClaimsBtn = document.getElementById('remove-selected-btn');
 if (removeClaimsBtn) {
     const removeClaimsForm = removeClaimsBtn.closest('form');
     if (removeClaimsForm) {
         removeClaimsBtn.addEventListener('click', (event) => {
-            const count = document.querySelectorAll('.claim-checkbox:checked').length;
+            const selectedClaimCheckboxes = Array.from(document.querySelectorAll('.claim-checkbox:checked'));
+            const count = selectedClaimCheckboxes.length;
             if (count === 0) {
                 event.preventDefault();
                 return;
             }
 
             event.preventDefault();
-            confirmAction('Remove Claims', `Remove ${count} claim(s) from this user?`, () => submitWithButton(removeClaimsForm, removeClaimsBtn));
+            const claimDetails = selectedClaimCheckboxes.map((checkbox) => getClaimDetail(checkbox));
+            const message = buildRemoveClaimsMessage(count, claimDetails);
+            confirmAction('Remove Claims', message, () => submitWithButton(removeClaimsForm, removeClaimsBtn));
         });
     }
 }
@@ -56,15 +103,53 @@ const addClaimModal = document.getElementById('add-claim-modal');
 const openAddClaimBtn = document.getElementById('open-add-claim-modal-btn');
 const cancelAddClaimBtn = document.getElementById('cancel-add-claim-btn');
 const closeAddClaimBtn = document.getElementById('close-add-claim-btn');
+const newClaimTypeInput = document.getElementById('NewClaimType');
+const newClaimValueInput = document.getElementById('NewClaimValue');
 
-if (openAddClaimBtn && addClaimModal) {
-    openAddClaimBtn.addEventListener('click', () => addClaimModal.showModal());
-    cancelAddClaimBtn.addEventListener('click', () => addClaimModal.close());
+function openAddClaimModal(prefilledClaimType = null, focusClaimValue = false) {
+    if (!addClaimModal) {
+        return;
+    }
+
+    if (newClaimTypeInput && prefilledClaimType !== null) {
+        newClaimTypeInput.value = prefilledClaimType;
+    }
+
+    if (newClaimValueInput && prefilledClaimType !== null) {
+        newClaimValueInput.value = '';
+    }
+
+    addClaimModal.showModal();
+
+    if (focusClaimValue && newClaimValueInput) {
+        newClaimValueInput.focus();
+    } else if (newClaimTypeInput) {
+        newClaimTypeInput.focus();
+    }
+}
+
+if (addClaimModal) {
+    if (openAddClaimBtn) {
+        openAddClaimBtn.addEventListener('click', () => openAddClaimModal());
+    }
+    if (cancelAddClaimBtn) {
+        cancelAddClaimBtn.addEventListener('click', () => addClaimModal.close());
+    }
     if (closeAddClaimBtn) {
         closeAddClaimBtn.addEventListener('click', () => addClaimModal.close());
     }
-    addClaimModal.addEventListener('click', (e) => { if (e.target === addClaimModal) addClaimModal.close(); });
+    addClaimModal.addEventListener('click', (e) => {
+        if (e.target === addClaimModal) {
+            addClaimModal.close();
+        }
+    });
 }
+
+document.querySelectorAll('.available-claim-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+        openAddClaimModal(pill.dataset.claimType ?? '', true);
+    });
+});
 
 const editClaimModal = document.getElementById('edit-claim-modal');
 const cancelReplaceBtn = document.getElementById('cancel-replace-btn');
@@ -115,19 +200,41 @@ if (selectAllAvailableRoles) {
     });
 }
 
+function getRoleDetail(checkbox) {
+    const roleName = (checkbox.dataset.roleName ?? checkbox.value ?? '').trim();
+    if (roleName) {
+        return roleName;
+    }
+
+    return '(role details unavailable)';
+}
+
+function buildRemoveRolesMessage(count, roleDetails) {
+    const messageHeader = `Remove this user from ${count} role(s)?`;
+    if (!roleDetails.length) {
+        return messageHeader;
+    }
+
+    const detailLines = roleDetails.map((detail) => `- ${detail}`);
+    return `${messageHeader}\n${detailLines.join('\n')}`;
+}
+
 const removeRolesBtn = document.getElementById('remove-roles-btn');
 if (removeRolesBtn) {
     const removeRolesForm = removeRolesBtn.closest('form');
     if (removeRolesForm) {
         removeRolesBtn.addEventListener('click', (event) => {
-            const count = document.querySelectorAll('.role-checkbox:checked').length;
+            const selectedRoleCheckboxes = Array.from(document.querySelectorAll('.role-checkbox:checked'));
+            const count = selectedRoleCheckboxes.length;
             if (count === 0) {
                 event.preventDefault();
                 return;
             }
 
             event.preventDefault();
-            confirmAction('Remove Roles', `Remove this user from ${count} role(s)?`, () => submitWithButton(removeRolesForm, removeRolesBtn));
+            const roleDetails = selectedRoleCheckboxes.map((checkbox) => getRoleDetail(checkbox));
+            const message = buildRemoveRolesMessage(count, roleDetails);
+            confirmAction('Remove Roles', message, () => submitWithButton(removeRolesForm, removeRolesBtn));
         });
     }
 }

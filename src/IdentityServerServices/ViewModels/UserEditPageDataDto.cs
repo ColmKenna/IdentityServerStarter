@@ -25,6 +25,8 @@ public class UserEditPageDataDto
 
     public IList<Claim> Claims { get; init; } = new List<Claim>();
 
+    public IList<string> AvailableClaims { get; init; } = new List<string>();
+
     public IList<string> Roles { get; init; } = new List<string>();
 
     public IList<string> AvailableRoles { get; init; } = new List<string>();

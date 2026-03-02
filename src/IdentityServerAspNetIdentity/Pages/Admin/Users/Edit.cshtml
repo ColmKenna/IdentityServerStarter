@@ -424,7 +424,12 @@
                             @if (canDeleteClaims)
                             {
                                 <label class="claims-list__checkbox">
-                                    <input type="checkbox" name="SelectedClaims" value="@claim.Type:@claim.Value" class="claim-checkbox" />
+                                    <input type="checkbox"
+                                           name="SelectedClaims"
+                                           value="@claim.Type:@claim.Value"
+                                           class="claim-checkbox"
+                                           data-claim-type="@claim.Type"
+                                           data-claim-value="@claim.Value" />
                                 </label>
                             }
                             <span class="claims-list__type">@claim.Type</span>
@@ -460,6 +465,34 @@
                 <p class="text-muted" id="no-claims-message">No claims assigned to this user</p>
             }
 
+            @if (userData.AvailableClaims.Any())
+            {
+                <div class="multi-select mt-4" id="available-claims-list">
+                    <h5>Available Claim Types</h5>
+                    <div class="options-list">
+                        @foreach (var claimType in userData.AvailableClaims)
+                        {
+                            @if (canWriteClaims)
+                            {
+                                <button type="button"
+                                        class="option-pill available-claim available-claim-pill"
+                                        data-claim-type="@claimType">
+                                    @claimType
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="option-pill available-claim">@claimType</span>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mt-3" id="no-available-claims-message">No available claims</p>
+            }
+
             @if (canWriteClaims)
             {
                 <button type="button" class="button button-primary mt-3" id="open-add-claim-modal-btn">
@@ -491,7 +524,11 @@
                             @if (canDeleteRoles)
                             {
                                 <label class="option-label">
-                                    <input type="checkbox" name="SelectedRolesToRemove" value="@role" class="option-input role-checkbox" />
+                                    <input type="checkbox"
+                                           name="SelectedRolesToRemove"
+                                           value="@role"
+                                           class="option-input role-checkbox"
+                                           data-role-name="@role" />
                                     <span class="option-pill">@role</span>
                                 </label>
                             }
