@@ -1,13 +1,22 @@
 @page "/Admin/ApiScopes/{id:int}/Edit"
 @model IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel
 @{
-    ViewData["Title"] = "Edit API Scope";
+    ViewData["Title"] = Model.IsCreateMode ? "Create API Scope" : "Edit API Scope";
 }
 
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-12">
-            <h2><i class="fas fa-edit"></i> Edit API Scope</h2>
+            <h2>
+                @if (Model.IsCreateMode)
+                {
+                    <i class="fas fa-plus"></i> <text>Create API Scope</text>
+                }
+                else
+                {
+                    <i class="fas fa-edit"></i> <text>Edit API Scope</text>
+                }
+            </h2>
 
             @if (TempData["Success"] != null)
             {
@@ -57,7 +66,7 @@
                                 </div>
 
                                 <div class="profile-card__actions">
-                                    <button type="submit" class="button button-primary">Save Changes</button>
+                                    <button type="submit" class="button button-primary">@(Model.IsCreateMode ? "Create" : "Save Changes")</button>
                                     <a asp-page="/Admin/ApiScopes/Index" class="button button-outline-secondary">Back to API Scopes</a>
                                 </div>
                             </div>
@@ -65,83 +74,86 @@
                     </form>
                 </ck-tab>
 
-                <ck-tab label="User Claims">
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <h3><i class="fas fa-plus-circle"></i> Available User Claims</h3>
-                            @if (Model.AvailableUserClaims.Any())
-                            {
-                                <form method="post" asp-page-handler="AddClaim" id="add-user-claim-form">
-                                    <input type="hidden" asp-for="Id" />
-                                    <div class="form-group mb-3">
-                                        <label asp-for="SelectedClaimType" class="form-label">Select Claim Type</label>
-                                        <select asp-for="SelectedClaimType" class="form-control" id="available-user-claims-select">
-                                            <option value="">-- Select a claim type --</option>
-                                            @foreach (var claimType in Model.AvailableUserClaims)
-                                            {
-                                                <option value="@claimType">@claimType</option>
-                                            }
-                                        </select>
-                                        <span asp-validation-for="SelectedClaimType" class="text-danger"></span>
+                @if (!Model.IsCreateMode)
+                {
+                    <ck-tab label="User Claims">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h3><i class="fas fa-plus-circle"></i> Available User Claims</h3>
+                                @if (Model.AvailableUserClaims.Any())
+                                {
+                                    <form method="post" asp-page-handler="AddClaim" id="add-user-claim-form">
+                                        <input type="hidden" asp-for="Id" />
+                                        <div class="form-group mb-3">
+                                            <label asp-for="SelectedClaimType" class="form-label">Select Claim Type</label>
+                                            <select asp-for="SelectedClaimType" class="form-control" id="available-user-claims-select">
+                                                <option value="">-- Select a claim type --</option>
+                                                @foreach (var claimType in Model.AvailableUserClaims)
+                                                {
+                                                    <option value="@claimType">@claimType</option>
+                                                }
+                                            </select>
+                                            <span asp-validation-for="SelectedClaimType" class="text-danger"></span>
+                                        </div>
+                                        <button type="submit" class="button button-primary">
+                                            <i class="fas fa-plus"></i> Add Claim
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-info" id="no-available-user-claims-message">
+                                        <i class="fas fa-info-circle"></i> No available user claims found.
                                     </div>
-                                    <button type="submit" class="button button-primary">
-                                        <i class="fas fa-plus"></i> Add Claim
-                                    </button>
-                                </form>
-                            }
-                            else
-                            {
-                                <div class="alert alert-info" id="no-available-user-claims-message">
-                                    <i class="fas fa-info-circle"></i> No available user claims found.
-                                </div>
-                            }
+                                }
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="card">
-                        <div class="card-body">
-                            <h3><i class="fas fa-list"></i> Applied User Claims</h3>
-                            @if (Model.AppliedUserClaims.Any())
-                            {
-                                <table class="table table-striped" id="applied-user-claims-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Claim Type</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @{
-                                            var rowIndex = 0;
-                                        }
-                                        @foreach (var claimType in Model.AppliedUserClaims)
-                                        {
+                        <div class="card">
+                            <div class="card-body">
+                                <h3><i class="fas fa-list"></i> Applied User Claims</h3>
+                                @if (Model.AppliedUserClaims.Any())
+                                {
+                                    <table class="table table-striped" id="applied-user-claims-table">
+                                        <thead>
                                             <tr>
-                                                <td><code>@claimType</code></td>
-                                                <td>
-                                                    <form method="post" asp-page-handler="RemoveClaim" id="remove-claim-form-@rowIndex">
-                                                        <input type="hidden" asp-for="Id" />
-                                                        <input type="hidden" name="RemoveClaimType" value="@claimType" />
-                                                        <button type="submit" class="button button-sm button-danger">
-                                                            <i class="fas fa-trash"></i> Remove
-                                                        </button>
-                                                    </form>
-                                                </td>
+                                                <th>Claim Type</th>
+                                                <th>Actions</th>
                                             </tr>
-                                            rowIndex++;
-                                        }
-                                    </tbody>
-                                </table>
-                            }
-                            else
-                            {
-                                <div class="alert alert-info" id="no-applied-user-claims-message">
-                                    <i class="fas fa-info-circle"></i> No user claims are currently applied to this API scope.
-                                </div>
-                            }
+                                        </thead>
+                                        <tbody>
+                                            @{
+                                                var rowIndex = 0;
+                                            }
+                                            @foreach (var claimType in Model.AppliedUserClaims)
+                                            {
+                                                <tr>
+                                                    <td><code>@claimType</code></td>
+                                                    <td>
+                                                        <form method="post" asp-page-handler="RemoveClaim" id="remove-claim-form-@rowIndex">
+                                                            <input type="hidden" asp-for="Id" />
+                                                            <input type="hidden" name="RemoveClaimType" value="@claimType" />
+                                                            <button type="submit" class="button button-sm button-danger">
+                                                                <i class="fas fa-trash"></i> Remove
+                                                            </button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                                rowIndex++;
+                                            }
+                                        </tbody>
+                                    </table>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-info" id="no-applied-user-claims-message">
+                                        <i class="fas fa-info-circle"></i> No user claims are currently applied to this API scope.
+                                    </div>
+                                }
+                            </div>
                         </div>
-                    </div>
-                </ck-tab>
+                    </ck-tab>
+                }
             </ck-tabs>
         </div>
     </div>

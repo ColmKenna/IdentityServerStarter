@@ -95,6 +95,27 @@ public class ApiScopesEditIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task Get_EditApiScope_IdZero_ReturnsCreatePage()
+    {
+        var response = await _client.GetAsync("/Admin/ApiScopes/0/Edit");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        document.QuerySelector("h2")!.TextContent.Should().Contain("Create API Scope");
+        document.QuerySelector("button[type='submit']")!.TextContent.Should().Contain("Create");
+    }
+
+    [Fact]
+    public async Task Get_EditApiScope_IdZero_DoesNotRenderUserClaimsTab()
+    {
+        var response = await _client.GetAsync("/Admin/ApiScopes/0/Edit");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        document.QuerySelector("ck-tab[label='User Claims']").Should().BeNull();
+    }
+
+    [Fact]
     public async Task Get_EditApiScope_RendersExistingValues()
     {
         var id = SeedApiScope(name: "orders.read", displayName: "Orders Read", description: "Read orders", enabled: true);
@@ -175,6 +196,52 @@ public class ApiScopesEditIntegrationTests : IDisposable
 
         response.StatusCode.Should().Be(HttpStatusCode.Redirect);
         response.Headers.Location!.ToString().Should().Contain($"/Admin/ApiScopes/{id}/Edit");
+    }
+
+    [Fact]
+    public async Task PostEdit_IdZero_ValidInput_Returns302RedirectToCreatedScopeEdit()
+    {
+        using var noRedirectClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var response = await noRedirectClient.PostAsync(
+            "/Admin/ApiScopes/0/Edit",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["Id"] = "0",
+                ["Input.Name"] = "orders.create",
+                ["Input.DisplayName"] = "Orders Create",
+                ["Input.Description"] = "Create orders",
+                ["Input.Enabled"] = "true"
+            }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        response.Headers.Location!.ToString().Should().MatchRegex("^/Admin/ApiScopes/[1-9][0-9]*/Edit$");
+    }
+
+    [Fact]
+    public async Task PostEdit_IdZero_ValidInput_PersistsApiScope()
+    {
+        await _client.PostAsync(
+            "/Admin/ApiScopes/0/Edit",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["Id"] = "0",
+                ["Input.Name"] = "orders.new",
+                ["Input.DisplayName"] = "Orders New",
+                ["Input.Description"] = "New orders scope",
+                ["Input.Enabled"] = "false"
+            }));
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+        var created = await context.ApiScopes.SingleOrDefaultAsync(scope => scope.Name == "orders.new");
+        created.Should().NotBeNull();
+        created!.DisplayName.Should().Be("Orders New");
+        created.Description.Should().Be("New orders scope");
+        created.Enabled.Should().BeFalse();
     }
 
     [Fact]

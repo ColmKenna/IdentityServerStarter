@@ -56,7 +56,7 @@ public class ApiScopesIndexIntegrationTests : IDisposable
         var response = await _client.GetAsync("/Admin/ApiScopes");
         var document = await AngleSharpHelpers.GetDocumentAsync(response);
 
-        var createLink = document.QuerySelector("a[href*='/Admin/ApiScopes/Create']");
+        var createLink = document.QuerySelector("a[href='/Admin/ApiScopes/0/Edit']");
         createLink.Should().NotBeNull("page should contain a create API scope link");
         createLink!.TextContent.Should().Contain("Create API Scope");
     }
@@ -126,7 +126,7 @@ public class ApiScopesIndexIntegrationTests : IDisposable
         var response = await _client.GetAsync("/Admin/ApiScopes");
         var document = await AngleSharpHelpers.GetDocumentAsync(response);
 
-        var editLink = document.QuerySelector("a[href*='/Admin/ApiScopes/'][href*='/Edit']");
+        var editLink = document.QuerySelector("ck-responsive-tbody a[href*='/Admin/ApiScopes/'][href*='/Edit']");
         editLink.Should().NotBeNull("each API scope row should contain an edit link");
         editLink!.TextContent.Should().Contain("Edit");
     }

@@ -25,6 +25,8 @@ public class EditModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int Id { get; set; }
 
+    public bool IsCreateMode => Id == 0;
+
     [BindProperty]
     public ApiScopeInputModel Input { get; set; } = new();
 
@@ -39,6 +41,19 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        if (IsCreateMode)
+        {
+            Input = new ApiScopeInputModel
+            {
+                Name = string.Empty,
+                Enabled = true
+            };
+
+            AppliedUserClaims = new List<string>();
+            AvailableUserClaims = new List<string>();
+            return Page();
+        }
+
         var apiScope = await GetApiScopeAsync(trackChanges: false);
         if (apiScope is null)
         {
@@ -52,6 +67,43 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        if (IsCreateMode)
+        {
+            if (!ModelState.IsValid)
+            {
+                return Page();
+            }
+
+            var createScopeName = Input.Name.Trim();
+            var createDuplicateNameExists = await _configurationDbContext.ApiScopes
+                .AnyAsync(scope => scope.Name == createScopeName);
+            if (createDuplicateNameExists)
+            {
+                ModelState.AddModelError("Input.Name", "An API scope with this name already exists.");
+                return Page();
+            }
+
+            var entity = new ApiScope
+            {
+                Name = createScopeName,
+                DisplayName = NormalizeOptional(Input.DisplayName),
+                Description = NormalizeOptional(Input.Description),
+                Enabled = Input.Enabled,
+                ShowInDiscoveryDocument = true,
+                Required = false,
+                Emphasize = false,
+                NonEditable = false,
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow
+            };
+
+            _configurationDbContext.ApiScopes.Add(entity);
+            await _configurationDbContext.SaveChangesAsync();
+
+            TempData["Success"] = "API scope created successfully";
+            return RedirectToPage("/Admin/ApiScopes/Edit", new { id = entity.Id });
+        }
+
         var apiScope = await GetApiScopeAsync(trackChanges: true);
         if (apiScope is null)
         {
@@ -224,6 +276,6 @@ public class EditModel : PageModel
         public string? Description { get; set; }
 
         [Display(Name = "Enabled")]
-        public bool Enabled { get; set; }
+        public bool Enabled { get; set; } = true;
     }
 }

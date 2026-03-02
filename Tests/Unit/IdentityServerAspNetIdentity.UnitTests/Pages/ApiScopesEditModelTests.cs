@@ -88,6 +88,22 @@ public class ApiScopesEditModelTests
     }
 
     [Fact]
+    public async Task OnGetAsync_IdZero_ReturnsPageWithCreateDefaults()
+    {
+        await using var configurationDbContext = CreateConfigurationDbContext();
+        await using var applicationDbContext = CreateApplicationDbContext();
+        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
+        pageModel.Id = 0;
+
+        var result = await pageModel.OnGetAsync();
+
+        result.Should().BeOfType<PageResult>();
+        pageModel.Input.Should().NotBeNull();
+        pageModel.Input.Name.Should().BeEmpty();
+        pageModel.Input.Enabled.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task OnPostAsync_ValidInput_UpdatesApiScope()
     {
         await using var configurationDbContext = CreateConfigurationDbContext();
@@ -148,6 +164,61 @@ public class ApiScopesEditModelTests
         redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
         redirect.RouteValues.Should().ContainKey("id");
         redirect.RouteValues!["id"].Should().Be(id);
+    }
+
+    [Fact]
+    public async Task OnPostAsync_IdZero_ValidInput_CreatesApiScopeAndRedirectsToEdit()
+    {
+        await using var configurationDbContext = CreateConfigurationDbContext();
+        await using var applicationDbContext = CreateApplicationDbContext();
+        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
+        pageModel.Id = 0;
+        pageModel.Input = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApiScopeInputModel
+        {
+            Name = "orders.create",
+            DisplayName = "Orders Create",
+            Description = "Create orders",
+            Enabled = true
+        };
+
+        var result = await pageModel.OnPostAsync();
+
+        result.Should().BeOfType<RedirectToPageResult>();
+        var redirect = (RedirectToPageResult)result;
+        redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
+        redirect.RouteValues.Should().ContainKey("id");
+        redirect.RouteValues!["id"].Should().BeOfType<int>();
+        ((int)redirect.RouteValues!["id"]!).Should().BeGreaterThan(0);
+
+        var created = await configurationDbContext.ApiScopes.SingleOrDefaultAsync(scope => scope.Name == "orders.create");
+        created.Should().NotBeNull();
+        created!.DisplayName.Should().Be("Orders Create");
+        created.Description.Should().Be("Create orders");
+        created.Enabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task OnPostAsync_IdZero_DuplicateName_ReturnsPageWithModelError()
+    {
+        await using var configurationDbContext = CreateConfigurationDbContext();
+        await using var applicationDbContext = CreateApplicationDbContext();
+        configurationDbContext.ApiScopes.Add(new ApiScope { Name = "orders.read", Enabled = true });
+        await configurationDbContext.SaveChangesAsync();
+
+        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
+        pageModel.Id = 0;
+        pageModel.Input = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApiScopeInputModel
+        {
+            Name = "orders.read",
+            DisplayName = "Duplicate",
+            Description = "Duplicate",
+            Enabled = true
+        };
+
+        var result = await pageModel.OnPostAsync();
+
+        result.Should().BeOfType<PageResult>();
+        pageModel.ModelState.Should().ContainKey("Input.Name");
     }
 
     [Fact]
