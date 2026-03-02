@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Moq;
 using System.Security.Claims;
 using Xunit;
+using IdentityServer.EF.DataAccess.DataMigrations;
+using Microsoft.EntityFrameworkCore;
 
 namespace IdentityServerServices.UnitTests;
 
@@ -15,6 +17,7 @@ public class UserEditorTests
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
     private readonly Mock<RoleManager<IdentityRole>> _roleManagerMock;
     private readonly Mock<IPersistedGrantStore> _grantStoreMock;
+    private readonly ApplicationDbContext _dbContext;
     private readonly Mock<IServerSideSessionStore> _sessionStoreMock;
     private readonly UserEditor _sut;
 
@@ -31,10 +34,16 @@ public class UserEditorTests
         _grantStoreMock = new Mock<IPersistedGrantStore>();
         _sessionStoreMock = new Mock<IServerSideSessionStore>();
 
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        _dbContext = new ApplicationDbContext(options);
+
         _sut = new UserEditor(
             _userManagerMock.Object,
             _roleManagerMock.Object,
             _grantStoreMock.Object,
+            _dbContext,
             _sessionStoreMock.Object);
     }
 
@@ -852,6 +861,7 @@ public class UserEditorTests
             _userManagerMock.Object,
             _roleManagerMock.Object,
             _grantStoreMock.Object,
+            _dbContext,
             sessionStore: null);
 
         var user = CreateTestUser();

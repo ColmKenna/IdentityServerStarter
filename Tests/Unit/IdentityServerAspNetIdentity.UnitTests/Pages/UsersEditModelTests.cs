@@ -26,6 +26,9 @@ public class UsersEditModelTests
     {
         _mockUserManager = CreateMockUserManager();
         _mockAuthorizationService = new Mock<IAuthorizationService>();
+        _mockAuthorizationService
+            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), null, It.IsAny<string>()))
+            .ReturnsAsync(AuthorizationResult.Failed());
         _mockGrantStore = new Mock<IPersistedGrantStore>();
         _mockUserEditor = new Mock<IUserEditor>();
         _mockSessionStore = new Mock<IServerSideSessionStore>();
@@ -121,7 +124,8 @@ public class UsersEditModelTests
             UserPolicyConstants.UsersRead, UserPolicyConstants.UsersWrite, UserPolicyConstants.UsersDelete,
             UserPolicyConstants.UserClaimsRead, UserPolicyConstants.UserClaimsWrite, UserPolicyConstants.UserClaimsDelete,
             UserPolicyConstants.UserRolesRead, UserPolicyConstants.UserRolesWrite, UserPolicyConstants.UserRolesDelete,
-            UserPolicyConstants.UserGrantsDelete, UserPolicyConstants.UserSessionsDelete
+            UserPolicyConstants.UserGrantsRead, UserPolicyConstants.UserGrantsDelete, 
+            UserPolicyConstants.UserSessionsRead, UserPolicyConstants.UserSessionsDelete
         })
         {
             SetupAuthorizationMock(policy, true);
@@ -233,6 +237,7 @@ public class UsersEditModelTests
         SetupAuthorizationMock(UserPolicyConstants.UsersWrite, true);
         _pageModel.UserId = "";
         _pageModel.Input = CreateUserEditRequest();
+        _pageModel.Input.UserId = "";
 
         // Act
         var result = await _pageModel.OnPostAsync("");

@@ -5,6 +5,7 @@ using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using IdentityServer.EF.DataAccess.DataMigrations;
 
 namespace IdentityServerServices;
 
@@ -14,16 +15,19 @@ public class UserEditor : IUserEditor
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IPersistedGrantStore _grantStore;
     private readonly IServerSideSessionStore? _sessionStore;
+    private readonly ApplicationDbContext _dbContext;
 
     public UserEditor(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
         IPersistedGrantStore grantStore,
+        ApplicationDbContext dbContext,
         IServerSideSessionStore? sessionStore = null)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _grantStore = grantStore;
+        _dbContext = dbContext;
         _sessionStore = sessionStore;
     }
 
@@ -92,6 +96,9 @@ public class UserEditor : IUserEditor
             sessions = userSessions.ToList();
         }
 
+        var claimTypes = claims.Select(c => c.Type).ToList();
+        var availableClaims = await _dbContext.UserClaims.Where(c => c.UserId != user.Id && !claimTypes.Contains(c.ClaimType)   ).ToListAsync();
+        
         return new UserEditPageDataDto
         {
             Profile = profile,

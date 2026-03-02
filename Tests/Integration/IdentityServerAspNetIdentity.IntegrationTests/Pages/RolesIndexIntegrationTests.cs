@@ -33,7 +33,12 @@ public class RolesIndexIntegrationTests : IDisposable
         {
             if (!roleManager.RoleExistsAsync(roleName).GetAwaiter().GetResult())
             {
-                roleManager.CreateAsync(new IdentityRole(roleName)).GetAwaiter().GetResult();
+                var role = new IdentityRole(roleName);
+                var result = roleManager.CreateAsync(role).GetAwaiter().GetResult();
+                if (!result.Succeeded)
+                {
+                    throw new Exception("Role Save Failed: " + string.Join(", ", result.Errors.Select(e => e.Description)));
+                }
             }
         }
     }
@@ -78,7 +83,7 @@ public class RolesIndexIntegrationTests : IDisposable
         var document = await AngleSharpHelpers.GetDocumentAsync(response);
 
         // Assert
-        var table = document.QuerySelector("#roles-table");
+        var table = document.QuerySelector("ck-responsive-table");
         table.Should().NotBeNull("page should contain a roles table");
     }
 
@@ -93,7 +98,7 @@ public class RolesIndexIntegrationTests : IDisposable
         var document = await AngleSharpHelpers.GetDocumentAsync(response);
 
         // Assert
-        var rows = document.QuerySelectorAll("#roles-table tbody tr");
+        var rows = document.QuerySelectorAll("ck-responsive-table ck-responsive-tbody ck-responsive-row");
         rows.Length.Should().Be(3);
     }
 
@@ -103,13 +108,22 @@ public class RolesIndexIntegrationTests : IDisposable
         // Arrange
         SeedRoles("Admin", "Editor");
 
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IdentityServer.EF.DataAccess.DataMigrations.ApplicationDbContext>();
+            var roleCount = db.Roles.Count();
+            if (roleCount != 2) throw new Exception("Database roles count is " + roleCount + " after SeedRoles!");
+            var roleNamesInDb = string.Join(", ", db.Roles.Select(r => r.Name));
+            if (!roleNamesInDb.Contains("Admin")) throw new Exception("Admin not in DB directly! " + roleNamesInDb);
+        }
+
         // Act
         var response = await _client.GetAsync("/Admin/Roles");
         var document = await AngleSharpHelpers.GetDocumentAsync(response);
 
         // Assert
-        var rows = document.QuerySelectorAll("#roles-table tbody tr");
-        var roleNames = rows.Select(r => r.QuerySelector("td")?.TextContent.Trim()).ToList();
+        var rows = document.QuerySelectorAll("ck-responsive-table ck-responsive-tbody ck-responsive-row");
+        var roleNames = rows.Select(r => r.QuerySelector("ck-responsive-col")?.TextContent.Trim()).ToList();
         roleNames.Should().Contain("Admin");
         roleNames.Should().Contain("Editor");
     }
@@ -137,7 +151,7 @@ public class RolesIndexIntegrationTests : IDisposable
         var document = await AngleSharpHelpers.GetDocumentAsync(response);
 
         // Assert
-        var table = document.QuerySelector("#roles-table");
+        var table = document.QuerySelector("ck-responsive-table");
         table.Should().BeNull("table should not render when there are no roles");
     }
 }
