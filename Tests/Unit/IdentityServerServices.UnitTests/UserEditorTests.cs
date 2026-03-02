@@ -47,6 +47,17 @@ public class UserEditorTests
             _sessionStoreMock.Object);
     }
 
+    private void SeedUserClaim(string userId, string claimType, string claimValue = "value")
+    {
+        _dbContext.UserClaims.Add(new IdentityUserClaim<string>
+        {
+            UserId = userId,
+            ClaimType = claimType,
+            ClaimValue = claimValue
+        });
+        _dbContext.SaveChanges();
+    }
+
     private static ApplicationUser CreateTestUser(string id = "user-1", string? userName = "testuser", string? email = "test@example.com")
     {
         return new ApplicationUser
@@ -248,6 +259,61 @@ public class UserEditorTests
         var result = await _sut.GetUserEditPageDataAsync(request);
 
         result!.Claims.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task GetUserEditPageDataAsync_WithIncludeClaims_ReturnsAvailableClaimsMissingFromUser()
+    {
+        var user = CreateTestUser();
+        SetupUserExists(user);
+        _userManagerMock.Setup(x => x.GetClaimsAsync(user))
+            .ReturnsAsync(new List<Claim> { new("role", "admin") });
+        SeedUserClaim("other-1", "department");
+        SeedUserClaim("other-2", "location");
+
+        var request = new UserEditPageDataRequest { UserId = user.Id, IncludeClaims = true };
+
+        var result = await _sut.GetUserEditPageDataAsync(request);
+
+        result!.AvailableClaims.Should().Contain("department");
+        result.AvailableClaims.Should().Contain("location");
+    }
+
+    [Fact]
+    public async Task GetUserEditPageDataAsync_WithIncludeClaims_DoesNotReturnExistingUserClaimTypes()
+    {
+        var user = CreateTestUser();
+        SetupUserExists(user);
+        _userManagerMock.Setup(x => x.GetClaimsAsync(user))
+            .ReturnsAsync(new List<Claim> { new("department", "engineering") });
+        SeedUserClaim("other-1", "department");
+        SeedUserClaim("other-2", "location");
+
+        var request = new UserEditPageDataRequest { UserId = user.Id, IncludeClaims = true };
+
+        var result = await _sut.GetUserEditPageDataAsync(request);
+
+        result!.AvailableClaims.Should().NotContain("department");
+        result.AvailableClaims.Should().Contain("location");
+    }
+
+    [Fact]
+    public async Task GetUserEditPageDataAsync_WithIncludeClaims_DeduplicatesClaimTypes()
+    {
+        var user = CreateTestUser();
+        SetupUserExists(user);
+        _userManagerMock.Setup(x => x.GetClaimsAsync(user)).ReturnsAsync(new List<Claim>());
+        SeedUserClaim("other-1", "department");
+        SeedUserClaim("other-2", "department");
+        SeedUserClaim("other-3", "location");
+
+        var request = new UserEditPageDataRequest { UserId = user.Id, IncludeClaims = true };
+
+        var result = await _sut.GetUserEditPageDataAsync(request);
+
+        result!.AvailableClaims.Should().Contain("department");
+        result.AvailableClaims.Should().Contain("location");
+        result.AvailableClaims.Count(c => c == "department").Should().Be(1);
     }
 
     [Fact]
