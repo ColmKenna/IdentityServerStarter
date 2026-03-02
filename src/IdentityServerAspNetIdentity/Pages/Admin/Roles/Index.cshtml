@@ -15,27 +15,25 @@
             {
                 <div class="card">
                     <div class="card-body">
-                        <table class="table table-striped" id="roles-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                        <ck-responsive-table class="table table-striped" mobile-breakpoint="768px">
+                            <ck-responsive-thead>
+                                <ck-responsive-col-head align="left">Name</ck-responsive-col-head>
+                                <ck-responsive-col-head align="center" mobile-align="center" mobile-no-label="true">Actions</ck-responsive-col-head>
+                            </ck-responsive-thead>
+                            <ck-responsive-tbody>
                                 @foreach (var role in Model.Roles)
                                 {
-                                    <tr>
-                                        <td>@role.Name</td>
-                                        <td>
+                                    <ck-responsive-row>
+                                        <ck-responsive-col>@role.Name</ck-responsive-col>
+                                        <ck-responsive-col class="align-center mobile-align-center" mobile-direction="row" mobile-justify="center">
                                             <a asp-page="/Admin/Roles/Edit" asp-route-roleId="@role.Id" class="button button-sm button-primary">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
-                                        </td>
-                                    </tr>
+                                        </ck-responsive-col>
+                                    </ck-responsive-row>
                                 }
-                            </tbody>
-                        </table>
+                            </ck-responsive-tbody>
+                        </ck-responsive-table>
                     </div>
                 </div>
             }
