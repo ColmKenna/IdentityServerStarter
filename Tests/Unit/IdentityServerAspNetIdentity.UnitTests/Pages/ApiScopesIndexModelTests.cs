@@ -1,103 +1,102 @@
-using Duende.IdentityServer.EntityFramework.DbContexts;
-using Duende.IdentityServer.EntityFramework.Entities;
-using Duende.IdentityServer.EntityFramework.Options;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using IdentityServerServices;
+using IdentityServerServices.ViewModels;
 
 namespace IdentityServerAspNetIdentity.UnitTests.Pages;
 
 public class ApiScopesIndexModelTests
 {
-    private static ConfigurationDbContext CreateDbContext()
+    private readonly Mock<IApiScopesAdminService> _mockApiScopesAdminService;
+    private readonly IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.IndexModel _pageModel;
+
+    public ApiScopesIndexModelTests()
     {
-        var storeOptions = new ConfigurationStoreOptions();
-        var serviceProvider = new ServiceCollection()
-            .AddSingleton(storeOptions)
-            .BuildServiceProvider();
-
-        var options = new DbContextOptionsBuilder<ConfigurationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .UseApplicationServiceProvider(serviceProvider)
-            .Options;
-
-        return new ConfigurationDbContext(options);
+        _mockApiScopesAdminService = new Mock<IApiScopesAdminService>();
+        _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.IndexModel(_mockApiScopesAdminService.Object);
     }
 
     [Fact]
     public async Task OnGetAsync_InitializesApiScopesCollection()
     {
-        await using var dbContext = CreateDbContext();
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.IndexModel(dbContext);
+        _mockApiScopesAdminService
+            .Setup(service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ApiScopeListItemDto>());
 
-        await pageModel.OnGetAsync();
+        await _pageModel.OnGetAsync();
 
-        pageModel.ApiScopes.Should().NotBeNull();
+        _pageModel.ApiScopes.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task OnGetAsync_ApiScopesExist_PopulatesApiScopes()
+    public async Task OnGetAsync_ServiceReturnsScopes_PopulatesApiScopes()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.ApiScopes.AddRange(
-            new ApiScope { Name = "orders.read", DisplayName = "Orders Read", Description = "Read orders", Enabled = true },
-            new ApiScope { Name = "orders.write", DisplayName = "Orders Write", Description = "Write orders", Enabled = false });
-        await dbContext.SaveChangesAsync();
+        _mockApiScopesAdminService
+            .Setup(service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ApiScopeListItemDto>
+            {
+                new()
+                {
+                    Id = 1,
+                    Name = "orders.read",
+                    DisplayName = "Orders Read",
+                    Description = "Read orders",
+                    Enabled = true
+                },
+                new()
+                {
+                    Id = 2,
+                    Name = "orders.write",
+                    DisplayName = "Orders Write",
+                    Description = "Write orders",
+                    Enabled = false
+                }
+            });
 
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.IndexModel(dbContext);
+        await _pageModel.OnGetAsync();
 
-        await pageModel.OnGetAsync();
-
-        pageModel.ApiScopes.Should().HaveCount(2);
-        pageModel.ApiScopes.Select(s => s.Name).Should().Contain(new[] { "orders.read", "orders.write" });
+        _pageModel.ApiScopes.Should().HaveCount(2);
+        _pageModel.ApiScopes.Select(scope => scope.Name).Should().Contain(new[] { "orders.read", "orders.write" });
     }
 
     [Fact]
-    public async Task OnGetAsync_ApiScopesAreOrderedByName()
+    public async Task OnGetAsync_ServiceReturnsOrderedData_PreservesOrder()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.ApiScopes.AddRange(
-            new ApiScope { Name = "zeta", DisplayName = "Zeta", Description = "Zeta desc", Enabled = true },
-            new ApiScope { Name = "alpha", DisplayName = "Alpha", Description = "Alpha desc", Enabled = true },
-            new ApiScope { Name = "middle", DisplayName = "Middle", Description = "Middle desc", Enabled = true });
-        await dbContext.SaveChangesAsync();
+        _mockApiScopesAdminService
+            .Setup(service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ApiScopeListItemDto>
+            {
+                new() { Id = 1, Name = "alpha", DisplayName = "Alpha", Description = "A", Enabled = true },
+                new() { Id = 2, Name = "middle", DisplayName = "Middle", Description = "M", Enabled = true },
+                new() { Id = 3, Name = "zeta", DisplayName = "Zeta", Description = "Z", Enabled = true }
+            });
 
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.IndexModel(dbContext);
+        await _pageModel.OnGetAsync();
 
-        await pageModel.OnGetAsync();
-
-        pageModel.ApiScopes.Select(s => s.Name).Should().BeInAscendingOrder();
+        _pageModel.ApiScopes.Select(scope => scope.Name).Should().Equal("alpha", "middle", "zeta");
     }
 
     [Fact]
-    public async Task OnGetAsync_NoApiScopesExist_ReturnsEmptyList()
+    public async Task OnGetAsync_NoScopes_ReturnsEmptyList()
     {
-        await using var dbContext = CreateDbContext();
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.IndexModel(dbContext);
+        _mockApiScopesAdminService
+            .Setup(service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ApiScopeListItemDto>());
 
-        await pageModel.OnGetAsync();
+        await _pageModel.OnGetAsync();
 
-        pageModel.ApiScopes.Should().BeEmpty();
+        _pageModel.ApiScopes.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task OnGetAsync_NullDisplayNameOrDescription_MapsToEmptyStrings()
+    public async Task OnGetAsync_CallsServiceOnce()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.ApiScopes.Add(new ApiScope
-        {
-            Name = "api1",
-            DisplayName = null,
-            Description = null,
-            Enabled = true
-        });
-        await dbContext.SaveChangesAsync();
+        _mockApiScopesAdminService
+            .Setup(service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ApiScopeListItemDto>());
 
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.IndexModel(dbContext);
+        await _pageModel.OnGetAsync();
 
-        await pageModel.OnGetAsync();
-
-        pageModel.ApiScopes.Should().ContainSingle();
-        pageModel.ApiScopes[0].DisplayName.Should().BeEmpty();
-        pageModel.ApiScopes[0].Description.Should().BeEmpty();
+        _mockApiScopesAdminService.Verify(
+            service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
