@@ -243,9 +243,9 @@ public class ApiScopesAdminService : IApiScopesAdminService
         };
     }
 
-    private async Task<List<string>> GetAllUserClaimTypesAsync(CancellationToken ct)
+    private Task<List<string>> GetAllUserClaimTypesAsync(CancellationToken ct)
     {
-        return await _applicationDbContext.UserClaims
+        return _applicationDbContext.UserClaims
             .AsNoTracking()
             .Where(claim => claim.ClaimType != null && claim.ClaimType != string.Empty)
             .Select(claim => claim.ClaimType!)

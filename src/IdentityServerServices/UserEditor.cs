@@ -253,9 +253,9 @@ public class UserEditor : IUserEditor
         };
     }
 
-    public async Task<UserProfileUpdateResult> UpdateUserProfileAsync(UserProfileEditViewModel viewModel)
+    public Task<UserProfileUpdateResult> UpdateUserProfileAsync(UserProfileEditViewModel viewModel)
     {
-        return await UpdateUserFromEditPostAsync(new UserEditPostUpdateRequest
+        return UpdateUserFromEditPostAsync(new UserEditPostUpdateRequest
         {
             UserId = viewModel.UserId,
             Profile = viewModel
