@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.3" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\EfCoreExtensions\EfCoreExtensions.csproj" />
     <ProjectReference Include="..\IdentityServer.EF.DataAccess\IdentityServer.EF.DataAccess.csproj" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,6 @@
 using Duende.IdentityServer.EntityFramework.DbContexts;
 using Duende.IdentityServer.EntityFramework.Entities;
+using EfCoreExtensions;
 using IdentityServer.EF.DataAccess.DataMigrations;
 using IdentityServerServices.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -19,9 +20,9 @@ public class ApiScopesAdminService : IApiScopesAdminService
         _applicationDbContext = applicationDbContext;
     }
 
-    public async Task<IReadOnlyList<ApiScopeListItemDto>> GetApiScopesAsync(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<ApiScopeListItemDto>> GetApiScopesAsync(CancellationToken cancellationToken = default)
     {
-        return await _configurationDbContext.ApiScopes
+        return _configurationDbContext.ApiScopes
             .AsNoTracking()
             .OrderBy(scope => scope.Name)
             .Select(scope => new ApiScopeListItemDto
@@ -32,7 +33,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
                 Description = scope.Description ?? string.Empty,
                 Enabled = scope.Enabled
             })
-            .ToListAsync(cancellationToken);
+            .ToReadOnlyListAsync(cancellationToken);
     }
 
     public async Task<ApiScopeEditPageDataDto> GetForCreateAsync(CancellationToken ct = default)
