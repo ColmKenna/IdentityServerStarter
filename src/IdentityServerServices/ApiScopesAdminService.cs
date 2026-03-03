@@ -23,7 +23,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
     }
 
 
-    private Expression<Func<ApiScope, ApiScopeListItemDto>> MapToListItemDto => scope => new ApiScopeListItemDto
+    private static Expression<Func<ApiScope, ApiScopeListItemDto>> MapToListItemDto => scope => new ApiScopeListItemDto
     {
         Id = scope.Id,
         Name = scope.Name,
@@ -32,16 +32,19 @@ public class ApiScopesAdminService : IApiScopesAdminService
         Enabled = scope.Enabled
     };
 
-    private Func<List<string>, ApiScopeEditPageDataDto> createApiScopeEditPageData => allUserClaims => new ApiScopeEditPageDataDto
+    private static ApiScopeEditPageDataDto CreateApiScopeEditPageData(List<string> allUserClaims)
     {
-        Input = new ApiScopeEditInputDto
+        return new ApiScopeEditPageDataDto
         {
-            Name = string.Empty,
-            Enabled = true
-        },
-        AppliedUserClaims = Array.Empty<string>(),
-        AvailableUserClaims = allUserClaims
-    };
+            Input = new ApiScopeEditInputDto
+            {
+                Name = string.Empty,
+                Enabled = true
+            },
+            AppliedUserClaims = Array.Empty<string>(),
+            AvailableUserClaims = allUserClaims
+        };
+    }
 
 
 
@@ -56,31 +59,31 @@ public class ApiScopesAdminService : IApiScopesAdminService
 
 
 
-    public Task<ApiScopeEditPageDataDto> GetForCreateAsync(CancellationToken ct = default)
+    public Task<ApiScopeEditPageDataDto> GetForCreateAsync(CancellationToken cancellationToken = default)
     {
 
-        return GetAllUserClaimTypesAsync(ct)
-            .Then(createApiScopeEditPageData, ct);
+        return GetAllUserClaimTypesAsync(cancellationToken)
+            .Then(CreateApiScopeEditPageData, cancellationToken);
 
 
     }
 
-    public async Task<ApiScopeEditPageDataDto?> GetForEditAsync(int id, CancellationToken ct = default)
+    public async Task<ApiScopeEditPageDataDto?> GetForEditAsync(int id, CancellationToken cancellationToken = default)
     {
         var apiScope = await _configurationDbContext.ApiScopes
             .Include(scope => scope.UserClaims)
             .AsNoTracking()
-            .FirstOrDefaultAsync(scope => scope.Id == id, ct);
+            .FirstOrDefaultAsync(scope => scope.Id == id, cancellationToken);
 
         if (apiScope is null)
         {
             return null;
         }
 
-        return await BuildPageDataAsync(apiScope, ct);
+        return await BuildPageDataAsync(apiScope, cancellationToken);
     }
 
-    private ApiScope ToApiScope(CreateApiScopeRequest input)
+    private static ApiScope ToApiScope(CreateApiScopeRequest input)
     {
         return new ApiScope
         {
@@ -97,16 +100,16 @@ public class ApiScopesAdminService : IApiScopesAdminService
         };
     }
 
-    private Task<bool> DuplicateNameExists(string normalizedName, CancellationToken ct)
+    private Task<bool> DuplicateNameExists(string normalizedName, CancellationToken cancellationToken)
     {
         return _configurationDbContext.ApiScopes
-            .AnyAsync(scope => scope.Name == normalizedName , ct);
+            .AnyAsync(scope => scope.Name == normalizedName , cancellationToken);
     }
 
-    public async Task<CreateApiScopeResult> CreateAsync(CreateApiScopeRequest request, CancellationToken ct = default)
+    public async Task<CreateApiScopeResult> CreateAsync(CreateApiScopeRequest request, CancellationToken cancellationToken = default)
     {
         var normalizedName = request.Name.Trim();
-        var duplicateNameExists = await DuplicateNameExists(normalizedName, ct);
+        var duplicateNameExists = await DuplicateNameExists(normalizedName, cancellationToken);
 
         if (duplicateNameExists)
         {
@@ -114,15 +117,15 @@ public class ApiScopesAdminService : IApiScopesAdminService
         }
         var entity = ToApiScope(request);
         _configurationDbContext.ApiScopes.Add(entity);
-        await _configurationDbContext.SaveChangesAsync(ct);
+        await _configurationDbContext.SaveChangesAsync(cancellationToken);
 
         return CreateApiScopeResult.Success(entity.Id);
     }
 
-    public async Task<UpdateApiScopeResult> UpdateAsync(int id, UpdateApiScopeRequest request, CancellationToken ct = default)
+    public async Task<UpdateApiScopeResult> UpdateAsync(int id, UpdateApiScopeRequest request, CancellationToken cancellationToken = default)
     {
         var apiScope = await _configurationDbContext.ApiScopes
-            .FirstOrDefaultAsync(scope => scope.Id == id, ct);
+            .FirstOrDefaultAsync(scope => scope.Id == id, cancellationToken);
 
         if (apiScope is null)
         {
@@ -130,7 +133,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
         }
 
         var normalizedName = request.Name.Trim();
-        var duplicateNameExists = await DuplicateNameExists(id, normalizedName, ct);
+        var duplicateNameExists = await DuplicateNameExists(id, normalizedName, cancellationToken);
 
         if (duplicateNameExists)
         {
@@ -143,22 +146,22 @@ public class ApiScopesAdminService : IApiScopesAdminService
         apiScope.Enabled = request.Enabled;
         apiScope.Updated = DateTime.UtcNow;
 
-        await _configurationDbContext.SaveChangesAsync(ct);
+        await _configurationDbContext.SaveChangesAsync(cancellationToken);
         return UpdateApiScopeResult.Success();
     }
 
-    private Task<bool> DuplicateNameExists(int id, string normalizedName, CancellationToken ct  )
+    private Task<bool> DuplicateNameExists(int id, string normalizedName, CancellationToken cancellationToken)
     {
         return _configurationDbContext.ApiScopes
-            .AnyAsync(scope => scope.Name == normalizedName && scope.Id != id, ct);
+            .AnyAsync(scope => scope.Name == normalizedName && scope.Id != id, cancellationToken);
     }
 
 
-    public async Task<AddApiScopeClaimResult> AddClaimAsync(int id, string claimType, CancellationToken ct = default)
+    public async Task<AddApiScopeClaimResult> AddClaimAsync(int id, string claimType, CancellationToken cancellationToken = default)
     {
         var apiScope = await _configurationDbContext.ApiScopes
             .Include(scope => scope.UserClaims)
-            .FirstOrDefaultAsync(scope => scope.Id == id, ct)
+            .FirstOrDefaultAsync(scope => scope.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
         if (apiScope is null)
@@ -178,15 +181,15 @@ public class ApiScopesAdminService : IApiScopesAdminService
         });
         apiScope.Updated = DateTime.UtcNow;
 
-        await _configurationDbContext.SaveChangesAsync(ct);
+        await _configurationDbContext.SaveChangesAsync(cancellationToken);
         return AddApiScopeClaimResult.Success(normalizedClaimType);
     }
 
-    public async Task<RemoveApiScopeClaimResult> RemoveClaimAsync(int id, string claimType, CancellationToken ct = default)
+    public async Task<RemoveApiScopeClaimResult> RemoveClaimAsync(int id, string claimType, CancellationToken cancellationToken = default)
     {
         var apiScope = await _configurationDbContext.ApiScopes
             .Include(scope => scope.UserClaims)
-            .FirstOrDefaultAsync(scope => scope.Id == id, ct);
+            .FirstOrDefaultAsync(scope => scope.Id == id, cancellationToken);
 
         if (apiScope is null)
         {
@@ -203,11 +206,11 @@ public class ApiScopesAdminService : IApiScopesAdminService
         apiScope.UserClaims.Remove(claim);
         apiScope.Updated = DateTime.UtcNow;
 
-        await _configurationDbContext.SaveChangesAsync(ct);
+        await _configurationDbContext.SaveChangesAsync(cancellationToken);
         return RemoveApiScopeClaimResult.Success(normalizedClaimType);
     }
 
-    private async Task<ApiScopeEditPageDataDto> BuildPageDataAsync(ApiScope apiScope, CancellationToken ct)
+    private async Task<ApiScopeEditPageDataDto> BuildPageDataAsync(ApiScope apiScope, CancellationToken cancellationToken)
     {
         var appliedClaims = apiScope.UserClaims
             .Where(claim => !string.IsNullOrWhiteSpace(claim.Type))
@@ -216,7 +219,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
             .OrderBy(claimType => claimType)
             .ToList();
 
-        var allUserClaimTypes = await GetAllUserClaimTypesAsync(ct);
+        var allUserClaimTypes = await GetAllUserClaimTypesAsync(cancellationToken);
         var availableClaims = allUserClaimTypes
             .Where(claimType => !appliedClaims.Contains(claimType))
             .ToList();
@@ -235,7 +238,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
         };
     }
 
-    private Task<List<string>> GetAllUserClaimTypesAsync(CancellationToken ct)
+    private Task<List<string>> GetAllUserClaimTypesAsync(CancellationToken cancellationToken)
     {
         return _applicationDbContext.UserClaims
             .AsNoTracking()
@@ -243,7 +246,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
             .Select(claim => claim.ClaimType!)
             .Distinct()
             .OrderBy(claimType => claimType)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
     }
 
     private static string? NormalizeOptional(string? value)
