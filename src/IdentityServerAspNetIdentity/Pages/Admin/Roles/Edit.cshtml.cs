@@ -1,7 +1,7 @@
 #nullable enable
-using IdentityServerAspNetIdentity.Models;
+using IdentityServerServices;
+using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -10,15 +10,11 @@ namespace IdentityServerAspNetIdentity.Pages.Admin.Roles;
 [Authorize(Roles = "ADMIN")]
 public class EditModel : PageModel
 {
-    private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IRolesAdminService _rolesAdminService;
 
-    public EditModel(
-        RoleManager<IdentityRole> roleManager,
-        UserManager<ApplicationUser> userManager)
+    public EditModel(IRolesAdminService rolesAdminService)
     {
-        _roleManager = roleManager;
-        _userManager = userManager;
+        _rolesAdminService = rolesAdminService;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -26,131 +22,105 @@ public class EditModel : PageModel
 
     public string RoleName { get; set; } = default!;
 
-    public IList<UserListItem> UsersInRole { get; set; } = new List<UserListItem>();
+    public IList<RoleUserDto> UsersInRole { get; set; } = new List<RoleUserDto>();
 
-    public IList<UserListItem> AvailableUsers { get; set; } = new List<UserListItem>();
+    public IList<RoleUserDto> AvailableUsers { get; set; } = new List<RoleUserDto>();
 
     [BindProperty]
     public string? SelectedUserId { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var role = await _roleManager.FindByIdAsync(RoleId);
-        if (role == null)
+        var ct = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var pageData = await _rolesAdminService.GetRoleForEditAsync(RoleId, ct);
+        if (pageData == null)
         {
             return NotFound();
         }
 
-        await PopulatePageData(role);
+        PopulateFromPageData(pageData);
         return Page();
     }
 
     public async Task<IActionResult> OnPostAddUserAsync()
     {
-        var role = await _roleManager.FindByIdAsync(RoleId);
-        if (role == null)
-        {
-            return NotFound();
-        }
+        var ct = HttpContext?.RequestAborted ?? CancellationToken.None;
 
         if (string.IsNullOrWhiteSpace(SelectedUserId))
         {
             ModelState.AddModelError(nameof(SelectedUserId), "Please select a user");
-            await PopulatePageData(role);
+            await ReloadPageData(ct);
             return Page();
         }
 
-        var user = await _userManager.FindByIdAsync(SelectedUserId);
-        if (user == null)
-        {
-            return NotFound();
-        }
+        var result = await _rolesAdminService.AddUserToRoleAsync(RoleId, SelectedUserId, ct);
 
-        var result = await _userManager.AddToRoleAsync(user, role.Name!);
-        if (!result.Succeeded)
+        switch (result.Status)
         {
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-            await PopulatePageData(role);
-            return Page();
-        }
+            case AddUserToRoleStatus.RoleNotFound:
+            case AddUserToRoleStatus.UserNotFound:
+                return NotFound();
 
-        TempData["Success"] = $"User '{user.UserName}' added to role '{role.Name}'";
-        return RedirectToPage(new { roleId = RoleId });
+            case AddUserToRoleStatus.Failed:
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error);
+                }
+                await ReloadPageData(ct);
+                return Page();
+
+            default:
+                TempData["Success"] = $"User '{result.UserName}' added to role '{result.RoleName}'";
+                return RedirectToPage(new { roleId = RoleId });
+        }
     }
 
     public async Task<IActionResult> OnPostRemoveUserAsync()
     {
-        var role = await _roleManager.FindByIdAsync(RoleId);
-        if (role == null)
-        {
-            return NotFound();
-        }
+        var ct = HttpContext?.RequestAborted ?? CancellationToken.None;
 
         if (string.IsNullOrWhiteSpace(SelectedUserId))
         {
             ModelState.AddModelError(nameof(SelectedUserId), "Please select a user");
-            await PopulatePageData(role);
+            await ReloadPageData(ct);
             return Page();
         }
 
-        var user = await _userManager.FindByIdAsync(SelectedUserId);
-        if (user == null)
-        {
-            return NotFound();
-        }
+        var result = await _rolesAdminService.RemoveUserFromRoleAsync(RoleId, SelectedUserId, ct);
 
-        var result = await _userManager.RemoveFromRoleAsync(user, role.Name!);
-        if (!result.Succeeded)
+        switch (result.Status)
         {
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-            await PopulatePageData(role);
-            return Page();
-        }
+            case RemoveUserFromRoleStatus.RoleNotFound:
+            case RemoveUserFromRoleStatus.UserNotFound:
+                return NotFound();
 
-        TempData["Success"] = $"User '{user.UserName}' removed from role '{role.Name}'";
-        return RedirectToPage(new { roleId = RoleId });
+            case RemoveUserFromRoleStatus.Failed:
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error);
+                }
+                await ReloadPageData(ct);
+                return Page();
+
+            default:
+                TempData["Success"] = $"User '{result.UserName}' removed from role '{result.RoleName}'";
+                return RedirectToPage(new { roleId = RoleId });
+        }
     }
 
-    private async Task PopulatePageData(IdentityRole role)
+    private async Task ReloadPageData(CancellationToken ct)
     {
-        RoleName = role.Name ?? string.Empty;
-
-        var usersInRole = await _userManager.GetUsersInRoleAsync(role.Name!);
-        var usersInRoleIds = usersInRole.Select(u => u.Id).ToHashSet();
-
-        UsersInRole = usersInRole
-            .OrderBy(u => u.UserName)
-            .Select(u => new UserListItem
-            {
-                Id = u.Id,
-                UserName = u.UserName ?? string.Empty,
-                Email = u.Email ?? string.Empty
-            })
-            .ToList();
-
-        var allUsers = _userManager.Users.ToList();
-        AvailableUsers = allUsers
-            .Where(u => !usersInRoleIds.Contains(u.Id))
-            .OrderBy(u => u.UserName)
-            .Select(u => new UserListItem
-            {
-                Id = u.Id,
-                UserName = u.UserName ?? string.Empty,
-                Email = u.Email ?? string.Empty
-            })
-            .ToList();
+        var pageData = await _rolesAdminService.GetRoleForEditAsync(RoleId, ct);
+        if (pageData != null)
+        {
+            PopulateFromPageData(pageData);
+        }
     }
 
-    public class UserListItem
+    private void PopulateFromPageData(RoleEditPageDataDto pageData)
     {
-        public string Id { get; set; } = default!;
-        public string UserName { get; set; } = default!;
-        public string Email { get; set; } = default!;
+        RoleName = pageData.RoleName;
+        UsersInRole = pageData.UsersInRole.ToList();
+        AvailableUsers = pageData.AvailableUsers.ToList();
     }
 }
