@@ -943,4 +943,121 @@ public class UserEditorTests
     }
 
     #endregion
+
+    #region GetUsersAsync
+
+    [Fact]
+    public async Task GetUsersAsync_NoUsers_ReturnsEmptyList()
+    {
+        _userManagerMock.Setup(x => x.Users)
+            .Returns(new List<ApplicationUser>().AsQueryable());
+
+        var result = await _sut.GetUsersAsync();
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetUsersAsync_UsersExist_ReturnsAllUsers()
+    {
+        var users = new List<ApplicationUser>
+        {
+            new() { Id = "u1", UserName = "alice", Email = "alice@test.com", EmailConfirmed = true },
+            new() { Id = "u2", UserName = "bob", Email = "bob@test.com", EmailConfirmed = false }
+        };
+        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+
+        var result = await _sut.GetUsersAsync();
+
+        result.Should().HaveCount(2);
+        result.Select(u => u.UserName).Should().Contain(new[] { "alice", "bob" });
+    }
+
+    [Fact]
+    public async Task GetUsersAsync_MapsAllFields()
+    {
+        var users = new List<ApplicationUser>
+        {
+            new()
+            {
+                Id = "u1",
+                UserName = "alice",
+                Email = "alice@test.com",
+                EmailConfirmed = true,
+                LockoutEnd = DateTimeOffset.MaxValue,
+                TwoFactorEnabled = true
+            }
+        };
+        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+
+        var result = await _sut.GetUsersAsync();
+
+        var item = result.Should().ContainSingle().Subject;
+        item.Id.Should().Be("u1");
+        item.UserName.Should().Be("alice");
+        item.Email.Should().Be("alice@test.com");
+        item.EmailConfirmed.Should().BeTrue();
+        item.LockoutEnd.Should().Be(DateTimeOffset.MaxValue);
+        item.TwoFactorEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetUsersAsync_NullUserNameAndEmail_ReturnsEmptyStrings()
+    {
+        var users = new List<ApplicationUser>
+        {
+            new() { Id = "u1", UserName = null, Email = null }
+        };
+        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+
+        var result = await _sut.GetUsersAsync();
+
+        var item = result.Should().ContainSingle().Subject;
+        item.UserName.Should().Be(string.Empty);
+        item.Email.Should().Be(string.Empty);
+    }
+
+    [Fact]
+    public async Task GetUsersAsync_LockoutStatus_DisabledWhenMaxValue()
+    {
+        var users = new List<ApplicationUser>
+        {
+            new() { Id = "u1", UserName = "alice", LockoutEnd = DateTimeOffset.MaxValue }
+        };
+        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+
+        var result = await _sut.GetUsersAsync();
+
+        result.Should().ContainSingle().Which.LockoutStatus.Should().Be("Disabled");
+    }
+
+    [Fact]
+    public async Task GetUsersAsync_LockoutStatus_ActiveWhenNoLockout()
+    {
+        var users = new List<ApplicationUser>
+        {
+            new() { Id = "u1", UserName = "alice", LockoutEnd = null }
+        };
+        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+
+        var result = await _sut.GetUsersAsync();
+
+        result.Should().ContainSingle().Which.LockoutStatus.Should().Be("Active");
+    }
+
+    [Fact]
+    public async Task GetUsersAsync_LockoutStatus_LockedOutWhenFutureLockout()
+    {
+        var users = new List<ApplicationUser>
+        {
+            new() { Id = "u1", UserName = "alice", LockoutEnd = DateTimeOffset.UtcNow.AddHours(1) }
+        };
+        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+
+        var result = await _sut.GetUsersAsync();
+
+        result.Should().ContainSingle().Which.LockoutStatus.Should().Be("Locked Out");
+    }
+
+    #endregion
 }

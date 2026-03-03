@@ -31,6 +31,23 @@ public class UserEditor : IUserEditor
         _sessionStore = sessionStore;
     }
 
+    public Task<IReadOnlyList<UserListItemDto>> GetUsersAsync(CancellationToken ct = default)
+    {
+        var users = _userManager.Users.ToList();
+        IReadOnlyList<UserListItemDto> result = users
+            .Select(u => new UserListItemDto
+            {
+                Id = u.Id,
+                UserName = u.UserName ?? string.Empty,
+                Email = u.Email ?? string.Empty,
+                EmailConfirmed = u.EmailConfirmed,
+                LockoutEnd = u.LockoutEnd,
+                TwoFactorEnabled = u.TwoFactorEnabled
+            })
+            .ToList();
+        return Task.FromResult(result);
+    }
+
     public async Task<UserEditPageDataDto?> GetUserEditPageDataAsync(UserEditPageDataRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.UserId))

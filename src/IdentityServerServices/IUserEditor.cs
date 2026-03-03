@@ -4,6 +4,7 @@ namespace IdentityServerServices;
 
 public interface IUserEditor
 {
+    Task<IReadOnlyList<UserListItemDto>> GetUsersAsync(CancellationToken ct = default);
     Task<UserEditPageDataDto?> GetUserEditPageDataAsync(UserEditPageDataRequest request);
     Task<UserProfileEditViewModel?> GetUserForEditAsync(string userId);
     Task<UserProfileUpdateResult> UpdateUserFromEditPostAsync(UserEditPostUpdateRequest request);
