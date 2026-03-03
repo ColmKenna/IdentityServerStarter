@@ -2,6 +2,7 @@ using Duende.IdentityServer.EntityFramework.DbContexts;
 using Duende.IdentityServer.EntityFramework.Entities;
 using Duende.IdentityServer.EntityFramework.Options;
 using FluentAssertions;
+using IdentityServer.EF.DataAccess.DataMigrations;
 using IdentityServerServices.ViewModels;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -12,47 +13,68 @@ namespace IdentityServerServices.UnitTests;
 
 public class ApiScopesAdminServiceTests : IDisposable
 {
-    private readonly SqliteConnection _connection;
-    private readonly DbContextOptions<ConfigurationDbContext> _options;
+    private readonly SqliteConnection _configurationConnection;
+    private readonly SqliteConnection _applicationConnection;
+    private readonly DbContextOptions<ConfigurationDbContext> _configurationOptions;
+    private readonly DbContextOptions<ApplicationDbContext> _applicationOptions;
 
     public ApiScopesAdminServiceTests()
     {
-        _connection = new SqliteConnection("Data Source=:memory:");
-        _connection.Open();
+        _configurationConnection = new SqliteConnection("Data Source=:memory:");
+        _configurationConnection.Open();
+
+        _applicationConnection = new SqliteConnection("Data Source=:memory:");
+        _applicationConnection.Open();
 
         var storeOptions = new ConfigurationStoreOptions();
-        _options = new DbContextOptionsBuilder<ConfigurationDbContext>()
-            .UseSqlite(_connection)
+        _configurationOptions = new DbContextOptionsBuilder<ConfigurationDbContext>()
+            .UseSqlite(_configurationConnection)
             .UseApplicationServiceProvider(
                 new ServiceCollection()
                     .AddSingleton(storeOptions)
                     .BuildServiceProvider())
             .Options;
 
-        using var context = CreateContext();
-        context.Database.EnsureCreated();
+        _applicationOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(_applicationConnection)
+            .Options;
+
+        using var configurationDbContext = CreateConfigurationContext();
+        configurationDbContext.Database.EnsureCreated();
+
+        using var applicationDbContext = CreateApplicationContext();
+        applicationDbContext.Database.EnsureCreated();
     }
 
     public void Dispose()
     {
-        _connection.Dispose();
+        _configurationConnection.Dispose();
+        _applicationConnection.Dispose();
     }
 
-    private ConfigurationDbContext CreateContext()
+    private ConfigurationDbContext CreateConfigurationContext()
     {
-        return new ConfigurationDbContext(_options);
+        return new ConfigurationDbContext(_configurationOptions);
     }
 
-    private ApiScopesAdminService CreateService(ConfigurationDbContext context)
+    private ApplicationDbContext CreateApplicationContext()
     {
-        return new ApiScopesAdminService(context);
+        return new ApplicationDbContext(_applicationOptions);
+    }
+
+    private ApiScopesAdminService CreateService(
+        ConfigurationDbContext configurationDbContext,
+        ApplicationDbContext applicationDbContext)
+    {
+        return new ApiScopesAdminService(configurationDbContext, applicationDbContext);
     }
 
     [Fact]
     public async Task GetApiScopesAsync_NoScopes_ReturnsEmptyList()
     {
-        using var context = CreateContext();
-        var service = CreateService(context);
+        using var configurationDbContext = CreateConfigurationContext();
+        using var applicationDbContext = CreateApplicationContext();
+        var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.GetApiScopesAsync();
 
@@ -62,16 +84,17 @@ public class ApiScopesAdminServiceTests : IDisposable
     [Fact]
     public async Task GetApiScopesAsync_ApiScopesExist_ReturnsAllScopes()
     {
-        using (var seedContext = CreateContext())
+        using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
-            seedContext.ApiScopes.AddRange(
+            seedConfigurationDbContext.ApiScopes.AddRange(
                 new ApiScope { Name = "orders.read", Enabled = true },
                 new ApiScope { Name = "orders.write", Enabled = false });
-            await seedContext.SaveChangesAsync();
+            await seedConfigurationDbContext.SaveChangesAsync();
         }
 
-        using var context = CreateContext();
-        var service = CreateService(context);
+        using var configurationDbContext = CreateConfigurationContext();
+        using var applicationDbContext = CreateApplicationContext();
+        var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.GetApiScopesAsync();
 
@@ -82,17 +105,18 @@ public class ApiScopesAdminServiceTests : IDisposable
     [Fact]
     public async Task GetApiScopesAsync_OrdersByNameAscending()
     {
-        using (var seedContext = CreateContext())
+        using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
-            seedContext.ApiScopes.AddRange(
+            seedConfigurationDbContext.ApiScopes.AddRange(
                 new ApiScope { Name = "zeta", Enabled = true },
                 new ApiScope { Name = "alpha", Enabled = true },
                 new ApiScope { Name = "middle", Enabled = true });
-            await seedContext.SaveChangesAsync();
+            await seedConfigurationDbContext.SaveChangesAsync();
         }
 
-        using var context = CreateContext();
-        var service = CreateService(context);
+        using var configurationDbContext = CreateConfigurationContext();
+        using var applicationDbContext = CreateApplicationContext();
+        var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.GetApiScopesAsync();
 
@@ -102,20 +126,21 @@ public class ApiScopesAdminServiceTests : IDisposable
     [Fact]
     public async Task GetApiScopesAsync_NullDisplayNameOrDescription_MapsToEmptyStrings()
     {
-        using (var seedContext = CreateContext())
+        using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
-            seedContext.ApiScopes.Add(new ApiScope
+            seedConfigurationDbContext.ApiScopes.Add(new ApiScope
             {
                 Name = "api1",
                 DisplayName = null,
                 Description = null,
                 Enabled = true
             });
-            await seedContext.SaveChangesAsync();
+            await seedConfigurationDbContext.SaveChangesAsync();
         }
 
-        using var context = CreateContext();
-        var service = CreateService(context);
+        using var configurationDbContext = CreateConfigurationContext();
+        using var applicationDbContext = CreateApplicationContext();
+        var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.GetApiScopesAsync();
 
@@ -128,7 +153,7 @@ public class ApiScopesAdminServiceTests : IDisposable
     public async Task GetApiScopesAsync_MapsIdNameDisplayNameDescriptionEnabled()
     {
         int scopeId;
-        using (var seedContext = CreateContext())
+        using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
             var entity = new ApiScope
             {
@@ -137,13 +162,14 @@ public class ApiScopesAdminServiceTests : IDisposable
                 Description = "Read orders",
                 Enabled = false
             };
-            seedContext.ApiScopes.Add(entity);
-            await seedContext.SaveChangesAsync();
+            seedConfigurationDbContext.ApiScopes.Add(entity);
+            await seedConfigurationDbContext.SaveChangesAsync();
             scopeId = entity.Id;
         }
 
-        using var context = CreateContext();
-        var service = CreateService(context);
+        using var configurationDbContext = CreateConfigurationContext();
+        using var applicationDbContext = CreateApplicationContext();
+        var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.GetApiScopesAsync();
 

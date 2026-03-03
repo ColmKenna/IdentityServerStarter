@@ -1,458 +1,480 @@
-using Duende.IdentityServer.EntityFramework.DbContexts;
-using Duende.IdentityServer.EntityFramework.Entities;
-using Duende.IdentityServer.EntityFramework.Options;
-using IdentityServer.EF.DataAccess.DataMigrations;
+using IdentityServerAspNetIdentity.Pages.Admin.ApiScopes;
+using IdentityServerServices;
+using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace IdentityServerAspNetIdentity.UnitTests.Pages;
 
 public class ApiScopesEditModelTests
 {
-    private static ConfigurationDbContext CreateConfigurationDbContext()
+    private readonly Mock<IApiScopesAdminService> _mockApiScopesAdminService;
+    private readonly EditModel _pageModel;
+
+    public ApiScopesEditModelTests()
     {
-        var storeOptions = new ConfigurationStoreOptions();
-        var serviceProvider = new ServiceCollection()
-            .AddSingleton(storeOptions)
-            .BuildServiceProvider();
-
-        var options = new DbContextOptionsBuilder<ConfigurationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .UseApplicationServiceProvider(serviceProvider)
-            .Options;
-
-        return new ConfigurationDbContext(options);
-    }
-
-    private static ApplicationDbContext CreateApplicationDbContext()
-    {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        return new ApplicationDbContext(options);
-    }
-
-    private static IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel CreatePageModel(
-        ConfigurationDbContext configurationDbContext,
-        ApplicationDbContext applicationDbContext)
-    {
-        return new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel(configurationDbContext, applicationDbContext)
+        _mockApiScopesAdminService = new Mock<IApiScopesAdminService>();
+        _pageModel = new EditModel(_mockApiScopesAdminService.Object)
         {
             TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>())
         };
     }
 
-    [Fact]
-    public async Task OnGetAsync_ApiScopeExists_ReturnsPageAndPopulatesInput()
+    private static ApiScopeEditPageDataDto CreatePageData(
+        string name = "orders.read",
+        string? displayName = "Orders Read",
+        string? description = "Read orders",
+        bool enabled = true,
+        IReadOnlyList<string>? appliedClaims = null,
+        IReadOnlyList<string>? availableClaims = null)
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope
+        return new ApiScopeEditPageDataDto
         {
-            Name = "orders.read",
-            DisplayName = "Orders Read",
-            Description = "Read orders",
-            Enabled = true
-        });
-        await configurationDbContext.SaveChangesAsync();
-        var id = await configurationDbContext.ApiScopes.Select(s => s.Id).SingleAsync();
-
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-
-        var result = await pageModel.OnGetAsync();
-
-        result.Should().BeOfType<PageResult>();
-        pageModel.Input.Name.Should().Be("orders.read");
-        pageModel.Input.DisplayName.Should().Be("Orders Read");
-        pageModel.Input.Description.Should().Be("Read orders");
-        pageModel.Input.Enabled.Should().BeTrue();
+            Input = new ApiScopeEditInputDto
+            {
+                Name = name,
+                DisplayName = displayName,
+                Description = description,
+                Enabled = enabled
+            },
+            AppliedUserClaims = appliedClaims ?? new List<string> { "department" },
+            AvailableUserClaims = availableClaims ?? new List<string> { "location", "region" }
+        };
     }
 
     [Fact]
-    public async Task OnGetAsync_ApiScopeMissing_ReturnsNotFound()
+    public async Task OnGetAsync_IdZero_ReturnsPageWithCreateDefaultsAndAvailableClaims()
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = 999;
+        _pageModel.Id = 0;
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForCreateAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData(name: string.Empty, displayName: null, description: null, enabled: true,
+                appliedClaims: Array.Empty<string>(),
+                availableClaims: new[] { "department", "region" }));
 
-        var result = await pageModel.OnGetAsync();
+        var result = await _pageModel.OnGetAsync();
+
+        result.Should().BeOfType<PageResult>();
+        _pageModel.Input.Name.Should().BeEmpty();
+        _pageModel.Input.Enabled.Should().BeTrue();
+        _pageModel.AppliedUserClaims.Should().BeEmpty();
+        _pageModel.AvailableUserClaims.Should().Equal("department", "region");
+    }
+
+    [Fact]
+    public async Task OnGetAsync_EditId_ReturnsPageAndMapsInputAndClaims()
+    {
+        _pageModel.Id = 10;
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData(
+                name: "orders.write",
+                displayName: "Orders Write",
+                description: "Write orders",
+                enabled: false,
+                appliedClaims: new[] { "department", "location" },
+                availableClaims: new[] { "region" }));
+
+        var result = await _pageModel.OnGetAsync();
+
+        result.Should().BeOfType<PageResult>();
+        _pageModel.Input.Name.Should().Be("orders.write");
+        _pageModel.Input.DisplayName.Should().Be("Orders Write");
+        _pageModel.Input.Description.Should().Be("Write orders");
+        _pageModel.Input.Enabled.Should().BeFalse();
+        _pageModel.AppliedUserClaims.Should().Equal("department", "location");
+        _pageModel.AvailableUserClaims.Should().Equal("region");
+    }
+
+    [Fact]
+    public async Task OnGetAsync_Missing_ReturnsNotFound()
+    {
+        _pageModel.Id = 999;
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(999, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ApiScopeEditPageDataDto?)null);
+
+        var result = await _pageModel.OnGetAsync();
 
         result.Should().BeOfType<NotFoundResult>();
     }
 
     [Fact]
-    public async Task OnGetAsync_IdZero_ReturnsPageWithCreateDefaults()
+    public async Task OnPostAsync_Create_ModelStateInvalid_ReturnsPage_WithoutCallingCreate()
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = 0;
+        _pageModel.Id = 0;
+        _pageModel.Input = new EditModel.ApiScopeInputModel
+        {
+            Name = string.Empty,
+            Enabled = true
+        };
+        _pageModel.ModelState.AddModelError("Input.Name", "Name is required");
 
-        var result = await pageModel.OnGetAsync();
+        var result = await _pageModel.OnPostAsync();
 
         result.Should().BeOfType<PageResult>();
-        pageModel.Input.Should().NotBeNull();
-        pageModel.Input.Name.Should().BeEmpty();
-        pageModel.Input.Enabled.Should().BeTrue();
+        _mockApiScopesAdminService.Verify(
+            service => service.CreateAsync(It.IsAny<CreateApiScopeRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task OnPostAsync_ValidInput_UpdatesApiScope()
+    public async Task OnPostAsync_Create_Duplicate_AddsModelError_InputName_ExactMessage()
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope
-        {
-            Name = "orders.read",
-            DisplayName = "Orders Read",
-            Description = "Read orders",
-            Enabled = true
-        });
-        await configurationDbContext.SaveChangesAsync();
-        var id = await configurationDbContext.ApiScopes.Select(s => s.Id).SingleAsync();
-
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-        pageModel.Input = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApiScopeInputModel
-        {
-            Name = "orders.write",
-            DisplayName = "Orders Write",
-            Description = "Write orders",
-            Enabled = false
-        };
-
-        await pageModel.OnPostAsync();
-
-        var updated = await configurationDbContext.ApiScopes.FindAsync(id);
-        updated.Should().NotBeNull();
-        updated!.Name.Should().Be("orders.write");
-        updated.DisplayName.Should().Be("Orders Write");
-        updated.Description.Should().Be("Write orders");
-        updated.Enabled.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task OnPostAsync_ValidInput_RedirectsToEditPage()
-    {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope { Name = "orders.read", Enabled = true });
-        await configurationDbContext.SaveChangesAsync();
-        var id = await configurationDbContext.ApiScopes.Select(s => s.Id).SingleAsync();
-
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-        pageModel.Input = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApiScopeInputModel
+        _pageModel.Id = 0;
+        _pageModel.Input = new EditModel.ApiScopeInputModel
         {
             Name = "orders.read",
             DisplayName = "Orders Read",
             Description = "Read orders",
             Enabled = true
         };
+        _mockApiScopesAdminService
+            .Setup(service => service.CreateAsync(It.IsAny<CreateApiScopeRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateApiScopeResult
+            {
+                Status = CreateApiScopeStatus.DuplicateName
+            });
 
-        var result = await pageModel.OnPostAsync();
+        var result = await _pageModel.OnPostAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        var redirect = (RedirectToPageResult)result;
-        redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
-        redirect.RouteValues.Should().ContainKey("id");
-        redirect.RouteValues!["id"].Should().Be(id);
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.Should().ContainKey("Input.Name");
+        _pageModel.ModelState["Input.Name"]!.Errors.Single().ErrorMessage
+            .Should().Be("An API scope with this name already exists.");
     }
 
     [Fact]
-    public async Task OnPostAsync_IdZero_ValidInput_CreatesApiScopeAndRedirectsToEdit()
+    public async Task OnPostAsync_Create_Success_RedirectsToEdit_WithCreatedId_AndTempDataSuccessExact()
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = 0;
-        pageModel.Input = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApiScopeInputModel
+        _pageModel.Id = 0;
+        _pageModel.Input = new EditModel.ApiScopeInputModel
         {
             Name = "orders.create",
             DisplayName = "Orders Create",
             Description = "Create orders",
             Enabled = true
         };
+        _mockApiScopesAdminService
+            .Setup(service => service.CreateAsync(It.IsAny<CreateApiScopeRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateApiScopeResult
+            {
+                Status = CreateApiScopeStatus.Success,
+                CreatedId = 25
+            });
 
-        var result = await pageModel.OnPostAsync();
+        var result = await _pageModel.OnPostAsync();
 
         result.Should().BeOfType<RedirectToPageResult>();
         var redirect = (RedirectToPageResult)result;
         redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
         redirect.RouteValues.Should().ContainKey("id");
-        redirect.RouteValues!["id"].Should().BeOfType<int>();
-        ((int)redirect.RouteValues!["id"]!).Should().BeGreaterThan(0);
-
-        var created = await configurationDbContext.ApiScopes.SingleOrDefaultAsync(scope => scope.Name == "orders.create");
-        created.Should().NotBeNull();
-        created!.DisplayName.Should().Be("Orders Create");
-        created.Description.Should().Be("Create orders");
-        created.Enabled.Should().BeTrue();
+        redirect.RouteValues!["id"].Should().Be(25);
+        _pageModel.TempData["Success"].Should().Be("API scope created successfully");
     }
 
     [Fact]
-    public async Task OnPostAsync_IdZero_DuplicateName_ReturnsPageWithModelError()
+    public async Task OnPostAsync_Edit_MissingOnLoad_ReturnsNotFound()
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope { Name = "orders.read", Enabled = true });
-        await configurationDbContext.SaveChangesAsync();
+        _pageModel.Id = 15;
+        _pageModel.Input = new EditModel.ApiScopeInputModel
+        {
+            Name = "orders.write",
+            Enabled = true
+        };
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(15, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ApiScopeEditPageDataDto?)null);
 
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = 0;
-        pageModel.Input = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApiScopeInputModel
+        var result = await _pageModel.OnPostAsync();
+
+        result.Should().BeOfType<NotFoundResult>();
+        _mockApiScopesAdminService.Verify(
+            service => service.UpdateAsync(It.IsAny<int>(), It.IsAny<UpdateApiScopeRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task OnPostAsync_Edit_ModelStateInvalid_RepopulatesClaimsWithoutOverwritingInput()
+    {
+        _pageModel.Id = 16;
+        _pageModel.Input = new EditModel.ApiScopeInputModel
+        {
+            Name = "user-entered-name",
+            DisplayName = "User Entered Display Name",
+            Description = "User Entered Description",
+            Enabled = false
+        };
+        _pageModel.ModelState.AddModelError("Input.Name", "Name is required");
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(16, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData(
+                name: "server-value",
+                displayName: "Server Display",
+                description: "Server Description",
+                enabled: true,
+                appliedClaims: new[] { "department" },
+                availableClaims: new[] { "location", "region" }));
+
+        var result = await _pageModel.OnPostAsync();
+
+        result.Should().BeOfType<PageResult>();
+        _pageModel.Input.Name.Should().Be("user-entered-name");
+        _pageModel.Input.DisplayName.Should().Be("User Entered Display Name");
+        _pageModel.Input.Description.Should().Be("User Entered Description");
+        _pageModel.Input.Enabled.Should().BeFalse();
+        _pageModel.AppliedUserClaims.Should().Equal("department");
+        _pageModel.AvailableUserClaims.Should().Equal("location", "region");
+    }
+
+    [Fact]
+    public async Task OnPostAsync_Edit_Duplicate_AddsModelError_InputName_ExactMessage()
+    {
+        _pageModel.Id = 17;
+        _pageModel.Input = new EditModel.ApiScopeInputModel
         {
             Name = "orders.read",
             DisplayName = "Duplicate",
             Description = "Duplicate",
             Enabled = true
         };
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(17, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockApiScopesAdminService
+            .Setup(service => service.UpdateAsync(17, It.IsAny<UpdateApiScopeRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UpdateApiScopeResult
+            {
+                Status = UpdateApiScopeStatus.DuplicateName
+            });
 
-        var result = await pageModel.OnPostAsync();
+        var result = await _pageModel.OnPostAsync();
 
         result.Should().BeOfType<PageResult>();
-        pageModel.ModelState.Should().ContainKey("Input.Name");
+        _pageModel.ModelState.Should().ContainKey("Input.Name");
+        _pageModel.ModelState["Input.Name"]!.Errors.Single().ErrorMessage
+            .Should().Be("An API scope with this name already exists.");
     }
 
     [Fact]
-    public async Task OnPostAsync_ModelStateInvalid_ReturnsPage()
+    public async Task OnPostAsync_Edit_UpdateNotFound_ReturnsNotFound()
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope { Name = "orders.read", Enabled = true });
-        await configurationDbContext.SaveChangesAsync();
-        var id = await configurationDbContext.ApiScopes.Select(s => s.Id).SingleAsync();
-
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-        pageModel.ModelState.AddModelError("Input.Name", "Name is required");
-        pageModel.Input = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApiScopeInputModel
-        {
-            Name = string.Empty
-        };
-
-        var result = await pageModel.OnPostAsync();
-
-        result.Should().BeOfType<PageResult>();
-    }
-
-    [Fact]
-    public async Task OnPostAsync_ApiScopeMissing_ReturnsNotFound()
-    {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = 999;
-        pageModel.Input = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApiScopeInputModel
+        _pageModel.Id = 18;
+        _pageModel.Input = new EditModel.ApiScopeInputModel
         {
             Name = "orders.read",
             Enabled = true
         };
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(18, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockApiScopesAdminService
+            .Setup(service => service.UpdateAsync(18, It.IsAny<UpdateApiScopeRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UpdateApiScopeResult
+            {
+                Status = UpdateApiScopeStatus.NotFound
+            });
 
-        var result = await pageModel.OnPostAsync();
+        var result = await _pageModel.OnPostAsync();
 
         result.Should().BeOfType<NotFoundResult>();
     }
 
     [Fact]
-    public async Task OnPostAsync_DuplicateName_ReturnsPageWithModelError()
+    public async Task OnPostAsync_Edit_Success_RedirectsAndTempDataSuccessExact()
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.AddRange(
-            new ApiScope { Name = "orders.read", Enabled = true },
-            new ApiScope { Name = "orders.write", Enabled = true });
-        await configurationDbContext.SaveChangesAsync();
-        var id = await configurationDbContext.ApiScopes.Where(s => s.Name == "orders.write").Select(s => s.Id).SingleAsync();
-
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-        pageModel.Input = new IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApiScopeInputModel
+        _pageModel.Id = 19;
+        _pageModel.Input = new EditModel.ApiScopeInputModel
         {
             Name = "orders.read",
-            DisplayName = "Duplicate Name",
-            Description = "Should fail",
             Enabled = true
         };
-
-        var result = await pageModel.OnPostAsync();
-
-        result.Should().BeOfType<PageResult>();
-        pageModel.ModelState.Should().ContainKey("Input.Name");
-    }
-
-    [Fact]
-    public async Task OnGetAsync_ApiScopeHasUserClaims_PopulatesAppliedUserClaims()
-    {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope
-        {
-            Name = "orders.read",
-            Enabled = true,
-            UserClaims = new List<ApiScopeClaim>
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(19, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockApiScopesAdminService
+            .Setup(service => service.UpdateAsync(19, It.IsAny<UpdateApiScopeRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UpdateApiScopeResult
             {
-                new() { Type = "department" },
-                new() { Type = "location" }
-            }
-        });
-        await configurationDbContext.SaveChangesAsync();
-        var id = await configurationDbContext.ApiScopes.Select(s => s.Id).SingleAsync();
+                Status = UpdateApiScopeStatus.Success
+            });
 
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-
-        await pageModel.OnGetAsync();
-
-        pageModel.AppliedUserClaims.Should().Contain(new[] { "department", "location" });
-    }
-
-    [Fact]
-    public async Task OnGetAsync_SystemUserClaimsExist_PopulatesAvailableUserClaimsExcludingApplied()
-    {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope
-        {
-            Name = "orders.read",
-            Enabled = true,
-            UserClaims = new List<ApiScopeClaim>
-            {
-                new() { Type = "department" }
-            }
-        });
-
-        applicationDbContext.UserClaims.AddRange(
-            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "department", ClaimValue = "engineering" },
-            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "location", ClaimValue = "dublin" },
-            new IdentityUserClaim<string> { UserId = "u3", ClaimType = "region", ClaimValue = "eu" });
-        await configurationDbContext.SaveChangesAsync();
-        await applicationDbContext.SaveChangesAsync();
-
-        var id = await configurationDbContext.ApiScopes.Select(s => s.Id).SingleAsync();
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-
-        await pageModel.OnGetAsync();
-
-        pageModel.AvailableUserClaims.Should().Contain("location");
-        pageModel.AvailableUserClaims.Should().Contain("region");
-        pageModel.AvailableUserClaims.Should().NotContain("department");
-    }
-
-    [Fact]
-    public async Task OnPostAddClaimAsync_ValidSelection_AddsClaimAndRedirects()
-    {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope { Name = "orders.read", Enabled = true });
-        applicationDbContext.UserClaims.Add(new IdentityUserClaim<string>
-        {
-            UserId = "u1",
-            ClaimType = "department",
-            ClaimValue = "engineering"
-        });
-        await configurationDbContext.SaveChangesAsync();
-        await applicationDbContext.SaveChangesAsync();
-        var id = await configurationDbContext.ApiScopes.Select(s => s.Id).SingleAsync();
-
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-        pageModel.SelectedClaimType = "department";
-
-        var result = await pageModel.OnPostAddClaimAsync();
+        var result = await _pageModel.OnPostAsync();
 
         result.Should().BeOfType<RedirectToPageResult>();
-        var updated = await configurationDbContext.ApiScopes
-            .Include(scope => scope.UserClaims)
-            .SingleAsync(scope => scope.Id == id);
-        updated.UserClaims.Select(claim => claim.Type).Should().Contain("department");
+        var redirect = (RedirectToPageResult)result;
+        redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
+        redirect.RouteValues.Should().ContainKey("id");
+        redirect.RouteValues!["id"].Should().Be(19);
+        _pageModel.TempData["Success"].Should().Be("API scope updated successfully");
     }
 
     [Fact]
-    public async Task OnPostAddClaimAsync_DuplicateClaim_ReturnsPageWithModelError()
+    public async Task OnPostAddClaimAsync_MissingScope_ReturnsNotFound()
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope
-        {
-            Name = "orders.read",
-            Enabled = true,
-            UserClaims = new List<ApiScopeClaim> { new() { Type = "department" } }
-        });
-        await configurationDbContext.SaveChangesAsync();
-        var id = await configurationDbContext.ApiScopes.Select(s => s.Id).SingleAsync();
+        _pageModel.Id = 20;
+        _pageModel.SelectedClaimType = "department";
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ApiScopeEditPageDataDto?)null);
 
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-        pageModel.SelectedClaimType = "department";
+        var result = await _pageModel.OnPostAddClaimAsync();
 
-        var result = await pageModel.OnPostAddClaimAsync();
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task OnPostAddClaimAsync_NoSelection_AddsModelError_SelectedClaimType_ExactMessage()
+    {
+        _pageModel.Id = 21;
+        _pageModel.SelectedClaimType = "   ";
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(21, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+
+        var result = await _pageModel.OnPostAddClaimAsync();
 
         result.Should().BeOfType<PageResult>();
-        pageModel.ModelState.Should().ContainKey("SelectedClaimType");
+        _pageModel.ModelState.Should().ContainKey("SelectedClaimType");
+        _pageModel.ModelState["SelectedClaimType"]!.Errors.Single().ErrorMessage
+            .Should().Be("Please select a user claim");
+        _mockApiScopesAdminService.Verify(
+            service => service.AddClaimAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task OnPostRemoveClaimAsync_ValidSelection_RemovesClaimAndRedirects()
+    public async Task OnPostAddClaimAsync_AlreadyApplied_AddsModelError_SelectedClaimType_ExactMessage()
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope
-        {
-            Name = "orders.read",
-            Enabled = true,
-            UserClaims = new List<ApiScopeClaim>
+        _pageModel.Id = 22;
+        _pageModel.SelectedClaimType = "department";
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(22, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockApiScopesAdminService
+            .Setup(service => service.AddClaimAsync(22, "department", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AddApiScopeClaimResult
             {
-                new() { Type = "department" },
-                new() { Type = "location" }
-            }
-        });
-        await configurationDbContext.SaveChangesAsync();
-        var id = await configurationDbContext.ApiScopes.Select(s => s.Id).SingleAsync();
+                Status = AddApiScopeClaimStatus.AlreadyApplied,
+                ClaimType = "department"
+            });
 
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-        pageModel.RemoveClaimType = "department";
+        var result = await _pageModel.OnPostAddClaimAsync();
 
-        var result = await pageModel.OnPostRemoveClaimAsync();
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.Should().ContainKey("SelectedClaimType");
+        _pageModel.ModelState["SelectedClaimType"]!.Errors.Single().ErrorMessage
+            .Should().Be("This user claim is already applied to the API scope.");
+    }
+
+    [Fact]
+    public async Task OnPostAddClaimAsync_Success_RedirectsAndTempDataUsesTrimmedClaim()
+    {
+        _pageModel.Id = 23;
+        _pageModel.SelectedClaimType = "  department  ";
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(23, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockApiScopesAdminService
+            .Setup(service => service.AddClaimAsync(23, "  department  ", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AddApiScopeClaimResult
+            {
+                Status = AddApiScopeClaimStatus.Success,
+                ClaimType = "department"
+            });
+
+        var result = await _pageModel.OnPostAddClaimAsync();
 
         result.Should().BeOfType<RedirectToPageResult>();
-        var updated = await configurationDbContext.ApiScopes
-            .Include(scope => scope.UserClaims)
-            .SingleAsync(scope => scope.Id == id);
-        updated.UserClaims.Select(claim => claim.Type).Should().NotContain("department");
-        updated.UserClaims.Select(claim => claim.Type).Should().Contain("location");
+        var redirect = (RedirectToPageResult)result;
+        redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
+        redirect.RouteValues.Should().ContainKey("id");
+        redirect.RouteValues!["id"].Should().Be(23);
+        _pageModel.TempData["Success"].Should().Be("User claim 'department' added successfully");
     }
 
     [Fact]
-    public async Task OnPostRemoveClaimAsync_NoClaimSelected_ReturnsPageWithModelError()
+    public async Task OnPostRemoveClaimAsync_MissingScope_ReturnsNotFound()
     {
-        await using var configurationDbContext = CreateConfigurationDbContext();
-        await using var applicationDbContext = CreateApplicationDbContext();
-        configurationDbContext.ApiScopes.Add(new ApiScope
-        {
-            Name = "orders.read",
-            Enabled = true,
-            UserClaims = new List<ApiScopeClaim> { new() { Type = "department" } }
-        });
-        await configurationDbContext.SaveChangesAsync();
-        var id = await configurationDbContext.ApiScopes.Select(s => s.Id).SingleAsync();
+        _pageModel.Id = 24;
+        _pageModel.RemoveClaimType = "department";
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(24, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ApiScopeEditPageDataDto?)null);
 
-        var pageModel = CreatePageModel(configurationDbContext, applicationDbContext);
-        pageModel.Id = id;
-        pageModel.RemoveClaimType = string.Empty;
+        var result = await _pageModel.OnPostRemoveClaimAsync();
 
-        var result = await pageModel.OnPostRemoveClaimAsync();
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task OnPostRemoveClaimAsync_NoSelection_AddsModelError_RemoveClaimType_ExactMessage()
+    {
+        _pageModel.Id = 25;
+        _pageModel.RemoveClaimType = string.Empty;
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(25, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+
+        var result = await _pageModel.OnPostRemoveClaimAsync();
 
         result.Should().BeOfType<PageResult>();
-        pageModel.ModelState.Should().ContainKey("RemoveClaimType");
+        _pageModel.ModelState.Should().ContainKey("RemoveClaimType");
+        _pageModel.ModelState["RemoveClaimType"]!.Errors.Single().ErrorMessage
+            .Should().Be("Please select a user claim to remove");
+        _mockApiScopesAdminService.Verify(
+            service => service.RemoveClaimAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task OnPostRemoveClaimAsync_NotApplied_AddsModelError_RemoveClaimType_ExactMessage()
+    {
+        _pageModel.Id = 26;
+        _pageModel.RemoveClaimType = "department";
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(26, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockApiScopesAdminService
+            .Setup(service => service.RemoveClaimAsync(26, "department", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RemoveApiScopeClaimResult
+            {
+                Status = RemoveApiScopeClaimStatus.NotApplied,
+                ClaimType = "department"
+            });
+
+        var result = await _pageModel.OnPostRemoveClaimAsync();
+
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.Should().ContainKey("RemoveClaimType");
+        _pageModel.ModelState["RemoveClaimType"]!.Errors.Single().ErrorMessage
+            .Should().Be("The selected user claim is not applied to this API scope.");
+    }
+
+    [Fact]
+    public async Task OnPostRemoveClaimAsync_Success_RedirectsAndTempDataUsesTrimmedClaim()
+    {
+        _pageModel.Id = 27;
+        _pageModel.RemoveClaimType = "  department  ";
+        _mockApiScopesAdminService
+            .Setup(service => service.GetForEditAsync(27, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockApiScopesAdminService
+            .Setup(service => service.RemoveClaimAsync(27, "  department  ", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RemoveApiScopeClaimResult
+            {
+                Status = RemoveApiScopeClaimStatus.Success,
+                ClaimType = "department"
+            });
+
+        var result = await _pageModel.OnPostRemoveClaimAsync();
+
+        result.Should().BeOfType<RedirectToPageResult>();
+        var redirect = (RedirectToPageResult)result;
+        redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
+        redirect.RouteValues.Should().ContainKey("id");
+        redirect.RouteValues!["id"].Should().Be(27);
+        _pageModel.TempData["Success"].Should().Be("User claim 'department' removed successfully");
     }
 }

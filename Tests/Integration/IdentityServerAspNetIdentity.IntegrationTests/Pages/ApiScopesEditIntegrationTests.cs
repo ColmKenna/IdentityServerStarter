@@ -340,6 +340,24 @@ public class ApiScopesEditIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task PostAddClaim_NoSelection_Returns200AndValidationMessage()
+    {
+        var id = SeedApiScope();
+
+        var response = await _client.PostAsync(
+            $"/Admin/ApiScopes/{id}/Edit?handler=AddClaim",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["Id"] = id.ToString(),
+                ["SelectedClaimType"] = string.Empty
+            }));
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        document.Body!.TextContent.Should().Contain("Please select a user claim");
+    }
+
+    [Fact]
     public async Task PostRemoveClaim_ValidSelection_RemovesApiScopeClaim()
     {
         var id = SeedApiScope(userClaims: new[] { "department", "location" });
@@ -359,5 +377,41 @@ public class ApiScopesEditIntegrationTests : IDisposable
             .SingleAsync(apiScope => apiScope.Id == id);
         updated.UserClaims.Select(claim => claim.Type).Should().NotContain("department");
         updated.UserClaims.Select(claim => claim.Type).Should().Contain("location");
+    }
+
+    [Fact]
+    public async Task PostRemoveClaim_NotApplied_Returns200AndValidationMessage()
+    {
+        var id = SeedApiScope(userClaims: new[] { "location" });
+
+        var response = await _client.PostAsync(
+            $"/Admin/ApiScopes/{id}/Edit?handler=RemoveClaim",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["Id"] = id.ToString(),
+                ["RemoveClaimType"] = "department"
+            }));
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        document.Body!.TextContent.Should().Contain("The selected user claim is not applied to this API scope.");
+    }
+
+    [Fact]
+    public async Task PostRemoveClaim_NoSelection_Returns200AndValidationMessage()
+    {
+        var id = SeedApiScope(userClaims: new[] { "department" });
+
+        var response = await _client.PostAsync(
+            $"/Admin/ApiScopes/{id}/Edit?handler=RemoveClaim",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["Id"] = id.ToString(),
+                ["RemoveClaimType"] = string.Empty
+            }));
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        document.Body!.TextContent.Should().Contain("Please select a user claim to remove");
     }
 }

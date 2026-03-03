@@ -1,25 +1,21 @@
 #nullable enable
 using System.ComponentModel.DataAnnotations;
-using Duende.IdentityServer.EntityFramework.DbContexts;
-using Duende.IdentityServer.EntityFramework.Entities;
-using IdentityServer.EF.DataAccess.DataMigrations;
+using IdentityServerServices;
+using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 
 namespace IdentityServerAspNetIdentity.Pages.Admin.ApiScopes;
 
 [Authorize(Roles = "ADMIN")]
 public class EditModel : PageModel
 {
-    private readonly ConfigurationDbContext _configurationDbContext;
-    private readonly ApplicationDbContext _applicationDbContext;
+    private readonly IApiScopesAdminService _apiScopesAdminService;
 
-    public EditModel(ConfigurationDbContext configurationDbContext, ApplicationDbContext applicationDbContext)
+    public EditModel(IApiScopesAdminService apiScopesAdminService)
     {
-        _configurationDbContext = configurationDbContext;
-        _applicationDbContext = applicationDbContext;
+        _apiScopesAdminService = apiScopesAdminService;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -41,32 +37,27 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         if (IsCreateMode)
         {
-            Input = new ApiScopeInputModel
-            {
-                Name = string.Empty,
-                Enabled = true
-            };
-
-            AppliedUserClaims = new List<string>();
-            AvailableUserClaims = await GetAllUserClaimTypesAsync();
+            var createData = await _apiScopesAdminService.GetForCreateAsync(cancellationToken);
+            ApplyPageData(createData, mapInput: true);
             return Page();
         }
 
-        var apiScope = await GetApiScopeAsync(trackChanges: false);
-        if (apiScope is null)
+        var editData = await _apiScopesAdminService.GetForEditAsync(Id, cancellationToken);
+        if (editData is null)
         {
             return NotFound();
         }
 
-        await PopulatePageDataAsync(apiScope, mapInput: true);
-
+        ApplyPageData(editData, mapInput: true);
         return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         if (IsCreateMode)
         {
             if (!ModelState.IsValid)
@@ -74,65 +65,55 @@ public class EditModel : PageModel
                 return Page();
             }
 
-            var createScopeName = Input.Name.Trim();
-            var createDuplicateNameExists = await _configurationDbContext.ApiScopes
-                .AnyAsync(scope => scope.Name == createScopeName);
-            if (createDuplicateNameExists)
+            var createResult = await _apiScopesAdminService.CreateAsync(new CreateApiScopeRequest
+            {
+                Name = Input.Name,
+                DisplayName = Input.DisplayName,
+                Description = Input.Description,
+                Enabled = Input.Enabled
+            }, cancellationToken);
+
+            if (createResult.Status == CreateApiScopeStatus.DuplicateName)
             {
                 ModelState.AddModelError("Input.Name", "An API scope with this name already exists.");
                 return Page();
             }
 
-            var entity = new ApiScope
-            {
-                Name = createScopeName,
-                DisplayName = NormalizeOptional(Input.DisplayName),
-                Description = NormalizeOptional(Input.Description),
-                Enabled = Input.Enabled,
-                ShowInDiscoveryDocument = true,
-                Required = false,
-                Emphasize = false,
-                NonEditable = false,
-                Created = DateTime.UtcNow,
-                Updated = DateTime.UtcNow
-            };
-
-            _configurationDbContext.ApiScopes.Add(entity);
-            await _configurationDbContext.SaveChangesAsync();
-
             TempData["Success"] = "API scope created successfully";
-            return RedirectToPage("/Admin/ApiScopes/Edit", new { id = entity.Id });
+            return RedirectToPage("/Admin/ApiScopes/Edit", new { id = createResult.CreatedId });
         }
 
-        var apiScope = await GetApiScopeAsync(trackChanges: true);
-        if (apiScope is null)
+        var existingData = await _apiScopesAdminService.GetForEditAsync(Id, cancellationToken);
+        if (existingData is null)
         {
             return NotFound();
         }
 
         if (!ModelState.IsValid)
         {
-            await PopulatePageDataAsync(apiScope, mapInput: false);
+            ApplyPageData(existingData, mapInput: false);
             return Page();
         }
 
-        var scopeName = Input.Name.Trim();
-        var duplicateNameExists = await _configurationDbContext.ApiScopes
-            .AnyAsync(scope => scope.Name == scopeName && scope.Id != Id);
-        if (duplicateNameExists)
+        var updateResult = await _apiScopesAdminService.UpdateAsync(Id, new UpdateApiScopeRequest
+        {
+            Name = Input.Name,
+            DisplayName = Input.DisplayName,
+            Description = Input.Description,
+            Enabled = Input.Enabled
+        }, cancellationToken);
+
+        if (updateResult.Status == UpdateApiScopeStatus.NotFound)
+        {
+            return NotFound();
+        }
+
+        if (updateResult.Status == UpdateApiScopeStatus.DuplicateName)
         {
             ModelState.AddModelError("Input.Name", "An API scope with this name already exists.");
-            await PopulatePageDataAsync(apiScope, mapInput: false);
+            ApplyPageData(existingData, mapInput: false);
             return Page();
         }
-
-        apiScope.Name = scopeName;
-        apiScope.DisplayName = NormalizeOptional(Input.DisplayName);
-        apiScope.Description = NormalizeOptional(Input.Description);
-        apiScope.Enabled = Input.Enabled;
-        apiScope.Updated = DateTime.UtcNow;
-
-        await _configurationDbContext.SaveChangesAsync();
 
         TempData["Success"] = "API scope updated successfully";
         return RedirectToPage("/Admin/ApiScopes/Edit", new { id = Id });
@@ -140,8 +121,9 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAddClaimAsync()
     {
-        var apiScope = await GetApiScopeAsync(trackChanges: true);
-        if (apiScope is null)
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var existingData = await _apiScopesAdminService.GetForEditAsync(Id, cancellationToken);
+        if (existingData is null)
         {
             return NotFound();
         }
@@ -149,34 +131,32 @@ public class EditModel : PageModel
         if (string.IsNullOrWhiteSpace(SelectedClaimType))
         {
             ModelState.AddModelError(nameof(SelectedClaimType), "Please select a user claim");
-            await PopulatePageDataAsync(apiScope, mapInput: true);
+            ApplyPageData(existingData, mapInput: true);
             return Page();
         }
 
-        var claimType = SelectedClaimType.Trim();
-        if (apiScope.UserClaims.Any(claim => claim.Type == claimType))
+        var addResult = await _apiScopesAdminService.AddClaimAsync(Id, SelectedClaimType, cancellationToken);
+        if (addResult.Status == AddApiScopeClaimStatus.NotFound)
+        {
+            return NotFound();
+        }
+
+        if (addResult.Status == AddApiScopeClaimStatus.AlreadyApplied)
         {
             ModelState.AddModelError(nameof(SelectedClaimType), "This user claim is already applied to the API scope.");
-            await PopulatePageDataAsync(apiScope, mapInput: true);
+            ApplyPageData(existingData, mapInput: true);
             return Page();
         }
 
-        apiScope.UserClaims.Add(new ApiScopeClaim
-        {
-            Type = claimType
-        });
-        apiScope.Updated = DateTime.UtcNow;
-
-        await _configurationDbContext.SaveChangesAsync();
-
-        TempData["Success"] = $"User claim '{claimType}' added successfully";
+        TempData["Success"] = $"User claim '{addResult.ClaimType}' added successfully";
         return RedirectToPage("/Admin/ApiScopes/Edit", new { id = Id });
     }
 
     public async Task<IActionResult> OnPostRemoveClaimAsync()
     {
-        var apiScope = await GetApiScopeAsync(trackChanges: true);
-        if (apiScope is null)
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var existingData = await _apiScopesAdminService.GetForEditAsync(Id, cancellationToken);
+        if (existingData is null)
         {
             return NotFound();
         }
@@ -184,88 +164,42 @@ public class EditModel : PageModel
         if (string.IsNullOrWhiteSpace(RemoveClaimType))
         {
             ModelState.AddModelError(nameof(RemoveClaimType), "Please select a user claim to remove");
-            await PopulatePageDataAsync(apiScope, mapInput: true);
+            ApplyPageData(existingData, mapInput: true);
             return Page();
         }
 
-        var claimType = RemoveClaimType.Trim();
-        var claim = apiScope.UserClaims.FirstOrDefault(userClaim => userClaim.Type == claimType);
-        if (claim is null)
+        var removeResult = await _apiScopesAdminService.RemoveClaimAsync(Id, RemoveClaimType, cancellationToken);
+        if (removeResult.Status == RemoveApiScopeClaimStatus.NotFound)
+        {
+            return NotFound();
+        }
+
+        if (removeResult.Status == RemoveApiScopeClaimStatus.NotApplied)
         {
             ModelState.AddModelError(nameof(RemoveClaimType), "The selected user claim is not applied to this API scope.");
-            await PopulatePageDataAsync(apiScope, mapInput: true);
+            ApplyPageData(existingData, mapInput: true);
             return Page();
         }
 
-        apiScope.UserClaims.Remove(claim);
-        apiScope.Updated = DateTime.UtcNow;
-
-        await _configurationDbContext.SaveChangesAsync();
-
-        TempData["Success"] = $"User claim '{claimType}' removed successfully";
+        TempData["Success"] = $"User claim '{removeResult.ClaimType}' removed successfully";
         return RedirectToPage("/Admin/ApiScopes/Edit", new { id = Id });
     }
 
-    private async Task<ApiScope?> GetApiScopeAsync(bool trackChanges)
-    {
-        var query = _configurationDbContext.ApiScopes
-            .Include(scope => scope.UserClaims)
-            .Where(scope => scope.Id == Id);
-
-        if (!trackChanges)
-        {
-            query = query.AsNoTracking();
-        }
-
-        return await query.FirstOrDefaultAsync();
-    }
-
-    private async Task PopulatePageDataAsync(ApiScope apiScope, bool mapInput)
+    private void ApplyPageData(ApiScopeEditPageDataDto pageData, bool mapInput)
     {
         if (mapInput)
         {
             Input = new ApiScopeInputModel
             {
-                Name = apiScope.Name,
-                DisplayName = apiScope.DisplayName,
-                Description = apiScope.Description,
-                Enabled = apiScope.Enabled
+                Name = pageData.Input.Name,
+                DisplayName = pageData.Input.DisplayName,
+                Description = pageData.Input.Description,
+                Enabled = pageData.Input.Enabled
             };
         }
 
-        AppliedUserClaims = apiScope.UserClaims
-            .Where(claim => !string.IsNullOrWhiteSpace(claim.Type))
-            .Select(claim => claim.Type.Trim())
-            .Distinct()
-            .OrderBy(claimType => claimType)
-            .ToList();
-
-        var allUserClaimTypes = await GetAllUserClaimTypesAsync();
-
-        AvailableUserClaims = allUserClaimTypes
-            .Where(claimType => !AppliedUserClaims.Contains(claimType))
-            .ToList();
-    }
-
-    private async Task<List<string>> GetAllUserClaimTypesAsync()
-    {
-        return await _applicationDbContext.UserClaims
-            .AsNoTracking()
-            .Where(claim => claim.ClaimType != null && claim.ClaimType != string.Empty)
-            .Select(claim => claim.ClaimType!)
-            .Distinct()
-            .OrderBy(claimType => claimType)
-            .ToListAsync();
-    }
-
-    private static string? NormalizeOptional(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        return value.Trim();
+        AppliedUserClaims = pageData.AppliedUserClaims.ToList();
+        AvailableUserClaims = pageData.AvailableUserClaims.ToList();
     }
 
     public class ApiScopeInputModel
