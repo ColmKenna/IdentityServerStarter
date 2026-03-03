@@ -1,28 +1,25 @@
+using IdentityServerServices;
+using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Duende.IdentityServer.EntityFramework.DbContexts;
-using Microsoft.EntityFrameworkCore;
-using Duende.IdentityServer.EntityFramework.Entities;
 
 namespace IdentityServerAspNetIdentity.Pages.Admin.Clients;
 
 [Authorize(Roles = "ADMIN")]
 public class IndexModel : PageModel
 {
-    private readonly ConfigurationDbContext _context;
+    private readonly IClientAdminService _clientAdminService;
 
-    public IndexModel(ConfigurationDbContext context)
+    public IndexModel(IClientAdminService clientAdminService)
     {
-        _context = context;
+        _clientAdminService = clientAdminService;
     }
 
-    public List<Client> Clients { get; set; } = new();
+    public IList<ClientListItemDto> Clients { get; set; } = new List<ClientListItemDto>();
 
     public async Task OnGetAsync()
     {
-        Clients = await _context.Clients
-            .AsNoTracking()
-            .OrderBy(c => c.ClientName)
-            .ToListAsync();
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        Clients = (await _clientAdminService.GetClientsAsync(cancellationToken)).ToList();
     }
 }

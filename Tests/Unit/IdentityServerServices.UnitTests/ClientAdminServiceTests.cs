@@ -702,4 +702,132 @@ public class ClientAdminServiceTests : IDisposable
             updated.AllowedScopes.First().Scope.Should().Be("openid");
         }
     }
+
+    // --- GetClientsAsync ---
+
+    [Fact]
+    public async Task GetClientsAsync_NoClients_ReturnsEmptyList()
+    {
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientsAsync();
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetClientsAsync_ClientsExist_ReturnsAllClients()
+    {
+        using (var seedContext = CreateContext())
+        {
+            seedContext.Clients.AddRange(
+                new Client { ClientId = "client-a", ClientName = "Client A", Enabled = true },
+                new Client { ClientId = "client-b", ClientName = "Client B", Enabled = false });
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientsAsync();
+
+        result.Should().HaveCount(2);
+        result.Select(c => c.ClientId).Should().Contain(new[] { "client-a", "client-b" });
+    }
+
+    [Fact]
+    public async Task GetClientsAsync_ClientsExist_ReturnedInAscendingOrderByClientName()
+    {
+        using (var seedContext = CreateContext())
+        {
+            seedContext.Clients.AddRange(
+                new Client { ClientId = "c", ClientName = "Zeta App" },
+                new Client { ClientId = "a", ClientName = "Alpha App" },
+                new Client { ClientId = "b", ClientName = "Middle App" });
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientsAsync();
+
+        result.Select(c => c.ClientName).Should().Equal("Alpha App", "Middle App", "Zeta App");
+    }
+
+    [Fact]
+    public async Task GetClientsAsync_MapsAllFields()
+    {
+        using (var seedContext = CreateContext())
+        {
+            seedContext.Clients.Add(new Client
+            {
+                ClientId = "web-app",
+                ClientName = "Web Application",
+                Description = "The main web app",
+                Enabled = true
+            });
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientsAsync();
+
+        var item = result.Should().ContainSingle().Subject;
+        item.ClientId.Should().Be("web-app");
+        item.ClientName.Should().Be("Web Application");
+        item.Description.Should().Be("The main web app");
+        item.Enabled.Should().BeTrue();
+        item.Id.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task GetClientsAsync_NullClientName_ReturnsEmptyString()
+    {
+        using (var seedContext = CreateContext())
+        {
+            seedContext.Clients.Add(new Client
+            {
+                ClientId = "web-app",
+                ClientName = null,
+                Enabled = true
+            });
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientsAsync();
+
+        var item = result.Should().ContainSingle().Subject;
+        item.ClientName.Should().Be(string.Empty);
+    }
+
+    [Fact]
+    public async Task GetClientsAsync_NullDescription_ReturnsNull()
+    {
+        using (var seedContext = CreateContext())
+        {
+            seedContext.Clients.Add(new Client
+            {
+                ClientId = "web-app",
+                ClientName = "Web App",
+                Description = null,
+                Enabled = true
+            });
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientsAsync();
+
+        var item = result.Should().ContainSingle().Subject;
+        item.Description.Should().BeNull();
+    }
 }

@@ -16,6 +16,22 @@ public class ClientAdminService : IClientAdminService
         _context = context;
     }
 
+    public async Task<IReadOnlyList<ClientListItemDto>> GetClientsAsync(CancellationToken ct = default)
+    {
+        return await _context.Clients
+            .AsNoTracking()
+            .OrderBy(c => c.ClientName)
+            .Select(c => new ClientListItemDto
+            {
+                Id = c.Id,
+                ClientId = c.ClientId,
+                ClientName = c.ClientName ?? string.Empty,
+                Description = c.Description,
+                Enabled = c.Enabled
+            })
+            .ToListAsync(ct);
+    }
+
     public async Task<ClientEditViewModel?> GetClientForEditAsync(int id)
     {
         var client = await _context.Clients
