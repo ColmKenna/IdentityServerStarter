@@ -1,89 +1,76 @@
-using IdentityServer.EF.DataAccess.DataMigrations;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using IdentityServerServices;
+using IdentityServerServices.ViewModels;
 
 namespace IdentityServerAspNetIdentity.UnitTests.Pages;
 
 public class ClaimsIndexModelTests
 {
-    private static ApplicationDbContext CreateDbContext()
-    {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
+    private readonly Mock<IClaimsAdminService> _mockClaimsAdminService;
+    private readonly IdentityServerAspNetIdentity.Pages.Admin.Claims.IndexModel _pageModel;
 
-        return new ApplicationDbContext(options);
+    public ClaimsIndexModelTests()
+    {
+        _mockClaimsAdminService = new Mock<IClaimsAdminService>();
+        _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Claims.IndexModel(_mockClaimsAdminService.Object);
     }
 
     [Fact]
     public async Task OnGetAsync_InitializesClaimsCollection()
     {
-        await using var dbContext = CreateDbContext();
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Claims.IndexModel(dbContext);
+        _mockClaimsAdminService
+            .Setup(service => service.GetClaimsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ClaimTypeListItemDto>());
 
-        await pageModel.OnGetAsync();
+        await _pageModel.OnGetAsync();
 
-        pageModel.Claims.Should().NotBeNull();
+        _pageModel.Claims.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task OnGetAsync_UserClaimsExist_PopulatesDistinctClaimTypes()
+    public async Task OnGetAsync_ServiceReturnsClaims_PopulatesClaims()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.AddRange(
-            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "department", ClaimValue = "engineering" },
-            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "department", ClaimValue = "sales" },
-            new IdentityUserClaim<string> { UserId = "u3", ClaimType = "location", ClaimValue = "dublin" });
-        await dbContext.SaveChangesAsync();
+        _mockClaimsAdminService
+            .Setup(service => service.GetClaimsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ClaimTypeListItemDto>
+            {
+                new() { ClaimType = "department" },
+                new() { ClaimType = "location" }
+            });
 
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Claims.IndexModel(dbContext);
+        await _pageModel.OnGetAsync();
 
-        await pageModel.OnGetAsync();
-
-        pageModel.Claims.Select(c => c.ClaimType).Should().BeEquivalentTo(new[] { "department", "location" });
+        _pageModel.Claims.Should().HaveCount(2);
+        _pageModel.Claims.Select(claim => claim.ClaimType).Should().Equal("department", "location");
     }
 
     [Fact]
-    public async Task OnGetAsync_ClaimTypesAreOrderedAlphabetically()
+    public async Task OnGetAsync_ServiceReturnsOrderedData_PreservesOrder()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.AddRange(
-            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "zeta", ClaimValue = "1" },
-            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "alpha", ClaimValue = "2" },
-            new IdentityUserClaim<string> { UserId = "u3", ClaimType = "middle", ClaimValue = "3" });
-        await dbContext.SaveChangesAsync();
+        _mockClaimsAdminService
+            .Setup(service => service.GetClaimsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ClaimTypeListItemDto>
+            {
+                new() { ClaimType = "alpha" },
+                new() { ClaimType = "middle" },
+                new() { ClaimType = "zeta" }
+            });
 
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Claims.IndexModel(dbContext);
+        await _pageModel.OnGetAsync();
 
-        await pageModel.OnGetAsync();
-
-        pageModel.Claims.Select(c => c.ClaimType).Should().BeInAscendingOrder();
+        _pageModel.Claims.Select(claim => claim.ClaimType).Should().Equal("alpha", "middle", "zeta");
     }
 
     [Fact]
-    public async Task OnGetAsync_NoClaimsExist_ReturnsEmptyList()
+    public async Task OnGetAsync_CallsServiceOnce_WithCancellationToken()
     {
-        await using var dbContext = CreateDbContext();
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Claims.IndexModel(dbContext);
+        _mockClaimsAdminService
+            .Setup(service => service.GetClaimsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ClaimTypeListItemDto>());
 
-        await pageModel.OnGetAsync();
+        await _pageModel.OnGetAsync();
 
-        pageModel.Claims.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task OnGetAsync_NullOrEmptyClaimTypes_AreExcluded()
-    {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.AddRange(
-            new IdentityUserClaim<string> { UserId = "u1", ClaimType = string.Empty, ClaimValue = "v1" },
-            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "department", ClaimValue = "v2" });
-        await dbContext.SaveChangesAsync();
-
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Claims.IndexModel(dbContext);
-
-        await pageModel.OnGetAsync();
-
-        pageModel.Claims.Select(c => c.ClaimType).Should().BeEquivalentTo(new[] { "department" });
+        _mockClaimsAdminService.Verify(
+            service => service.GetClaimsAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

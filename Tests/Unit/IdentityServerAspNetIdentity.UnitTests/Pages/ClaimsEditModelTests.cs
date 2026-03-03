@@ -1,512 +1,462 @@
-using System.Security.Claims;
-using IdentityServer.EF.DataAccess.DataMigrations;
-using IdentityServerAspNetIdentity.Models;
+using IdentityServerServices;
+using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.EntityFrameworkCore;
 
 namespace IdentityServerAspNetIdentity.UnitTests.Pages;
 
 public class ClaimsEditModelTests
 {
-    private static ApplicationDbContext CreateDbContext()
+    private readonly Mock<IClaimsAdminService> _mockClaimsAdminService;
+    private readonly IdentityServerAspNetIdentity.Pages.Admin.Claims.EditModel _pageModel;
+
+    public ClaimsEditModelTests()
     {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        return new ApplicationDbContext(options);
-    }
-
-    private static Mock<UserManager<ApplicationUser>> CreateMockUserManager()
-    {
-        var store = new Mock<IUserStore<ApplicationUser>>();
-        var mockUserManager = new Mock<UserManager<ApplicationUser>>(
-            store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
-
-        mockUserManager.Object.UserValidators.Add(new UserValidator<ApplicationUser>());
-        mockUserManager.Object.PasswordValidators.Add(new PasswordValidator<ApplicationUser>());
-        return mockUserManager;
-    }
-
-    private static IdentityServerAspNetIdentity.Pages.Admin.Claims.EditModel CreatePageModel(
-        ApplicationDbContext dbContext,
-        Mock<UserManager<ApplicationUser>> mockUserManager)
-    {
-        return new IdentityServerAspNetIdentity.Pages.Admin.Claims.EditModel(dbContext, mockUserManager.Object)
+        _mockClaimsAdminService = new Mock<IClaimsAdminService>();
+        _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Claims.EditModel(_mockClaimsAdminService.Object)
         {
             TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>())
         };
     }
 
-    [Fact]
-    public async Task OnGetAsync_ValidClaimType_ReturnsPageResult()
+    private static ClaimEditPageDataDto CreatePageData(
+        IReadOnlyList<ClaimUserAssignmentItemDto>? usersInClaim = null,
+        IReadOnlyList<AvailableClaimUserItemDto>? availableUsers = null,
+        string? newClaimValue = null)
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.Add(new IdentityUserClaim<string>
+        return new ClaimEditPageDataDto
         {
-            UserId = "u1",
-            ClaimType = "department",
-            ClaimValue = "engineering"
-        });
-        await dbContext.SaveChangesAsync();
-
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>
-        {
-            new() { Id = "u1", UserName = "alice", Email = "alice@test.com" }
-        }.AsQueryable());
-
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-
-        var result = await pageModel.OnGetAsync();
-
-        result.Should().BeOfType<PageResult>();
-    }
-
-    [Fact]
-    public async Task OnGetAsync_ClaimAssignmentsExist_PopulatesUsersInClaim()
-    {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.AddRange(
-            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "department", ClaimValue = "engineering" },
-            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "department", ClaimValue = "sales" });
-        await dbContext.SaveChangesAsync();
-
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>
-        {
-            new() { Id = "u1", UserName = "alice", Email = "alice@test.com" },
-            new() { Id = "u2", UserName = "bob", Email = "bob@test.com" }
-        }.AsQueryable());
-
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-
-        await pageModel.OnGetAsync();
-
-        pageModel.UsersInClaim.Should().HaveCount(2);
-        pageModel.UsersInClaim.Select(u => u.UserName).Should().Contain(new[] { "alice", "bob" });
-    }
-
-    [Fact]
-    public async Task OnGetAsync_ClaimAssignmentsExist_PopulatesAvailableUsers()
-    {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.Add(new IdentityUserClaim<string>
-        {
-            UserId = "u1",
-            ClaimType = "department",
-            ClaimValue = "engineering"
-        });
-        await dbContext.SaveChangesAsync();
-
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>
-        {
-            new() { Id = "u1", UserName = "alice", Email = "alice@test.com" },
-            new() { Id = "u2", UserName = "bob", Email = "bob@test.com" }
-        }.AsQueryable());
-
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-
-        await pageModel.OnGetAsync();
-
-        pageModel.AvailableUsers.Should().HaveCount(1);
-        pageModel.AvailableUsers[0].UserName.Should().Be("bob");
-    }
-
-    [Fact]
-    public async Task OnGetAsync_AssignedUsersAreOrderedByUserName()
-    {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.AddRange(
-            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "department", ClaimValue = "engineering" },
-            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "department", ClaimValue = "sales" });
-        await dbContext.SaveChangesAsync();
-
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>
-        {
-            new() { Id = "u1", UserName = "zara", Email = "zara@test.com" },
-            new() { Id = "u2", UserName = "adam", Email = "adam@test.com" }
-        }.AsQueryable());
-
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-
-        await pageModel.OnGetAsync();
-
-        pageModel.UsersInClaim.Select(u => u.UserName).Should().BeInAscendingOrder();
+            UsersInClaim = usersInClaim ?? new List<ClaimUserAssignmentItemDto>
+            {
+                new()
+                {
+                    UserId = "u1",
+                    UserName = "alice",
+                    Email = "alice@test.com",
+                    ClaimValue = "engineering",
+                    IsLastUserAssignment = false
+                }
+            },
+            AvailableUsers = availableUsers ?? new List<AvailableClaimUserItemDto>
+            {
+                new()
+                {
+                    UserId = "u2",
+                    UserName = "bob",
+                    Email = "bob@test.com"
+                }
+            },
+            NewClaimValue = newClaimValue
+        };
     }
 
     [Fact]
     public async Task OnGetAsync_MissingClaimType_ReturnsBadRequest()
     {
-        await using var dbContext = CreateDbContext();
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>().AsQueryable());
+        _pageModel.ClaimType = string.Empty;
 
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = string.Empty;
-
-        var result = await pageModel.OnGetAsync();
+        var result = await _pageModel.OnGetAsync();
 
         result.Should().BeOfType<BadRequestResult>();
+        _mockClaimsAdminService.Verify(
+            service => service.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task OnGetAsync_ClaimTypeNotFound_ReturnsNotFound()
+    public async Task OnGetAsync_UnknownClaimType_ReturnsNotFound()
     {
-        await using var dbContext = CreateDbContext();
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>().AsQueryable());
+        _pageModel.ClaimType = "unknown";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("unknown", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ClaimEditPageDataDto?)null);
 
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "unknown-claim";
-
-        var result = await pageModel.OnGetAsync();
+        var result = await _pageModel.OnGetAsync();
 
         result.Should().BeOfType<NotFoundResult>();
     }
 
     [Fact]
-    public async Task OnGetAsync_SingleAssignedUser_FlagsLastUserWarning()
+    public async Task OnGetAsync_ValidClaimType_MapsPageData_AndReturnsPage()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.Add(new IdentityUserClaim<string>
-        {
-            UserId = "u1",
-            ClaimType = "department",
-            ClaimValue = "engineering"
-        });
-        await dbContext.SaveChangesAsync();
+        _pageModel.ClaimType = "department";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData(
+                usersInClaim: new List<ClaimUserAssignmentItemDto>
+                {
+                    new()
+                    {
+                        UserId = "u1",
+                        UserName = "alice",
+                        Email = "alice@test.com",
+                        ClaimValue = "engineering",
+                        IsLastUserAssignment = true
+                    }
+                },
+                availableUsers: new List<AvailableClaimUserItemDto>
+                {
+                    new()
+                    {
+                        UserId = "u2",
+                        UserName = "bob",
+                        Email = "bob@test.com"
+                    }
+                },
+                newClaimValue: "true"));
 
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>
-        {
-            new() { Id = "u1", UserName = "alice", Email = "alice@test.com" }
-        }.AsQueryable());
-
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-
-        await pageModel.OnGetAsync();
-
-        pageModel.UsersInClaim.Should().ContainSingle();
-        pageModel.UsersInClaim.Single().IsLastUserAssignment.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task OnGetAsync_BooleanClaimValues_DefaultsNewClaimValueToTrue()
-    {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.AddRange(
-            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "feature-enabled", ClaimValue = "true" },
-            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "feature-enabled", ClaimValue = "false" });
-        await dbContext.SaveChangesAsync();
-
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>
-        {
-            new() { Id = "u1", UserName = "alice", Email = "alice@test.com" },
-            new() { Id = "u2", UserName = "bob", Email = "bob@test.com" },
-            new() { Id = "u3", UserName = "charlie", Email = "charlie@test.com" }
-        }.AsQueryable());
-
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "feature-enabled";
-
-        await pageModel.OnGetAsync();
-
-        pageModel.NewClaimValue.Should().Be("true");
-    }
-
-    [Fact]
-    public async Task OnGetAsync_NonBooleanClaimValues_DoesNotDefaultNewClaimValue()
-    {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.Add(new IdentityUserClaim<string>
-        {
-            UserId = "u1",
-            ClaimType = "department",
-            ClaimValue = "engineering"
-        });
-        await dbContext.SaveChangesAsync();
-
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>
-        {
-            new() { Id = "u1", UserName = "alice", Email = "alice@test.com" },
-            new() { Id = "u2", UserName = "bob", Email = "bob@test.com" }
-        }.AsQueryable());
-
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-
-        await pageModel.OnGetAsync();
-
-        pageModel.NewClaimValue.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task OnPostAddUserAsync_ValidInput_AddsClaimAndRedirects()
-    {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.Add(new IdentityUserClaim<string>
-        {
-            UserId = "seed",
-            ClaimType = "department",
-            ClaimValue = "seed-value"
-        });
-        await dbContext.SaveChangesAsync();
-
-        var mockUserManager = CreateMockUserManager();
-        var user = new ApplicationUser { Id = "u1", UserName = "alice", Email = "alice@test.com" };
-
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser> { user }.AsQueryable());
-        mockUserManager.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
-        mockUserManager.Setup(m => m.AddClaimAsync(user, It.IsAny<Claim>()))
-            .ReturnsAsync(IdentityResult.Success);
-
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-        pageModel.SelectedUserId = "u1";
-        pageModel.NewClaimValue = "engineering";
-
-        var result = await pageModel.OnPostAddUserAsync();
-
-        result.Should().BeOfType<RedirectToPageResult>();
-        mockUserManager.Verify(
-            m => m.AddClaimAsync(user, It.Is<Claim>(c => c.Type == "department" && c.Value == "engineering")),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task OnPostAddUserAsync_NoUserSelected_ReturnsPageWithModelError()
-    {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.Add(new IdentityUserClaim<string>
-        {
-            UserId = "seed",
-            ClaimType = "department",
-            ClaimValue = "seed-value"
-        });
-        await dbContext.SaveChangesAsync();
-
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>().AsQueryable());
-
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-        pageModel.NewClaimValue = "engineering";
-
-        var result = await pageModel.OnPostAddUserAsync();
+        var result = await _pageModel.OnGetAsync();
 
         result.Should().BeOfType<PageResult>();
-        pageModel.ModelState.Should().ContainKey(nameof(pageModel.SelectedUserId));
+        _pageModel.UsersInClaim.Should().ContainSingle();
+        _pageModel.UsersInClaim[0].UserName.Should().Be("alice");
+        _pageModel.UsersInClaim[0].IsLastUserAssignment.Should().BeTrue();
+        _pageModel.AvailableUsers.Should().ContainSingle();
+        _pageModel.AvailableUsers[0].UserName.Should().Be("bob");
+        _pageModel.NewClaimValue.Should().Be("true");
     }
 
     [Fact]
-    public async Task OnPostAddUserAsync_MissingClaimValue_ReturnsPageWithModelError()
+    public async Task OnPostAddUserAsync_MissingClaimType_ReturnsBadRequest()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.Add(new IdentityUserClaim<string>
-        {
-            UserId = "seed",
-            ClaimType = "department",
-            ClaimValue = "seed-value"
-        });
-        await dbContext.SaveChangesAsync();
+        _pageModel.ClaimType = " ";
+        _pageModel.SelectedUserId = "u1";
+        _pageModel.NewClaimValue = "engineering";
 
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>().AsQueryable());
+        var result = await _pageModel.OnPostAddUserAsync();
 
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-        pageModel.SelectedUserId = "u1";
-        pageModel.NewClaimValue = string.Empty;
-
-        var result = await pageModel.OnPostAddUserAsync();
-
-        result.Should().BeOfType<PageResult>();
-        pageModel.ModelState.Should().ContainKey(nameof(pageModel.NewClaimValue));
+        result.Should().BeOfType<BadRequestResult>();
+        _mockClaimsAdminService.Verify(
+            service => service.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task OnPostAddUserAsync_UserAlreadyAssigned_ReturnsPageWithModelError()
+    public async Task OnPostAddUserAsync_UnknownClaimType_ReturnsNotFound()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.AddRange(
-            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "department", ClaimValue = "engineering" },
-            new IdentityUserClaim<string> { UserId = "seed", ClaimType = "department", ClaimValue = "seed-value" });
-        await dbContext.SaveChangesAsync();
+        _pageModel.ClaimType = "unknown";
+        _pageModel.SelectedUserId = "u1";
+        _pageModel.NewClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("unknown", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ClaimEditPageDataDto?)null);
 
-        var mockUserManager = CreateMockUserManager();
-        var user = new ApplicationUser { Id = "u1", UserName = "alice", Email = "alice@test.com" };
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser> { user }.AsQueryable());
-        mockUserManager.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        var result = await _pageModel.OnPostAddUserAsync();
 
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-        pageModel.SelectedUserId = "u1";
-        pageModel.NewClaimValue = "new-value";
+        result.Should().BeOfType<NotFoundResult>();
+    }
 
-        var result = await pageModel.OnPostAddUserAsync();
+    [Fact]
+    public async Task OnPostAddUserAsync_NoUserSelected_AddsModelError_SelectedUserId_ExactMessage()
+    {
+        _pageModel.ClaimType = "department";
+        _pageModel.NewClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+
+        var result = await _pageModel.OnPostAddUserAsync();
 
         result.Should().BeOfType<PageResult>();
-        pageModel.ModelState.Should().ContainKey(string.Empty);
+        _pageModel.ModelState.Should().ContainKey(nameof(_pageModel.SelectedUserId));
+        _pageModel.ModelState[nameof(_pageModel.SelectedUserId)]!.Errors.Single().ErrorMessage
+            .Should().Be("Please select a user");
+        _mockClaimsAdminService.Verify(
+            service => service.AddUserToClaimAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task OnPostAddUserAsync_MissingClaimValue_AddsModelError_NewClaimValue_ExactMessage()
+    {
+        _pageModel.ClaimType = "department";
+        _pageModel.SelectedUserId = "u1";
+        _pageModel.NewClaimValue = string.Empty;
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", string.Empty, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+
+        var result = await _pageModel.OnPostAddUserAsync();
+
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.Should().ContainKey(nameof(_pageModel.NewClaimValue));
+        _pageModel.ModelState[nameof(_pageModel.NewClaimValue)]!.Errors.Single().ErrorMessage
+            .Should().Be("Claim value is required");
+        _mockClaimsAdminService.Verify(
+            service => service.AddUserToClaimAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
     public async Task OnPostAddUserAsync_UserNotFound_ReturnsNotFound()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.Add(new IdentityUserClaim<string>
-        {
-            UserId = "seed",
-            ClaimType = "department",
-            ClaimValue = "seed-value"
-        });
-        await dbContext.SaveChangesAsync();
+        _pageModel.ClaimType = "department";
+        _pageModel.SelectedUserId = "u1";
+        _pageModel.NewClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockClaimsAdminService
+            .Setup(service => service.AddUserToClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AddClaimAssignmentResult
+            {
+                Status = AddClaimAssignmentStatus.UserNotFound
+            });
 
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>().AsQueryable());
-        mockUserManager.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync((ApplicationUser?)null);
-
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-        pageModel.SelectedUserId = "u1";
-        pageModel.NewClaimValue = "engineering";
-
-        var result = await pageModel.OnPostAddUserAsync();
+        var result = await _pageModel.OnPostAddUserAsync();
 
         result.Should().BeOfType<NotFoundResult>();
     }
 
     [Fact]
-    public async Task OnPostRemoveUserAsync_ValidInput_RemovesClaimAndRedirects()
+    public async Task OnPostAddUserAsync_AlreadyAssigned_AddsModelError_ModelOnly_ExactMessage()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.AddRange(
-            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "department", ClaimValue = "engineering" },
-            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "department", ClaimValue = "sales" });
-        await dbContext.SaveChangesAsync();
-
-        var mockUserManager = CreateMockUserManager();
-        var user = new ApplicationUser { Id = "u1", UserName = "alice", Email = "alice@test.com" };
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>
-        {
-            user,
-            new() { Id = "u2", UserName = "bob", Email = "bob@test.com" }
-        }.AsQueryable());
-        mockUserManager.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
-        mockUserManager.Setup(m => m.RemoveClaimAsync(user, It.IsAny<Claim>()))
-            .ReturnsAsync(IdentityResult.Success)
-            .Callback<ApplicationUser, Claim>((_, claim) =>
+        _pageModel.ClaimType = "department";
+        _pageModel.SelectedUserId = "u1";
+        _pageModel.NewClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockClaimsAdminService
+            .Setup(service => service.AddUserToClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AddClaimAssignmentResult
             {
-                var claimRow = dbContext.UserClaims.FirstOrDefault(c =>
-                    c.UserId == "u1" &&
-                    c.ClaimType == claim.Type &&
-                    c.ClaimValue == claim.Value);
-
-                if (claimRow is not null)
-                {
-                    dbContext.UserClaims.Remove(claimRow);
-                    dbContext.SaveChanges();
-                }
+                Status = AddClaimAssignmentStatus.AlreadyAssigned
             });
 
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-        pageModel.RemoveUserId = "u1";
-        pageModel.RemoveClaimValue = "engineering";
+        var result = await _pageModel.OnPostAddUserAsync();
 
-        var result = await pageModel.OnPostRemoveUserAsync();
-
-        result.Should().BeOfType<RedirectToPageResult>();
-        mockUserManager.Verify(
-            m => m.RemoveClaimAsync(user, It.Is<Claim>(c => c.Type == "department" && c.Value == "engineering")),
-            Times.Once);
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.Should().ContainKey(string.Empty);
+        _pageModel.ModelState[string.Empty]!.Errors.Single().ErrorMessage
+            .Should().Be("Selected user already has this claim type");
     }
 
     [Fact]
-    public async Task OnPostRemoveUserAsync_LastUserRemoved_RedirectsToClaimsIndexWithWarning()
+    public async Task OnPostAddUserAsync_IdentityFailure_AddsModelOnlyErrors_ExactDescriptions()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.Add(new IdentityUserClaim<string>
-        {
-            UserId = "u1",
-            ClaimType = "department",
-            ClaimValue = "engineering"
-        });
-        await dbContext.SaveChangesAsync();
-
-        var mockUserManager = CreateMockUserManager();
-        var user = new ApplicationUser { Id = "u1", UserName = "alice", Email = "alice@test.com" };
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser> { user }.AsQueryable());
-        mockUserManager.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
-        mockUserManager.Setup(m => m.RemoveClaimAsync(user, It.IsAny<Claim>()))
-            .ReturnsAsync(IdentityResult.Success)
-            .Callback<ApplicationUser, Claim>((_, claim) =>
+        _pageModel.ClaimType = "department";
+        _pageModel.SelectedUserId = "u1";
+        _pageModel.NewClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockClaimsAdminService
+            .Setup(service => service.AddUserToClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AddClaimAssignmentResult
             {
-                var claimRow = dbContext.UserClaims.FirstOrDefault(c =>
-                    c.UserId == "u1" &&
-                    c.ClaimType == claim.Type &&
-                    c.ClaimValue == claim.Value);
-
-                if (claimRow is not null)
-                {
-                    dbContext.UserClaims.Remove(claimRow);
-                    dbContext.SaveChanges();
-                }
+                Status = AddClaimAssignmentStatus.IdentityFailure,
+                Errors = new List<string> { "error-1", "error-2" }
             });
 
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-        pageModel.RemoveUserId = "u1";
-        pageModel.RemoveClaimValue = "engineering";
+        var result = await _pageModel.OnPostAddUserAsync();
 
-        var result = await pageModel.OnPostRemoveUserAsync();
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.Should().ContainKey(string.Empty);
+        _pageModel.ModelState[string.Empty]!.Errors.Select(error => error.ErrorMessage)
+            .Should().Equal("error-1", "error-2");
+    }
+
+    [Fact]
+    public async Task OnPostAddUserAsync_Success_RedirectsToEdit_WithExactSuccessTempData()
+    {
+        _pageModel.ClaimType = "department";
+        _pageModel.SelectedUserId = "u1";
+        _pageModel.NewClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockClaimsAdminService
+            .Setup(service => service.AddUserToClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AddClaimAssignmentResult
+            {
+                Status = AddClaimAssignmentStatus.Success,
+                UserName = "alice"
+            });
+
+        var result = await _pageModel.OnPostAddUserAsync();
+
+        result.Should().BeOfType<RedirectToPageResult>();
+        var redirect = (RedirectToPageResult)result;
+        redirect.PageName.Should().Be("/Admin/Claims/Edit");
+        redirect.RouteValues.Should().ContainKey("claimType");
+        redirect.RouteValues!["claimType"].Should().Be("department");
+        _pageModel.TempData["Success"].Should().Be("Claim 'department' assigned to user 'alice'.");
+    }
+
+    [Fact]
+    public async Task OnPostRemoveUserAsync_MissingClaimType_ReturnsBadRequest()
+    {
+        _pageModel.ClaimType = " ";
+        _pageModel.RemoveUserId = "u1";
+        _pageModel.RemoveClaimValue = "engineering";
+
+        var result = await _pageModel.OnPostRemoveUserAsync();
+
+        result.Should().BeOfType<BadRequestResult>();
+        _mockClaimsAdminService.Verify(
+            service => service.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task OnPostRemoveUserAsync_UnknownClaimType_ReturnsNotFound()
+    {
+        _pageModel.ClaimType = "unknown";
+        _pageModel.RemoveUserId = "u1";
+        _pageModel.RemoveClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("unknown", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ClaimEditPageDataDto?)null);
+
+        var result = await _pageModel.OnPostRemoveUserAsync();
+
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task OnPostRemoveUserAsync_MissingAssignmentDetails_AddsModelError_ModelOnly_ExactMessage()
+    {
+        _pageModel.ClaimType = "department";
+        _pageModel.RemoveUserId = string.Empty;
+        _pageModel.RemoveClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+
+        var result = await _pageModel.OnPostRemoveUserAsync();
+
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.Should().ContainKey(string.Empty);
+        _pageModel.ModelState[string.Empty]!.Errors.Single().ErrorMessage
+            .Should().Be("Claim assignment details are required");
+        _mockClaimsAdminService.Verify(
+            service => service.RemoveUserFromClaimAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task OnPostRemoveUserAsync_UserNotFound_ReturnsNotFound()
+    {
+        _pageModel.ClaimType = "department";
+        _pageModel.RemoveUserId = "u1";
+        _pageModel.RemoveClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockClaimsAdminService
+            .Setup(service => service.RemoveUserFromClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RemoveClaimAssignmentResult
+            {
+                Status = RemoveClaimAssignmentStatus.UserNotFound
+            });
+
+        var result = await _pageModel.OnPostRemoveUserAsync();
+
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task OnPostRemoveUserAsync_AssignmentMissing_AddsModelError_ModelOnly_ExactMessage()
+    {
+        _pageModel.ClaimType = "department";
+        _pageModel.RemoveUserId = "u1";
+        _pageModel.RemoveClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockClaimsAdminService
+            .Setup(service => service.RemoveUserFromClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RemoveClaimAssignmentResult
+            {
+                Status = RemoveClaimAssignmentStatus.AssignmentNotFound
+            });
+
+        var result = await _pageModel.OnPostRemoveUserAsync();
+
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.Should().ContainKey(string.Empty);
+        _pageModel.ModelState[string.Empty]!.Errors.Single().ErrorMessage
+            .Should().Be("The selected claim assignment does not exist");
+    }
+
+    [Fact]
+    public async Task OnPostRemoveUserAsync_IdentityFailure_AddsModelOnlyErrors_ExactDescriptions()
+    {
+        _pageModel.ClaimType = "department";
+        _pageModel.RemoveUserId = "u1";
+        _pageModel.RemoveClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockClaimsAdminService
+            .Setup(service => service.RemoveUserFromClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RemoveClaimAssignmentResult
+            {
+                Status = RemoveClaimAssignmentStatus.IdentityFailure,
+                Errors = new List<string> { "error-1", "error-2" }
+            });
+
+        var result = await _pageModel.OnPostRemoveUserAsync();
+
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.Should().ContainKey(string.Empty);
+        _pageModel.ModelState[string.Empty]!.Errors.Select(error => error.ErrorMessage)
+            .Should().Equal("error-1", "error-2");
+    }
+
+    [Fact]
+    public async Task OnPostRemoveUserAsync_LastAssignmentRemoved_RedirectsIndex_WithExactWarningTempData()
+    {
+        _pageModel.ClaimType = "department";
+        _pageModel.RemoveUserId = "u1";
+        _pageModel.RemoveClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockClaimsAdminService
+            .Setup(service => service.RemoveUserFromClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RemoveClaimAssignmentResult
+            {
+                Status = RemoveClaimAssignmentStatus.Success,
+                UserName = "alice",
+                HasRemainingAssignments = false
+            });
+
+        var result = await _pageModel.OnPostRemoveUserAsync();
 
         result.Should().BeOfType<RedirectToPageResult>();
         var redirect = (RedirectToPageResult)result;
         redirect.PageName.Should().Be("/Admin/Claims/Index");
-        pageModel.TempData["Warning"].Should().NotBeNull();
-        pageModel.TempData["Warning"]!.ToString().Should().Contain("different value");
-        pageModel.TempData["Warning"]!.ToString().Should().Contain("keep this claim");
+        _pageModel.TempData["Warning"].Should().Be(
+            "Claim type 'department' no longer has any assigned users and was removed from the system. Assign it to a user with a different value to keep this claim.");
     }
 
     [Fact]
-    public async Task OnPostRemoveUserAsync_InvalidInput_ReturnsPageWithModelError()
+    public async Task OnPostRemoveUserAsync_RemainingAssignments_RedirectsEdit_WithExactSuccessTempData()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.UserClaims.Add(new IdentityUserClaim<string>
-        {
-            UserId = "u1",
-            ClaimType = "department",
-            ClaimValue = "engineering"
-        });
-        await dbContext.SaveChangesAsync();
+        _pageModel.ClaimType = "department";
+        _pageModel.RemoveUserId = "u1";
+        _pageModel.RemoveClaimValue = "engineering";
+        _mockClaimsAdminService
+            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+        _mockClaimsAdminService
+            .Setup(service => service.RemoveUserFromClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RemoveClaimAssignmentResult
+            {
+                Status = RemoveClaimAssignmentStatus.Success,
+                UserName = "alice",
+                HasRemainingAssignments = true
+            });
 
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(m => m.Users).Returns(new List<ApplicationUser>
-        {
-            new() { Id = "u1", UserName = "alice", Email = "alice@test.com" }
-        }.AsQueryable());
+        var result = await _pageModel.OnPostRemoveUserAsync();
 
-        var pageModel = CreatePageModel(dbContext, mockUserManager);
-        pageModel.ClaimType = "department";
-        pageModel.RemoveUserId = string.Empty;
-        pageModel.RemoveClaimValue = "engineering";
-
-        var result = await pageModel.OnPostRemoveUserAsync();
-
-        result.Should().BeOfType<PageResult>();
-        pageModel.ModelState.Should().ContainKey(string.Empty);
+        result.Should().BeOfType<RedirectToPageResult>();
+        var redirect = (RedirectToPageResult)result;
+        redirect.PageName.Should().Be("/Admin/Claims/Edit");
+        redirect.RouteValues.Should().ContainKey("claimType");
+        redirect.RouteValues!["claimType"].Should().Be("department");
+        _pageModel.TempData["Success"].Should().Be("Claim 'department' removed from user 'alice'.");
     }
 }

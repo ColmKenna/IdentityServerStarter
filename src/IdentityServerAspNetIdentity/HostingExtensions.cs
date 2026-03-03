@@ -216,6 +216,7 @@ internal static class HostingExtensions
         builder.Services.AddScoped<IScriptHolder,ScriptHolder>();
         builder.Services.AddScoped<IEmailSender, EmailSenderConsole>();
         builder.Services.AddScoped<IApiScopesAdminService, ApiScopesAdminService>();
+        builder.Services.AddScoped<IClaimsAdminService, ClaimsAdminService>();
         builder.Services.AddScoped<IClientAdminService, ClientAdminService>();
         builder.Services.AddScoped<IUserEditor, UserEditor>();
 
