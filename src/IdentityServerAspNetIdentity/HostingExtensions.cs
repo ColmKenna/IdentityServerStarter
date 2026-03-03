@@ -218,6 +218,7 @@ internal static class HostingExtensions
         builder.Services.AddScoped<IApiScopesAdminService, ApiScopesAdminService>();
         builder.Services.AddScoped<IClaimsAdminService, ClaimsAdminService>();
         builder.Services.AddScoped<IClientAdminService, ClientAdminService>();
+        builder.Services.AddScoped<IIdentityResourcesAdminService, IdentityResourcesAdminService>();
         builder.Services.AddScoped<IUserEditor, UserEditor>();
 
         return builder.Build();

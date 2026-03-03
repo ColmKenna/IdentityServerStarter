@@ -1,103 +1,102 @@
-using Duende.IdentityServer.EntityFramework.DbContexts;
-using Duende.IdentityServer.EntityFramework.Entities;
-using Duende.IdentityServer.EntityFramework.Options;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using IdentityServerServices;
+using IdentityServerServices.ViewModels;
 
 namespace IdentityServerAspNetIdentity.UnitTests.Pages;
 
 public class IdentityResourcesIndexModelTests
 {
-    private static ConfigurationDbContext CreateDbContext()
+    private readonly Mock<IIdentityResourcesAdminService> _mockService;
+    private readonly IdentityServerAspNetIdentity.Pages.Admin.IdentityResources.IndexModel _pageModel;
+
+    public IdentityResourcesIndexModelTests()
     {
-        var storeOptions = new ConfigurationStoreOptions();
-        var serviceProvider = new ServiceCollection()
-            .AddSingleton(storeOptions)
-            .BuildServiceProvider();
-
-        var options = new DbContextOptionsBuilder<ConfigurationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .UseApplicationServiceProvider(serviceProvider)
-            .Options;
-
-        return new ConfigurationDbContext(options);
+        _mockService = new Mock<IIdentityResourcesAdminService>();
+        _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.IdentityResources.IndexModel(_mockService.Object);
     }
 
     [Fact]
     public async Task OnGetAsync_InitializesIdentityResourcesCollection()
     {
-        await using var dbContext = CreateDbContext();
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.IdentityResources.IndexModel(dbContext);
+        _mockService
+            .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<IdentityResourceListItemDto>());
 
-        await pageModel.OnGetAsync();
+        await _pageModel.OnGetAsync();
 
-        pageModel.IdentityResources.Should().NotBeNull();
+        _pageModel.IdentityResources.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task OnGetAsync_IdentityResourcesExist_PopulatesIdentityResources()
+    public async Task OnGetAsync_ServiceReturnsResources_PopulatesIdentityResources()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.IdentityResources.AddRange(
-            new IdentityResource { Name = "profile", DisplayName = "Profile", Description = "User profile", Enabled = true },
-            new IdentityResource { Name = "email", DisplayName = "Email", Description = "User email", Enabled = false });
-        await dbContext.SaveChangesAsync();
+        _mockService
+            .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<IdentityResourceListItemDto>
+            {
+                new()
+                {
+                    Id = 1,
+                    Name = "openid",
+                    DisplayName = "OpenID Connect",
+                    Description = "OpenID Connect scope",
+                    Enabled = true
+                },
+                new()
+                {
+                    Id = 2,
+                    Name = "profile",
+                    DisplayName = "Profile",
+                    Description = "User profile",
+                    Enabled = false
+                }
+            });
 
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.IdentityResources.IndexModel(dbContext);
+        await _pageModel.OnGetAsync();
 
-        await pageModel.OnGetAsync();
-
-        pageModel.IdentityResources.Should().HaveCount(2);
-        pageModel.IdentityResources.Select(r => r.Name).Should().Contain(new[] { "profile", "email" });
+        _pageModel.IdentityResources.Should().HaveCount(2);
+        _pageModel.IdentityResources.Select(r => r.Name).Should().Contain(new[] { "openid", "profile" });
     }
 
     [Fact]
-    public async Task OnGetAsync_IdentityResourcesAreOrderedByName()
+    public async Task OnGetAsync_ServiceReturnsOrderedData_PreservesOrder()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.IdentityResources.AddRange(
-            new IdentityResource { Name = "zeta", DisplayName = "Zeta", Description = "Zeta description", Enabled = true },
-            new IdentityResource { Name = "alpha", DisplayName = "Alpha", Description = "Alpha description", Enabled = true },
-            new IdentityResource { Name = "middle", DisplayName = "Middle", Description = "Middle description", Enabled = true });
-        await dbContext.SaveChangesAsync();
+        _mockService
+            .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<IdentityResourceListItemDto>
+            {
+                new() { Id = 1, Name = "address", DisplayName = "Address", Description = "A", Enabled = true },
+                new() { Id = 2, Name = "openid", DisplayName = "OpenID", Description = "O", Enabled = true },
+                new() { Id = 3, Name = "profile", DisplayName = "Profile", Description = "P", Enabled = true }
+            });
 
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.IdentityResources.IndexModel(dbContext);
+        await _pageModel.OnGetAsync();
 
-        await pageModel.OnGetAsync();
-
-        pageModel.IdentityResources.Select(r => r.Name).Should().BeInAscendingOrder();
+        _pageModel.IdentityResources.Select(r => r.Name).Should().Equal("address", "openid", "profile");
     }
 
     [Fact]
-    public async Task OnGetAsync_NoIdentityResourcesExist_ReturnsEmptyList()
+    public async Task OnGetAsync_NoResources_ReturnsEmptyList()
     {
-        await using var dbContext = CreateDbContext();
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.IdentityResources.IndexModel(dbContext);
+        _mockService
+            .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<IdentityResourceListItemDto>());
 
-        await pageModel.OnGetAsync();
+        await _pageModel.OnGetAsync();
 
-        pageModel.IdentityResources.Should().BeEmpty();
+        _pageModel.IdentityResources.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task OnGetAsync_NullDisplayNameOrDescription_MapsToEmptyStrings()
+    public async Task OnGetAsync_CallsServiceOnce()
     {
-        await using var dbContext = CreateDbContext();
-        dbContext.IdentityResources.Add(new IdentityResource
-        {
-            Name = "profile",
-            DisplayName = null,
-            Description = null,
-            Enabled = true
-        });
-        await dbContext.SaveChangesAsync();
+        _mockService
+            .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<IdentityResourceListItemDto>());
 
-        var pageModel = new IdentityServerAspNetIdentity.Pages.Admin.IdentityResources.IndexModel(dbContext);
+        await _pageModel.OnGetAsync();
 
-        await pageModel.OnGetAsync();
-
-        pageModel.IdentityResources.Should().ContainSingle();
-        pageModel.IdentityResources[0].DisplayName.Should().BeEmpty();
-        pageModel.IdentityResources[0].Description.Should().BeEmpty();
+        _mockService.Verify(
+            service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

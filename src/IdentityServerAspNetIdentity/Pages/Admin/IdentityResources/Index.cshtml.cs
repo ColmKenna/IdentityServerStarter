@@ -1,44 +1,25 @@
-using Duende.IdentityServer.EntityFramework.DbContexts;
+using IdentityServerServices;
+using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 
 namespace IdentityServerAspNetIdentity.Pages.Admin.IdentityResources;
 
 [Authorize(Roles = "ADMIN")]
 public class IndexModel : PageModel
 {
-    private readonly ConfigurationDbContext _context;
+    private readonly IIdentityResourcesAdminService _identityResourcesAdminService;
 
-    public IndexModel(ConfigurationDbContext context)
+    public IndexModel(IIdentityResourcesAdminService identityResourcesAdminService)
     {
-        _context = context;
+        _identityResourcesAdminService = identityResourcesAdminService;
     }
 
-    public IList<IdentityResourceListItem> IdentityResources { get; set; } = new List<IdentityResourceListItem>();
+    public IList<IdentityResourceListItemDto> IdentityResources { get; set; } = new List<IdentityResourceListItemDto>();
 
     public async Task OnGetAsync()
     {
-        IdentityResources = await _context.IdentityResources
-            .AsNoTracking()
-            .OrderBy(resource => resource.Name)
-            .Select(resource => new IdentityResourceListItem
-            {
-                Id = resource.Id,
-                Name = resource.Name,
-                DisplayName = resource.DisplayName ?? string.Empty,
-                Description = resource.Description ?? string.Empty,
-                Enabled = resource.Enabled
-            })
-            .ToListAsync();
-    }
-
-    public class IdentityResourceListItem
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = default!;
-        public string DisplayName { get; set; } = default!;
-        public string Description { get; set; } = default!;
-        public bool Enabled { get; set; }
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+        IdentityResources = (await _identityResourcesAdminService.GetIdentityResourcesAsync(cancellationToken)).ToList();
     }
 }
