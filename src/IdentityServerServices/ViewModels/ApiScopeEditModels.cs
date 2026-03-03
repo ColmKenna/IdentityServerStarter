@@ -41,6 +41,9 @@ public sealed class CreateApiScopeResult
 {
     public CreateApiScopeStatus Status { get; init; }
     public int CreatedId { get; init; }
+
+    public static CreateApiScopeResult DuplicateName () => new() { Status = CreateApiScopeStatus.DuplicateName };
+    public static CreateApiScopeResult Success(int createdId) => new() { Status = CreateApiScopeStatus.Success, CreatedId = createdId };
 }
 
 public enum UpdateApiScopeStatus
@@ -53,7 +56,11 @@ public enum UpdateApiScopeStatus
 public sealed class UpdateApiScopeResult
 {
     public UpdateApiScopeStatus Status { get; init; }
-}
+
+    public static UpdateApiScopeResult NotFound() => new() { Status = UpdateApiScopeStatus.NotFound };
+    public static UpdateApiScopeResult DuplicateName() => new() { Status = UpdateApiScopeStatus.DuplicateName };
+    public static UpdateApiScopeResult Success() => new() { Status = UpdateApiScopeStatus.Success };
+    }
 
 public enum AddApiScopeClaimStatus
 {
@@ -66,6 +73,10 @@ public sealed class AddApiScopeClaimResult
 {
     public AddApiScopeClaimStatus Status { get; init; }
     public string? ClaimType { get; init; }
+
+    public static AddApiScopeClaimResult NotFound() => new() { Status = AddApiScopeClaimStatus.NotFound };
+    public static AddApiScopeClaimResult AlreadyApplied(string claimType) => new() { Status = AddApiScopeClaimStatus.AlreadyApplied, ClaimType = claimType };
+    public static AddApiScopeClaimResult Success(string claimType) => new() { Status = AddApiScopeClaimStatus.Success, ClaimType = claimType };
 }
 
 public enum RemoveApiScopeClaimStatus
@@ -79,4 +90,8 @@ public sealed class RemoveApiScopeClaimResult
 {
     public RemoveApiScopeClaimStatus Status { get; init; }
     public string? ClaimType { get; init; }
+
+    public static RemoveApiScopeClaimResult NotFound() => new() { Status = RemoveApiScopeClaimStatus.NotFound };
+    public static RemoveApiScopeClaimResult NotApplied(string claimType) => new() { Status = RemoveApiScopeClaimStatus.NotApplied, ClaimType = claimType };
+    public static RemoveApiScopeClaimResult Success(string claimType) => new() { Status = RemoveApiScopeClaimStatus.Success, ClaimType = claimType };
 }

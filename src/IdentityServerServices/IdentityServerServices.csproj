@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\EfCoreExtensions\EfCoreExtensions.csproj" />
     <ProjectReference Include="..\IdentityServer.EF.DataAccess\IdentityServer.EF.DataAccess.csproj" />
+    <ProjectReference Include="..\PrimativeExtensions\PrimativeExtensions.csproj" />
   </ItemGroup>
 </Project>
 
