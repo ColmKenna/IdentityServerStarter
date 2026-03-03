@@ -50,7 +50,7 @@ public class EditModel : PageModel
             };
 
             AppliedUserClaims = new List<string>();
-            AvailableUserClaims = new List<string>();
+            AvailableUserClaims = await GetAllUserClaimTypesAsync();
             return Page();
         }
 
@@ -240,17 +240,22 @@ public class EditModel : PageModel
             .OrderBy(claimType => claimType)
             .ToList();
 
-        var allUserClaimTypes = await _applicationDbContext.UserClaims
+        var allUserClaimTypes = await GetAllUserClaimTypesAsync();
+
+        AvailableUserClaims = allUserClaimTypes
+            .Where(claimType => !AppliedUserClaims.Contains(claimType))
+            .ToList();
+    }
+
+    private async Task<List<string>> GetAllUserClaimTypesAsync()
+    {
+        return await _applicationDbContext.UserClaims
             .AsNoTracking()
             .Where(claim => claim.ClaimType != null && claim.ClaimType != string.Empty)
             .Select(claim => claim.ClaimType!)
             .Distinct()
             .OrderBy(claimType => claimType)
             .ToListAsync();
-
-        AvailableUserClaims = allUserClaimTypes
-            .Where(claimType => !AppliedUserClaims.Contains(claimType))
-            .ToList();
     }
 
     private static string? NormalizeOptional(string? value)

@@ -74,9 +74,36 @@
                     </form>
                 </ck-tab>
 
-                @if (!Model.IsCreateMode)
-                {
-                    <ck-tab label="User Claims">
+                <ck-tab label="User Claims">
+                    @if (Model.IsCreateMode)
+                    {
+                        <div class="alert alert-info" id="save-before-user-claims-message">
+                            <i class="fas fa-info-circle"></i> Save API scope before managing applied user claims.
+                        </div>
+
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h3><i class="fas fa-list"></i> Known User Claim Types</h3>
+                                @if (Model.AvailableUserClaims.Any())
+                                {
+                                    <ul class="mb-0" id="known-user-claims-list">
+                                        @foreach (var claimType in Model.AvailableUserClaims)
+                                        {
+                                            <li><code>@claimType</code></li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-info" id="no-available-user-claims-message">
+                                        <i class="fas fa-info-circle"></i> No available user claims found.
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
                         <div class="card mb-4">
                             <div class="card-body">
                                 <h3><i class="fas fa-plus-circle"></i> Available User Claims</h3>
@@ -152,8 +179,8 @@
                                 }
                             </div>
                         </div>
-                    </ck-tab>
-                }
+                    }
+                </ck-tab>
             </ck-tabs>
         </div>
     </div>

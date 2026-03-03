@@ -244,6 +244,17 @@ internal static class HostingExtensions
             await next();
         });
 
+        // Route alias: serve create mode from the Edit Razor Page without a redirect.
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.Equals("/Admin/ApiScopes/Create", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Request.Path = "/Admin/ApiScopes/0/Edit";
+            }
+
+            await next();
+        });
+
         app.UseStaticFiles();
         app.UseRouting();
         app.UseIdentityServer();

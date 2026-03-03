@@ -106,13 +106,16 @@ public class ApiScopesEditIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task Get_EditApiScope_IdZero_DoesNotRenderUserClaimsTab()
+    public async Task Get_EditApiScope_IdZero_RendersUserClaimsTabWithSavePrompt()
     {
         var response = await _client.GetAsync("/Admin/ApiScopes/0/Edit");
         var document = await AngleSharpHelpers.GetDocumentAsync(response);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        document.QuerySelector("ck-tab[label='User Claims']").Should().BeNull();
+        document.QuerySelector("ck-tab[label='User Claims']").Should().NotBeNull();
+        var savePrompt = document.QuerySelector("#save-before-user-claims-message");
+        savePrompt.Should().NotBeNull();
+        savePrompt!.TextContent.Should().Contain("Save API scope");
     }
 
     [Fact]
