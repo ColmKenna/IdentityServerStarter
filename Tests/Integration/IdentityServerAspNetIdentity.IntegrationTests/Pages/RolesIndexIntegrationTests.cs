@@ -24,17 +24,16 @@ public class RolesIndexIntegrationTests : IDisposable
 
     #region Helpers
 
-    private void SeedRoles(params string[] roleNames)
+    private async Task SeedRolesAsync(params string[] roleNames)
     {
         using var scope = _factory.Services.CreateScope();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
         foreach (var roleName in roleNames)
         {
-            if (!roleManager.RoleExistsAsync(roleName).GetAwaiter().GetResult())
+            if (!await roleManager.RoleExistsAsync(roleName))
             {
-                var role = new IdentityRole(roleName);
-                var result = roleManager.CreateAsync(role).GetAwaiter().GetResult();
+                var result = await roleManager.CreateAsync(new IdentityRole(roleName));
                 if (!result.Succeeded)
                 {
                     throw new Exception("Role Save Failed: " + string.Join(", ", result.Errors.Select(e => e.Description)));
@@ -76,7 +75,7 @@ public class RolesIndexIntegrationTests : IDisposable
     public async Task Get_RolesExist_ReturnsPageWithRolesTable()
     {
         // Arrange
-        SeedRoles("Admin", "Editor", "Viewer");
+        await SeedRolesAsync("Admin", "Editor", "Viewer");
 
         // Act
         var response = await _client.GetAsync("/Admin/Roles");
@@ -91,7 +90,7 @@ public class RolesIndexIntegrationTests : IDisposable
     public async Task Get_RolesExist_TableContainsCorrectNumberOfRows()
     {
         // Arrange
-        SeedRoles("Admin", "Editor", "Viewer");
+        await SeedRolesAsync("Admin", "Editor", "Viewer");
 
         // Act
         var response = await _client.GetAsync("/Admin/Roles");
@@ -106,7 +105,7 @@ public class RolesIndexIntegrationTests : IDisposable
     public async Task Get_RolesExist_TableDisplaysRoleNames()
     {
         // Arrange
-        SeedRoles("Admin", "Editor");
+        await SeedRolesAsync("Admin", "Editor");
 
         using (var scope = _factory.Services.CreateScope())
         {
