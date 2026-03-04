@@ -830,4 +830,103 @@ public class ClientAdminServiceTests : IDisposable
         var item = result.Should().ContainSingle().Subject;
         item.Description.Should().BeNull();
     }
+
+    // --- GetClientForEditAsync: PopulateAvailableOptionsAsync edge cases ---
+
+    [Fact]
+    public async Task GetClientForEditAsync_WithNoIdentityResourcesOrApiScopes_ReturnsEmptyAvailableScopes()
+    {
+        var clientId = await SeedClientAsync();
+
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientForEditAsync(clientId);
+
+        result!.AvailableScopes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetClientForEditAsync_WithOnlyIdentityResources_AvailableScopesContainsOnlyIdentityResourceNames()
+    {
+        using (var seedContext = CreateContext())
+        {
+            seedContext.IdentityResources.AddRange(
+                new IdentityResource { Name = "openid" },
+                new IdentityResource { Name = "profile" });
+            await seedContext.SaveChangesAsync();
+        }
+
+        var clientId = await SeedClientAsync();
+
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientForEditAsync(clientId);
+
+        result!.AvailableScopes.Should().BeEquivalentTo("openid", "profile");
+    }
+
+    [Fact]
+    public async Task GetClientForEditAsync_WithOnlyApiScopes_AvailableScopesContainsOnlyApiScopeNames()
+    {
+        using (var seedContext = CreateContext())
+        {
+            seedContext.ApiScopes.AddRange(
+                new ApiScope { Name = "api1" },
+                new ApiScope { Name = "api2" });
+            await seedContext.SaveChangesAsync();
+        }
+
+        var clientId = await SeedClientAsync();
+
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientForEditAsync(clientId);
+
+        result!.AvailableScopes.Should().BeEquivalentTo("api1", "api2");
+    }
+
+    [Fact]
+    public async Task GetClientForEditAsync_AvailableScopesListsIdentityResourcesBeforeApiScopes()
+    {
+        using (var seedContext = CreateContext())
+        {
+            seedContext.IdentityResources.Add(new IdentityResource { Name = "openid" });
+            seedContext.ApiScopes.Add(new ApiScope { Name = "api1" });
+            await seedContext.SaveChangesAsync();
+        }
+
+        var clientId = await SeedClientAsync();
+
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientForEditAsync(clientId);
+
+        result!.AvailableScopes.Should().HaveCount(2);
+        result.AvailableScopes[0].Should().Be("openid");
+        result.AvailableScopes[1].Should().Be("api1");
+    }
+
+    [Fact]
+    public async Task GetClientForEditAsync_WhenSameNameExistsInIdentityResourcesAndApiScopes_AppearsInAvailableScopesTwice()
+    {
+        using (var seedContext = CreateContext())
+        {
+            seedContext.IdentityResources.Add(new IdentityResource { Name = "shared-scope" });
+            seedContext.ApiScopes.Add(new ApiScope { Name = "shared-scope" });
+            await seedContext.SaveChangesAsync();
+        }
+
+        var clientId = await SeedClientAsync();
+
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.GetClientForEditAsync(clientId);
+
+        result!.AvailableScopes.Count(s => s == "shared-scope").Should().Be(2);
+    }
 }

@@ -33,11 +33,11 @@ public class ClientAdminService : IClientAdminService
             .ToListAsync(ct);
     }
 
-    public async Task<ClientEditViewModel?> GetClientForEditAsync(int id)
+    public async Task<ClientEditViewModel?> GetClientForEditAsync(int id, CancellationToken ct = default)
     {
         var client = await ClientsWithIncludes()
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
 
         if (client == null)
             return null;
@@ -68,15 +68,15 @@ public class ClientAdminService : IClientAdminService
             AllowedScopes = client.AllowedScopes.Select(s => s.Scope).ToList()
         };
 
-        await PopulateAvailableOptionsAsync(viewModel);
+        await PopulateAvailableOptionsAsync(viewModel, ct);
 
         return viewModel;
     }
 
-    public async Task<bool> UpdateClientAsync(int id, ClientEditViewModel viewModel)
+    public async Task<bool> UpdateClientAsync(int id, ClientEditViewModel viewModel, CancellationToken ct = default)
     {
         var client = await ClientsWithIncludes()
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
 
         if (client == null)
             return false;
@@ -116,7 +116,7 @@ public class ClientAdminService : IClientAdminService
             });
         }
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(ct);
         return true;
     }
 
@@ -130,10 +130,10 @@ public class ClientAdminService : IClientAdminService
             .Include(c => c.ClientSecrets);
     }
 
-    private async Task PopulateAvailableOptionsAsync(ClientEditViewModel viewModel)
+    private async Task PopulateAvailableOptionsAsync(ClientEditViewModel viewModel, CancellationToken ct)
     {
-        var identityResources = await _context.IdentityResources.Select(ir => ir.Name).ToListAsync();
-        var apiScopes = await _context.ApiScopes.Select(aps => aps.Name).ToListAsync();
+        var identityResources = await _context.IdentityResources.AsNoTracking().Select(ir => ir.Name).ToListAsync(ct);
+        var apiScopes = await _context.ApiScopes.AsNoTracking().Select(aps => aps.Name).ToListAsync(ct);
         
         viewModel.AvailableScopes = identityResources.Concat(apiScopes).ToList();
 
