@@ -50,7 +50,7 @@ public class RolesAdminService : IRolesAdminService
             })
             .ToList();
 
-        var allUsers = _userManager.Users.ToList();
+        var allUsers = await _userManager.Users.ToListAsync(ct);
         var availableUsers = allUsers
             .Where(u => !usersInRoleIds.Contains(u.Id))
             .OrderBy(u => u.UserName)

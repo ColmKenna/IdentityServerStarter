@@ -260,6 +260,51 @@ public class RolesAdminServiceTests
         result!.UsersInRole.Select(u => u.UserName).Should().BeInAscendingOrder();
     }
 
+    [Fact]
+    public async Task GetRoleForEditAsync_AvailableUsers_OrderedByUserName()
+    {
+        var mockRoleManager = CreateMockRoleManager();
+        var usersInRole = new List<ApplicationUser>
+        {
+            new() { Id = "u1", UserName = "alice", Email = "a@t.com" }
+        };
+        var allUsers = new List<ApplicationUser>
+        {
+            new() { Id = "u1", UserName = "alice", Email = "a@t.com" },
+            new() { Id = "u4", UserName = "zara", Email = "z@t.com" },
+            new() { Id = "u2", UserName = "bob", Email = "b@t.com" },
+            new() { Id = "u3", UserName = "charlie", Email = "c@t.com" }
+        };
+        var mockUserManager = CreateMockUserManager(allUsers);
+        var role = new IdentityRole("Editor") { Id = "role-1" };
+
+        mockRoleManager.Setup(m => m.FindByIdAsync("role-1")).ReturnsAsync(role);
+        mockUserManager.Setup(m => m.GetUsersInRoleAsync("Editor")).ReturnsAsync(usersInRole);
+
+        var service = CreateService(mockRoleManager, mockUserManager);
+
+        var result = await service.GetRoleForEditAsync("role-1");
+
+        result!.AvailableUsers.Select(u => u.UserName).Should().BeInAscendingOrder();
+    }
+
+    [Fact]
+    public async Task GetRoleForEditAsync_NullRoleName_MapsToEmptyString()
+    {
+        var mockRoleManager = CreateMockRoleManager();
+        var mockUserManager = CreateMockUserManager();
+        var role = new IdentityRole { Id = "role-1", Name = null };
+
+        mockRoleManager.Setup(m => m.FindByIdAsync("role-1")).ReturnsAsync(role);
+        mockUserManager.Setup(m => m.GetUsersInRoleAsync(null!)).ReturnsAsync(new List<ApplicationUser>());
+
+        var service = CreateService(mockRoleManager, mockUserManager);
+
+        var result = await service.GetRoleForEditAsync("role-1");
+
+        result!.RoleName.Should().BeEmpty();
+    }
+
     // ── AddUserToRoleAsync ────────────────────────────────────────────────
 
     [Fact]
