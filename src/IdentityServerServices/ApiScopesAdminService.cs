@@ -59,13 +59,11 @@ public class ApiScopesAdminService : IApiScopesAdminService
 
 
 
-    public Task<ApiScopeEditPageDataDto> GetForCreateAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiScopeEditPageDataDto> GetForCreateAsync(CancellationToken cancellationToken = default)
     {
-
-        return GetAllUserClaimTypesAsync(cancellationToken)
-            .Then(CreateApiScopeEditPageData, cancellationToken);
-
-
+        var allUserClaims = 
+            await GetAllUserClaimTypesAsync(cancellationToken);
+        return CreateApiScopeEditPageData(allUserClaims);
     }
 
     public async Task<ApiScopeEditPageDataDto?> GetForEditAsync(int id, CancellationToken cancellationToken = default)
@@ -161,8 +159,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
     {
         var apiScope = await _configurationDbContext.ApiScopes
             .Include(scope => scope.UserClaims)
-            .FirstOrDefaultAsync(scope => scope.Id == id, cancellationToken)
-            .ConfigureAwait(false);
+            .FirstOrDefaultAsync(scope => scope.Id == id, cancellationToken);
 
         if (apiScope is null)
         {
