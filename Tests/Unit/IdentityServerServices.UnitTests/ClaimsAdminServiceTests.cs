@@ -50,7 +50,7 @@ public class ClaimsAdminServiceTests
             store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         mockUserManager.SetupGet(manager => manager.Users)
-            .Returns((users ?? Array.Empty<ApplicationUser>()).AsQueryable());
+            .Returns(new TestAsyncEnumerable<ApplicationUser>(users ?? Array.Empty<ApplicationUser>()));
 
         return mockUserManager;
     }

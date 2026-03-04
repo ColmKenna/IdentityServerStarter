@@ -51,11 +51,9 @@ public class ClaimsAdminService : IClaimsAdminService
             .ToListAsync(ct);
 
         if (assignments.Count == 0)
-        {
             return null;
-        }
 
-        var users = _userManager.Users.ToList();
+        var users = await _userManager.Users.ToListAsync(ct);
         var usersById = users.ToDictionary(user => user.Id, user => user, StringComparer.Ordinal);
 
         var usersInClaim = assignments
@@ -71,6 +69,26 @@ public class ClaimsAdminService : IClaimsAdminService
             .ThenBy(assignment => assignment.ClaimValue)
             .ToList();
 
+        SetIsLastUserAssignment(usersInClaim);
+
+        var assignedUserIds = usersInClaim
+            .Select(assignment => assignment.UserId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var newClaimValue = ShouldDefaultNewClaimValue(currentNewClaimValue, assignments.Select(a => a.ClaimValue))
+            ? bool.TrueString.ToLowerInvariant()
+            : currentNewClaimValue;
+
+        return new ClaimEditPageDataDto
+        {
+            UsersInClaim = usersInClaim,
+            AvailableUsers = BuildAvailableUsers(users, assignedUserIds),
+            NewClaimValue = newClaimValue
+        };
+    }
+
+    private static void SetIsLastUserAssignment(List<ClaimUserAssignmentItemDto> usersInClaim)
+    {
         var assignmentCountsByUser = usersInClaim
             .GroupBy(assignment => assignment.UserId)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
@@ -82,12 +100,13 @@ public class ClaimsAdminService : IClaimsAdminService
                 uniqueUsersCount == 1 &&
                 assignmentCountsByUser[assignment.UserId] == 1;
         }
+    }
 
-        var assignedUserIds = usersInClaim
-            .Select(assignment => assignment.UserId)
-            .ToHashSet(StringComparer.Ordinal);
-
-        var availableUsers = users
+    private static List<AvailableClaimUserItemDto> BuildAvailableUsers(
+        List<ApplicationUser> users,
+        HashSet<string> assignedUserIds)
+    {
+        return users
             .Where(user => !assignedUserIds.Contains(user.Id))
             .OrderBy(user => user.UserName)
             .Select(user => new AvailableClaimUserItemDto
@@ -97,17 +116,6 @@ public class ClaimsAdminService : IClaimsAdminService
                 Email = user.Email ?? string.Empty
             })
             .ToList();
-
-        var newClaimValue = ShouldDefaultNewClaimValue(currentNewClaimValue, assignments.Select(a => a.ClaimValue))
-            ? bool.TrueString.ToLowerInvariant()
-            : currentNewClaimValue;
-
-        return new ClaimEditPageDataDto
-        {
-            UsersInClaim = usersInClaim,
-            AvailableUsers = availableUsers,
-            NewClaimValue = newClaimValue
-        };
     }
 
     public async Task<AddClaimAssignmentResult> AddUserToClaimAsync(
