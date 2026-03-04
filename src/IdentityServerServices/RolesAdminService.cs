@@ -21,6 +21,7 @@ public class RolesAdminService : IRolesAdminService
     public async Task<IReadOnlyList<RoleListItemDto>> GetRolesAsync(CancellationToken ct = default)
     {
         return await _roleManager.Roles
+            .AsNoTracking()
             .OrderBy(r => r.Name)
             .Select(r => new RoleListItemDto
             {

@@ -33,8 +33,8 @@ public class UserEditor : IUserEditor
 
     public async Task<IReadOnlyList<UserListItemDto>> GetUsersAsync(CancellationToken ct = default)
     {
-        var users = await _userManager.Users.ToListAsync(ct);
-        return users
+        return await _userManager.Users
+            .AsNoTracking()
             .Select(u => new UserListItemDto
             {
                 Id = u.Id,
@@ -44,7 +44,7 @@ public class UserEditor : IUserEditor
                 LockoutEnd = u.LockoutEnd,
                 TwoFactorEnabled = u.TwoFactorEnabled
             })
-            .ToList();
+            .ToListAsync(ct);
     }
 
     public async Task<UserEditPageDataDto?> GetUserEditPageDataAsync(UserEditPageDataRequest request, CancellationToken ct = default)

@@ -35,8 +35,7 @@ public class ClientAdminService : IClientAdminService
 
     public async Task<ClientEditViewModel?> GetClientForEditAsync(int id, CancellationToken ct = default)
     {
-        var client = await ClientsWithIncludes()
-            .AsNoTracking()
+        var client = await ClientsForRead()
             .FirstOrDefaultAsync(c => c.Id == id, ct);
 
         if (client == null)
@@ -75,7 +74,7 @@ public class ClientAdminService : IClientAdminService
 
     public async Task<bool> UpdateClientAsync(int id, ClientEditViewModel viewModel, CancellationToken ct = default)
     {
-        var client = await ClientsWithIncludes()
+        var client = await ClientsForWrite()
             .FirstOrDefaultAsync(c => c.Id == id, ct);
 
         if (client == null)
@@ -100,10 +99,10 @@ public class ClientAdminService : IClientAdminService
         client.RefreshTokenUsage = viewModel.RefreshTokenUsage;
         client.AlwaysIncludeUserClaimsInIdToken = viewModel.AlwaysIncludeUserClaimsInIdToken;
 
-        ReplaceCollection(client.AllowedGrantTypes, viewModel.AllowedGrantTypes, value => new ClientGrantType { GrantType = value });
-        ReplaceCollection(client.RedirectUris, viewModel.RedirectUris, value => new ClientRedirectUri { RedirectUri = value });
-        ReplaceCollection(client.PostLogoutRedirectUris, viewModel.PostLogoutRedirectUris, value => new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = value });
-        ReplaceCollection(client.AllowedScopes, viewModel.AllowedScopes, value => new ClientScope { Scope = value });
+        SyncCollection(client.AllowedGrantTypes, viewModel.AllowedGrantTypes, gt => gt.GrantType, value => new ClientGrantType { GrantType = value });
+        SyncCollection(client.RedirectUris, viewModel.RedirectUris, ru => ru.RedirectUri, value => new ClientRedirectUri { RedirectUri = value });
+        SyncCollection(client.PostLogoutRedirectUris, viewModel.PostLogoutRedirectUris, pru => pru.PostLogoutRedirectUri, value => new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = value });
+        SyncCollection(client.AllowedScopes, viewModel.AllowedScopes, s => s.Scope, value => new ClientScope { Scope = value });
 
         if (!string.IsNullOrWhiteSpace(viewModel.NewSecret))
         {
@@ -120,9 +119,21 @@ public class ClientAdminService : IClientAdminService
         return true;
     }
 
-    private IQueryable<Client> ClientsWithIncludes()
+    private IQueryable<Client> ClientsForRead()
     {
         return _context.Clients
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(c => c.AllowedGrantTypes)
+            .Include(c => c.RedirectUris)
+            .Include(c => c.PostLogoutRedirectUris)
+            .Include(c => c.AllowedScopes);
+    }
+
+    private IQueryable<Client> ClientsForWrite()
+    {
+        return _context.Clients
+            .AsSplitQuery()
             .Include(c => c.AllowedGrantTypes)
             .Include(c => c.RedirectUris)
             .Include(c => c.PostLogoutRedirectUris)
@@ -149,12 +160,29 @@ public class ClientAdminService : IClientAdminService
         };
     }
 
-    private static void ReplaceCollection<T>(ICollection<T> collection, List<string> newValues, Func<string, T> createEntity)
+    private static void SyncCollection<T>(
+        ICollection<T> existing,
+        List<string> newValues,
+        Func<T, string> getValue,
+        Func<string, T> createEntity)
     {
-        collection.Clear();
-        foreach (var value in newValues.Where(v => !string.IsNullOrWhiteSpace(v)))
-        {
-            collection.Add(createEntity(value.Trim()));
-        }
+        var desired = newValues
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Select(v => v.Trim())
+            .ToHashSet(StringComparer.Ordinal);
+
+        var toRemove = existing
+            .Where(e => !desired.Contains(getValue(e)))
+            .ToList();
+
+        foreach (var item in toRemove)
+            existing.Remove(item);
+
+        var current = existing
+            .Select(getValue)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var value in desired.Where(v => !current.Contains(v)))
+            existing.Add(createEntity(value));
     }
 }
