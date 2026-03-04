@@ -47,7 +47,7 @@ public class UserEditor : IUserEditor
             .ToList();
     }
 
-    public async Task<UserEditPageDataDto?> GetUserEditPageDataAsync(UserEditPageDataRequest request)
+    public async Task<UserEditPageDataDto?> GetUserEditPageDataAsync(UserEditPageDataRequest request, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(request.UserId))
             return null;
@@ -63,12 +63,12 @@ public class UserEditor : IUserEditor
 
         var (claims, availableClaims) =
             request.IncludeClaims
-                ? await FetchClaimsDataAsync(user)
+                ? await FetchClaimsDataAsync(user, ct)
                 : (new List<Claim>(), new List<string>());
 
         var (roles, availableRoles) =
             request.IncludeRoles
-                ? await FetchRolesDataAsync(user)
+                ? await FetchRolesDataAsync(user, ct)
                 : (new List<string>(), new List<string>());
 
         var grants = request.IncludeGrants
@@ -107,7 +107,7 @@ public class UserEditor : IUserEditor
         return (externalLogins, hasPassword, user.LockoutEnabled, user.AccessFailedCount, twoFactorEnabled, twoFactorProviders, GetAccountStatus(user));
     }
 
-    private async Task<(List<Claim> Claims, List<string> AvailableClaims)> FetchClaimsDataAsync(ApplicationUser user)
+    private async Task<(List<Claim> Claims, List<string> AvailableClaims)> FetchClaimsDataAsync(ApplicationUser user, CancellationToken ct)
     {
         var claims = (await _userManager.GetClaimsAsync(user)).ToList();
         var claimTypes = claims
@@ -116,23 +116,24 @@ public class UserEditor : IUserEditor
             .ToList();
 
         var availableClaims = await _dbContext.UserClaims
+            .AsNoTracking()
             .Where(c => c.UserId != user.Id && !string.IsNullOrEmpty(c.ClaimType))
             .Select(c => c.ClaimType!)
             .Where(claimType => !claimTypes.Contains(claimType))
             .Distinct()
             .OrderBy(claimType => claimType)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return (claims, availableClaims);
     }
 
-    private async Task<(List<string> Roles, List<string> AvailableRoles)> FetchRolesDataAsync(ApplicationUser user)
+    private async Task<(List<string> Roles, List<string> AvailableRoles)> FetchRolesDataAsync(ApplicationUser user, CancellationToken ct)
     {
         var roles = (await _userManager.GetRolesAsync(user)).ToList();
         var allRoles = await _roleManager.Roles
             .Where(r => r.Name != null)
             .Select(r => r.Name!)
-            .ToListAsync();
+            .ToListAsync(ct);
         return (roles, allRoles.Except(roles).ToList());
     }
 

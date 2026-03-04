@@ -317,6 +317,51 @@ public class UserEditorTests
     }
 
     [Fact]
+    public async Task GetUserEditPageDataAsync_WithIncludeClaims_AvailableClaimsReturnedInAlphabeticalOrder()
+    {
+        var user = CreateTestUser();
+        SetupUserExists(user);
+        _userManagerMock.Setup(x => x.GetClaimsAsync(user)).ReturnsAsync(new List<Claim>());
+        SeedUserClaim("other-1", "zebra");
+        SeedUserClaim("other-2", "apple");
+        SeedUserClaim("other-3", "mango");
+
+        var request = new UserEditPageDataRequest { UserId = user.Id, IncludeClaims = true };
+
+        var result = await _sut.GetUserEditPageDataAsync(request);
+
+        result!.AvailableClaims.Should().BeInAscendingOrder();
+    }
+
+    [Fact]
+    public async Task GetUserEditPageDataAsync_WithIncludeClaims_ExcludesNullOrEmptyClaimTypes()
+    {
+        var user = CreateTestUser();
+        SetupUserExists(user);
+        _userManagerMock.Setup(x => x.GetClaimsAsync(user)).ReturnsAsync(new List<Claim>());
+        _dbContext.UserClaims.Add(new IdentityUserClaim<string>
+        {
+            UserId = "other-1",
+            ClaimType = null,
+            ClaimValue = "some-value"
+        });
+        _dbContext.UserClaims.Add(new IdentityUserClaim<string>
+        {
+            UserId = "other-2",
+            ClaimType = "",
+            ClaimValue = "some-value"
+        });
+        SeedUserClaim("other-3", "valid-claim");
+        _dbContext.SaveChanges();
+
+        var request = new UserEditPageDataRequest { UserId = user.Id, IncludeClaims = true };
+
+        var result = await _sut.GetUserEditPageDataAsync(request);
+
+        result!.AvailableClaims.Should().ContainSingle("valid-claim");
+    }
+
+    [Fact]
     public async Task GetUserEditPageDataAsync_WithIncludeRoles_ReturnsRolesAndAvailableRoles()
     {
         var user = CreateTestUser();
