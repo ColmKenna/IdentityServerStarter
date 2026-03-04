@@ -1,9 +1,10 @@
 using Duende.IdentityServer.EntityFramework.DbContexts;
 using Duende.IdentityServer.EntityFramework.Entities;
+using Duende.IdentityServer.Models;
 using Microsoft.EntityFrameworkCore;
 using IdentityModel;
-using Duende.IdentityServer.Models;
 using IdentityServerServices.ViewModels;
+using Client = Duende.IdentityServer.EntityFramework.Entities.Client;
 
 namespace IdentityServerServices;
 
@@ -34,12 +35,7 @@ public class ClientAdminService : IClientAdminService
 
     public async Task<ClientEditViewModel?> GetClientForEditAsync(int id)
     {
-        var client = await _context.Clients
-            .Include(c => c.AllowedGrantTypes)
-            .Include(c => c.RedirectUris)
-            .Include(c => c.PostLogoutRedirectUris)
-            .Include(c => c.AllowedScopes)
-            .Include(c => c.ClientSecrets)
+        var client = await ClientsWithIncludes()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id);
 
@@ -72,7 +68,6 @@ public class ClientAdminService : IClientAdminService
             AllowedScopes = client.AllowedScopes.Select(s => s.Scope).ToList()
         };
 
-        // Populate available options
         await PopulateAvailableOptionsAsync(viewModel);
 
         return viewModel;
@@ -80,18 +75,12 @@ public class ClientAdminService : IClientAdminService
 
     public async Task<bool> UpdateClientAsync(int id, ClientEditViewModel viewModel)
     {
-        var client = await _context.Clients
-            .Include(c => c.AllowedGrantTypes)
-            .Include(c => c.RedirectUris)
-            .Include(c => c.PostLogoutRedirectUris)
-            .Include(c => c.AllowedScopes)
-            .Include(c => c.ClientSecrets)
+        var client = await ClientsWithIncludes()
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (client == null)
             return false;
 
-        // Update scalar properties
         client.ClientId = viewModel.ClientId;
         client.ClientName = viewModel.ClientName;
         client.Description = viewModel.Description;
@@ -111,13 +100,11 @@ public class ClientAdminService : IClientAdminService
         client.RefreshTokenUsage = viewModel.RefreshTokenUsage;
         client.AlwaysIncludeUserClaimsInIdToken = viewModel.AlwaysIncludeUserClaimsInIdToken;
 
-        // Update collections
-        UpdateAllowedGrantTypes(client, viewModel.AllowedGrantTypes);
-        UpdateRedirectUris(client, viewModel.RedirectUris);
-        UpdatePostLogoutRedirectUris(client, viewModel.PostLogoutRedirectUris);
-        UpdateAllowedScopes(client, viewModel.AllowedScopes);
+        ReplaceCollection(client.AllowedGrantTypes, viewModel.AllowedGrantTypes, value => new ClientGrantType { GrantType = value });
+        ReplaceCollection(client.RedirectUris, viewModel.RedirectUris, value => new ClientRedirectUri { RedirectUri = value });
+        ReplaceCollection(client.PostLogoutRedirectUris, viewModel.PostLogoutRedirectUris, value => new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = value });
+        ReplaceCollection(client.AllowedScopes, viewModel.AllowedScopes, value => new ClientScope { Scope = value });
 
-        // Add new secret if provided
         if (!string.IsNullOrWhiteSpace(viewModel.NewSecret))
         {
             client.ClientSecrets.Add(new ClientSecret
@@ -133,15 +120,23 @@ public class ClientAdminService : IClientAdminService
         return true;
     }
 
+    private IQueryable<Client> ClientsWithIncludes()
+    {
+        return _context.Clients
+            .Include(c => c.AllowedGrantTypes)
+            .Include(c => c.RedirectUris)
+            .Include(c => c.PostLogoutRedirectUris)
+            .Include(c => c.AllowedScopes)
+            .Include(c => c.ClientSecrets);
+    }
+
     private async Task PopulateAvailableOptionsAsync(ClientEditViewModel viewModel)
     {
-        // Available scopes
         var identityResources = await _context.IdentityResources.Select(ir => ir.Name).ToListAsync();
         var apiScopes = await _context.ApiScopes.Select(aps => aps.Name).ToListAsync();
         
         viewModel.AvailableScopes = identityResources.Concat(apiScopes).ToList();
 
-        // Available grant types
         viewModel.AvailableGrantTypes = new List<string>
         {
             "authorization_code",
@@ -154,51 +149,12 @@ public class ClientAdminService : IClientAdminService
         };
     }
 
-    private void UpdateAllowedGrantTypes(Duende.IdentityServer.EntityFramework.Entities.Client client, List<string> newGrantTypes)
+    private static void ReplaceCollection<T>(ICollection<T> collection, List<string> newValues, Func<string, T> createEntity)
     {
-        client.AllowedGrantTypes.Clear();
-        foreach (var grantType in newGrantTypes.Where(gt => !string.IsNullOrWhiteSpace(gt)))
+        collection.Clear();
+        foreach (var value in newValues.Where(v => !string.IsNullOrWhiteSpace(v)))
         {
-            client.AllowedGrantTypes.Add(new ClientGrantType
-            {
-                GrantType = grantType.Trim()
-            });
-        }
-    }
-
-    private void UpdateRedirectUris(Duende.IdentityServer.EntityFramework.Entities.Client client, List<string> newUris)
-    {
-        client.RedirectUris.Clear();
-        foreach (var uri in newUris.Where(u => !string.IsNullOrWhiteSpace(u)))
-        {
-            client.RedirectUris.Add(new ClientRedirectUri
-            {
-                RedirectUri = uri.Trim()
-            });
-        }
-    }
-
-    private void UpdatePostLogoutRedirectUris(Duende.IdentityServer.EntityFramework.Entities.Client client, List<string> newUris)
-    {
-        client.PostLogoutRedirectUris.Clear();
-        foreach (var uri in newUris.Where(u => !string.IsNullOrWhiteSpace(u)))
-        {
-            client.PostLogoutRedirectUris.Add(new ClientPostLogoutRedirectUri
-            {
-                PostLogoutRedirectUri = uri.Trim()
-            });
-        }
-    }
-
-    private void UpdateAllowedScopes(Duende.IdentityServer.EntityFramework.Entities.Client client, List<string> newScopes)
-    {
-        client.AllowedScopes.Clear();
-        foreach (var scope in newScopes.Where(s => !string.IsNullOrWhiteSpace(s)))
-        {
-            client.AllowedScopes.Add(new ClientScope
-            {
-                Scope = scope.Trim()
-            });
+            collection.Add(createEntity(value.Trim()));
         }
     }
 }
