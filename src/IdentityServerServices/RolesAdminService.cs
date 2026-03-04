@@ -1,6 +1,7 @@
 using IdentityServerAspNetIdentity.Models;
 using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace IdentityServerServices;
 
@@ -17,18 +18,16 @@ public class RolesAdminService : IRolesAdminService
         _userManager = userManager;
     }
 
-    public Task<IReadOnlyList<RoleListItemDto>> GetRolesAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<RoleListItemDto>> GetRolesAsync(CancellationToken ct = default)
     {
-        var roles = _roleManager.Roles
+        return await _roleManager.Roles
             .OrderBy(r => r.Name)
             .Select(r => new RoleListItemDto
             {
                 Id = r.Id,
                 Name = r.Name ?? string.Empty
             })
-            .ToList();
-
-        return Task.FromResult<IReadOnlyList<RoleListItemDto>>(roles);
+            .ToListAsync(ct);
     }
 
     public async Task<RoleEditPageDataDto?> GetRoleForEditAsync(string roleId, CancellationToken ct = default)

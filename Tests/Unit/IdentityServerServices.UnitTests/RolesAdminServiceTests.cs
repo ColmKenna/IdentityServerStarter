@@ -23,7 +23,7 @@ public class RolesAdminServiceTests
         var mgr = new Mock<UserManager<ApplicationUser>>(
             store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
         mgr.SetupGet(m => m.Users)
-            .Returns((users ?? Array.Empty<ApplicationUser>()).AsQueryable());
+            .Returns(new TestAsyncEnumerable<ApplicationUser>(users ?? Array.Empty<ApplicationUser>()));
         return mgr;
     }
 
@@ -41,7 +41,7 @@ public class RolesAdminServiceTests
     {
         var mockRoleManager = CreateMockRoleManager();
         mockRoleManager.Setup(m => m.Roles)
-            .Returns(new List<IdentityRole>().AsQueryable());
+            .Returns(new TestAsyncEnumerable<IdentityRole>(new List<IdentityRole>()));
 
         var service = CreateService(mockRoleManager, CreateMockUserManager());
 
@@ -55,12 +55,12 @@ public class RolesAdminServiceTests
     {
         var mockRoleManager = CreateMockRoleManager();
         mockRoleManager.Setup(m => m.Roles)
-            .Returns(new List<IdentityRole>
+            .Returns(new TestAsyncEnumerable<IdentityRole>(new List<IdentityRole>
             {
                 new("Admin") { Id = "1" },
                 new("Editor") { Id = "2" },
                 new("Viewer") { Id = "3" }
-            }.AsQueryable());
+            }));
 
         var service = CreateService(mockRoleManager, CreateMockUserManager());
 
@@ -75,12 +75,12 @@ public class RolesAdminServiceTests
     {
         var mockRoleManager = CreateMockRoleManager();
         mockRoleManager.Setup(m => m.Roles)
-            .Returns(new List<IdentityRole>
+            .Returns(new TestAsyncEnumerable<IdentityRole>(new List<IdentityRole>
             {
                 new("Zebra") { Id = "1" },
                 new("Admin") { Id = "2" },
                 new("Manager") { Id = "3" }
-            }.AsQueryable());
+            }));
 
         var service = CreateService(mockRoleManager, CreateMockUserManager());
 
@@ -94,10 +94,10 @@ public class RolesAdminServiceTests
     {
         var mockRoleManager = CreateMockRoleManager();
         mockRoleManager.Setup(m => m.Roles)
-            .Returns(new List<IdentityRole>
+            .Returns(new TestAsyncEnumerable<IdentityRole>(new List<IdentityRole>
             {
                 new() { Id = "1", Name = null }
-            }.AsQueryable());
+            }));
 
         var service = CreateService(mockRoleManager, CreateMockUserManager());
 
@@ -111,10 +111,10 @@ public class RolesAdminServiceTests
     {
         var mockRoleManager = CreateMockRoleManager();
         mockRoleManager.Setup(m => m.Roles)
-            .Returns(new List<IdentityRole>
+            .Returns(new TestAsyncEnumerable<IdentityRole>(new List<IdentityRole>
             {
                 new("Admin") { Id = "abc-123" }
-            }.AsQueryable());
+            }));
 
         var service = CreateService(mockRoleManager, CreateMockUserManager());
 
