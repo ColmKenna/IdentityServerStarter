@@ -21,120 +21,118 @@ internal static class HostingExtensions
     private const string DefaultConnectionDocker = "DefaultConnection";
     //private const string DefaultConnectionDocker = "DefaultConnectionDocker";
 
-    private static void InitializeDatabase(IApplicationBuilder app)
+    private static async Task InitializeDatabaseAsync(IApplicationBuilder app)
     {
-        using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
+        using var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope();
+
+        var persistedGrantDbContext = serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>();
+        persistedGrantDbContext.Database.Migrate();
+
+        var configurationDbContext = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+        configurationDbContext.Database.Migrate();
+
+        var applicationDbContext = serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        applicationDbContext.Database.Migrate();
+
+        var userMgr = serviceScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var alice = await userMgr.FindByNameAsync("alice");
+        if (alice == null)
         {
-            var persistedGrantDbContext = serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>();
-            persistedGrantDbContext.Database.Migrate();
-
-            var configurationDbContext = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-            configurationDbContext.Database.Migrate();
-
-            var applicationDbContext = serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            applicationDbContext.Database.Migrate();
-
-            var userMgr = serviceScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            var alice = userMgr.FindByNameAsync("alice").Result;
-            if (alice == null)
+            alice = new ApplicationUser
             {
-                alice = new ApplicationUser
-                {
-                    UserName = "alice",
-                    Email = "AliceSmith@email.com",
-                    EmailConfirmed = true,
-                    FavoriteColor = "red",
-                };
-                var result = userMgr.CreateAsync(alice, "Pass123$").Result;
-                if (!result.Succeeded)
-                {
-                    throw new Exception(result.Errors.First().Description);
-                }
-
-                result = userMgr.AddClaimsAsync(alice, new Claim[]
-                {
-                    new Claim(JwtClaimTypes.Name, "Alice Smith"),
-                    new Claim(JwtClaimTypes.GivenName, "Alice"),
-                    new Claim(JwtClaimTypes.FamilyName, "Smith"),
-                    new Claim(JwtClaimTypes.WebSite, "http://alice.com"),
-                }).Result;
-                if (!result.Succeeded)
-                {
-                    throw new Exception(result.Errors.First().Description);
-                }
-
-                Log.Debug("alice created");
-            }
-            else
+                UserName = "alice",
+                Email = "AliceSmith@email.com",
+                EmailConfirmed = true,
+                FavoriteColor = "red",
+            };
+            var result = await userMgr.CreateAsync(alice, "Pass123$");
+            if (!result.Succeeded)
             {
-                Log.Debug("alice already exists");
+                throw new Exception(result.Errors.First().Description);
             }
 
-            var bob = userMgr.FindByNameAsync("bob").Result;
-            if (bob == null)
+            result = await userMgr.AddClaimsAsync(alice, new Claim[]
             {
-                bob = new ApplicationUser
-                {
-                    UserName = "bob",
-                    Email = "BobSmith@email.com",
-                    EmailConfirmed = true
-                };
-                var result = userMgr.CreateAsync(bob, "Pass123$").Result;
-                if (!result.Succeeded)
-                {
-                    throw new Exception(result.Errors.First().Description);
-                }
-
-                result = userMgr.AddClaimsAsync(bob, new Claim[]
-                {
-                    new Claim(JwtClaimTypes.Name, "Bob Smith"),
-                    new Claim(JwtClaimTypes.GivenName, "Bob"),
-                    new Claim(JwtClaimTypes.FamilyName, "Smith"),
-                    new Claim(JwtClaimTypes.WebSite, "http://bob.com"),
-                    new Claim("location", "somewhere")
-                }).Result;
-                if (!result.Succeeded)
-                {
-                    throw new Exception(result.Errors.First().Description);
-                }
-
-                Log.Debug("bob created");
-            }
-            else
+                new Claim(JwtClaimTypes.Name, "Alice Smith"),
+                new Claim(JwtClaimTypes.GivenName, "Alice"),
+                new Claim(JwtClaimTypes.FamilyName, "Smith"),
+                new Claim(JwtClaimTypes.WebSite, "http://alice.com"),
+            });
+            if (!result.Succeeded)
             {
-                Log.Debug("bob already exists");
+                throw new Exception(result.Errors.First().Description);
             }
 
+            Log.Debug("alice created");
+        }
+        else
+        {
+            Log.Debug("alice already exists");
+        }
 
-            if (!configurationDbContext.Clients.Any())
+        var bob = await userMgr.FindByNameAsync("bob");
+        if (bob == null)
+        {
+            bob = new ApplicationUser
             {
-                foreach (var client in Config.Clients)
-                {
-                    configurationDbContext.Clients.Add(client.ToEntity());
-                }
-
-                configurationDbContext.SaveChanges();
+                UserName = "bob",
+                Email = "BobSmith@email.com",
+                EmailConfirmed = true
+            };
+            var result = await userMgr.CreateAsync(bob, "Pass123$");
+            if (!result.Succeeded)
+            {
+                throw new Exception(result.Errors.First().Description);
             }
 
-            if (!configurationDbContext.IdentityResources.Any())
+            result = await userMgr.AddClaimsAsync(bob, new Claim[]
             {
-                foreach (var resource in Config.IdentityResources)
-                {
-                    configurationDbContext.IdentityResources.Add(resource.ToEntity());
-                }
-
-                configurationDbContext.SaveChanges();
+                new Claim(JwtClaimTypes.Name, "Bob Smith"),
+                new Claim(JwtClaimTypes.GivenName, "Bob"),
+                new Claim(JwtClaimTypes.FamilyName, "Smith"),
+                new Claim(JwtClaimTypes.WebSite, "http://bob.com"),
+                new Claim("location", "somewhere")
+            });
+            if (!result.Succeeded)
+            {
+                throw new Exception(result.Errors.First().Description);
             }
 
-            if (!configurationDbContext.ApiScopes.Any())
-            {
-                foreach (var resource in Config.ApiScopes)
-                {
-                    configurationDbContext.ApiScopes.Add(resource.ToEntity());
-                }
+            Log.Debug("bob created");
+        }
+        else
+        {
+            Log.Debug("bob already exists");
+        }
 
-                configurationDbContext.SaveChanges();
+        if (!configurationDbContext.Clients.Any())
+        {
+            foreach (var client in Config.Clients)
+            {
+                configurationDbContext.Clients.Add(client.ToEntity());
             }
+
+            configurationDbContext.SaveChanges();
+        }
+
+        if (!configurationDbContext.IdentityResources.Any())
+        {
+            foreach (var resource in Config.IdentityResources)
+            {
+                configurationDbContext.IdentityResources.Add(resource.ToEntity());
+            }
+
+            configurationDbContext.SaveChanges();
+        }
+
+        if (!configurationDbContext.ApiScopes.Any())
+        {
+            foreach (var resource in Config.ApiScopes)
+            {
+                configurationDbContext.ApiScopes.Add(resource.ToEntity());
+            }
+
+            configurationDbContext.SaveChanges();
         }
     }
 
@@ -225,7 +223,7 @@ internal static class HostingExtensions
         return builder.Build();
     }
 
-    public static WebApplication ConfigurePipeline(this WebApplication app)
+    public static async Task<WebApplication> ConfigurePipelineAsync(this WebApplication app)
     {
         app.UseSerilogRequestLogging();
 
@@ -234,10 +232,9 @@ internal static class HostingExtensions
             app.UseDeveloperExceptionPage();
         }
 
-
         if (!app.Environment.IsEnvironment("Testing"))
         {
-            InitializeDatabase(app);
+            await InitializeDatabaseAsync(app);
         }
         // Add a Content-Security-Policy header allowing styles from cdnjs.cloudflare.com
         app.Use(async (context, next) =>
