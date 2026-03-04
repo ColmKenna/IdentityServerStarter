@@ -19,7 +19,7 @@ public interface IClaimsAdminService
 
     Task<RemoveClaimAssignmentResult> RemoveUserFromClaimAsync(
         string claimType,
-        string removeUserId,
-        string removeClaimValue,
+        string userId,
+        string claimValue,
         CancellationToken ct = default);
 }

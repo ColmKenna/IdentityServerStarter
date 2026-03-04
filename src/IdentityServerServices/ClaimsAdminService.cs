@@ -24,7 +24,7 @@ public class ClaimsAdminService : IClaimsAdminService
     {
         return await _applicationDbContext.UserClaims
             .AsNoTracking()
-            .Where(claim => claim.ClaimType != null && claim.ClaimType != string.Empty)
+            .Where(claim => !string.IsNullOrEmpty(claim.ClaimType))
             .Select(claim => claim.ClaimType!)
             .Distinct()
             .OrderBy(claimType => claimType)
@@ -76,12 +76,11 @@ public class ClaimsAdminService : IClaimsAdminService
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
 
         var uniqueUsersCount = assignmentCountsByUser.Count;
-        for (var i = 0; i < usersInClaim.Count; i++)
+        foreach (var assignment in usersInClaim)
         {
-            var currentAssignment = usersInClaim[i];
-            currentAssignment.IsLastUserAssignment =
+            assignment.IsLastUserAssignment =
                 uniqueUsersCount == 1 &&
-                assignmentCountsByUser[currentAssignment.UserId] == 1;
+                assignmentCountsByUser[assignment.UserId] == 1;
         }
 
         var assignedUserIds = usersInClaim
@@ -99,11 +98,9 @@ public class ClaimsAdminService : IClaimsAdminService
             })
             .ToList();
 
-        var newClaimValue = currentNewClaimValue;
-        if (ShouldDefaultNewClaimValue(currentNewClaimValue, assignments.Select(assignment => assignment.ClaimValue)))
-        {
-            newClaimValue = bool.TrueString.ToLowerInvariant();
-        }
+        var newClaimValue = ShouldDefaultNewClaimValue(currentNewClaimValue, assignments.Select(a => a.ClaimValue))
+            ? bool.TrueString.ToLowerInvariant()
+            : currentNewClaimValue;
 
         return new ClaimEditPageDataDto
         {
@@ -157,11 +154,11 @@ public class ClaimsAdminService : IClaimsAdminService
 
     public async Task<RemoveClaimAssignmentResult> RemoveUserFromClaimAsync(
         string claimType,
-        string removeUserId,
-        string removeClaimValue,
+        string userId,
+        string claimValue,
         CancellationToken ct = default)
     {
-        var user = await _userManager.FindByIdAsync(removeUserId);
+        var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
         {
             return new RemoveClaimAssignmentResult
@@ -171,9 +168,9 @@ public class ClaimsAdminService : IClaimsAdminService
         }
 
         var assignmentExists = await _applicationDbContext.UserClaims.AnyAsync(claim =>
-            claim.UserId == removeUserId &&
+            claim.UserId == userId &&
             claim.ClaimType == claimType &&
-            (claim.ClaimValue ?? string.Empty) == removeClaimValue, ct);
+            (claim.ClaimValue ?? string.Empty) == claimValue, ct);
         if (!assignmentExists)
         {
             return new RemoveClaimAssignmentResult
@@ -182,7 +179,7 @@ public class ClaimsAdminService : IClaimsAdminService
             };
         }
 
-        var result = await _userManager.RemoveClaimAsync(user, new Claim(claimType, removeClaimValue));
+        var result = await _userManager.RemoveClaimAsync(user, new Claim(claimType, claimValue));
         if (!result.Succeeded)
         {
             return new RemoveClaimAssignmentResult
