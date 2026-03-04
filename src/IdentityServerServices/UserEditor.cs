@@ -31,10 +31,10 @@ public class UserEditor : IUserEditor
         _sessionStore = sessionStore;
     }
 
-    public Task<IReadOnlyList<UserListItemDto>> GetUsersAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<UserListItemDto>> GetUsersAsync(CancellationToken ct = default)
     {
-        var users = _userManager.Users.ToList();
-        IReadOnlyList<UserListItemDto> result = users
+        var users = await _userManager.Users.ToListAsync(ct);
+        return users
             .Select(u => new UserListItemDto
             {
                 Id = u.Id,
@@ -45,90 +45,43 @@ public class UserEditor : IUserEditor
                 TwoFactorEnabled = u.TwoFactorEnabled
             })
             .ToList();
-        return Task.FromResult(result);
     }
 
     public async Task<UserEditPageDataDto?> GetUserEditPageDataAsync(UserEditPageDataRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.UserId))
-        {
             return null;
-        }
 
         var user = await _userManager.FindByIdAsync(request.UserId);
         if (user is null)
-        {
             return null;
-        }
 
-        var profile = Map(user);
-        var claims = new List<Claim>();
-        var availableClaims = new List<string>();
-        var roles = new List<string>();
-        var availableRoles = new List<string>();
-        var externalLogins = new List<UserLoginInfo>();
-        var grants = new List<PersistedGrant>();
-        var sessions = new List<ServerSideSession>();
-        var hasPassword = false;
-        var lockoutEnabled = false;
-        var accessFailedCount = 0;
-        var twoFactorEnabled = false;
-        var twoFactorProviders = new List<string>();
-        var accountStatus = "Active";
+        var (externalLogins, hasPassword, lockoutEnabled, accessFailedCount, twoFactorEnabled, twoFactorProviders, accountStatus) =
+            request.IncludeUserTabData
+                ? await FetchUserTabDataAsync(user)
+                : (new List<UserLoginInfo>(), false, false, 0, false, new List<string>(), "Active");
 
-        if (request.IncludeUserTabData)
-        {
-            externalLogins = (await _userManager.GetLoginsAsync(user)).ToList();
-            hasPassword = await _userManager.HasPasswordAsync(user);
-            lockoutEnabled = user.LockoutEnabled;
-            accessFailedCount = user.AccessFailedCount;
-            twoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
-            twoFactorProviders = (await _userManager.GetValidTwoFactorProvidersAsync(user)).ToList();
-            accountStatus = GetAccountStatus(user);
-        }
+        var (claims, availableClaims) =
+            request.IncludeClaims
+                ? await FetchClaimsDataAsync(user)
+                : (new List<Claim>(), new List<string>());
 
-        if (request.IncludeClaims)
-        {
-            claims = (await _userManager.GetClaimsAsync(user)).ToList();
-            var claimTypes = claims
-                .Select(c => c.Type)
-                .Where(type => !string.IsNullOrWhiteSpace(type))
-                .ToList();
+        var (roles, availableRoles) =
+            request.IncludeRoles
+                ? await FetchRolesDataAsync(user)
+                : (new List<string>(), new List<string>());
 
-            availableClaims = await _dbContext.UserClaims
-                .Where(c => c.UserId != user.Id && c.ClaimType != null && c.ClaimType != string.Empty)
-                .Select(c => c.ClaimType!)
-                .Where(claimType => !claimTypes.Contains(claimType))
-                .Distinct()
-                .OrderBy(claimType => claimType)
-                .ToListAsync();
-        }
+        var grants = request.IncludeGrants
+            ? await FetchGrantsAsync(user)
+            : new List<PersistedGrant>();
 
-        if (request.IncludeRoles)
-        {
-            roles = (await _userManager.GetRolesAsync(user)).ToList();
-            var allRoles = await _roleManager.Roles
-                .Where(r => r.Name != null)
-                .Select(r => r.Name!)
-                .ToListAsync();
-            availableRoles = allRoles.Except(roles).ToList();
-        }
-
-        if (request.IncludeGrants)
-        {
-            var persistedGrants = await _grantStore.GetAllAsync(new PersistedGrantFilter { SubjectId = user.Id });
-            grants = persistedGrants.ToList();
-        }
-
-        if (request.IncludeSessions && _sessionStore != null)
-        {
-            var userSessions = await _sessionStore.GetSessionsAsync(new SessionFilter { SubjectId = user.Id });
-            sessions = userSessions.ToList();
-        }
+        var sessions = request.IncludeSessions
+            ? await FetchSessionsAsync(user)
+            : new List<ServerSideSession>();
 
         return new UserEditPageDataDto
         {
-            Profile = profile,
+            Profile = Map(user),
             Claims = claims,
             AvailableClaims = availableClaims,
             Roles = roles,
@@ -143,6 +96,58 @@ public class UserEditor : IUserEditor
             TwoFactorProviders = twoFactorProviders,
             AccountStatus = accountStatus
         };
+    }
+
+    private async Task<(List<UserLoginInfo> ExternalLogins, bool HasPassword, bool LockoutEnabled, int AccessFailedCount, bool TwoFactorEnabled, List<string> TwoFactorProviders, string AccountStatus)> FetchUserTabDataAsync(ApplicationUser user)
+    {
+        var externalLogins = (await _userManager.GetLoginsAsync(user)).ToList();
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+        var twoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
+        var twoFactorProviders = (await _userManager.GetValidTwoFactorProvidersAsync(user)).ToList();
+        return (externalLogins, hasPassword, user.LockoutEnabled, user.AccessFailedCount, twoFactorEnabled, twoFactorProviders, GetAccountStatus(user));
+    }
+
+    private async Task<(List<Claim> Claims, List<string> AvailableClaims)> FetchClaimsDataAsync(ApplicationUser user)
+    {
+        var claims = (await _userManager.GetClaimsAsync(user)).ToList();
+        var claimTypes = claims
+            .Select(c => c.Type)
+            .Where(type => !string.IsNullOrWhiteSpace(type))
+            .ToList();
+
+        var availableClaims = await _dbContext.UserClaims
+            .Where(c => c.UserId != user.Id && !string.IsNullOrEmpty(c.ClaimType))
+            .Select(c => c.ClaimType!)
+            .Where(claimType => !claimTypes.Contains(claimType))
+            .Distinct()
+            .OrderBy(claimType => claimType)
+            .ToListAsync();
+
+        return (claims, availableClaims);
+    }
+
+    private async Task<(List<string> Roles, List<string> AvailableRoles)> FetchRolesDataAsync(ApplicationUser user)
+    {
+        var roles = (await _userManager.GetRolesAsync(user)).ToList();
+        var allRoles = await _roleManager.Roles
+            .Where(r => r.Name != null)
+            .Select(r => r.Name!)
+            .ToListAsync();
+        return (roles, allRoles.Except(roles).ToList());
+    }
+
+    private async Task<List<PersistedGrant>> FetchGrantsAsync(ApplicationUser user)
+    {
+        var persistedGrants = await _grantStore.GetAllAsync(new PersistedGrantFilter { SubjectId = user.Id });
+        return persistedGrants.ToList();
+    }
+
+    private async Task<List<ServerSideSession>> FetchSessionsAsync(ApplicationUser user)
+    {
+        if (_sessionStore is null)
+            return new List<ServerSideSession>();
+        var userSessions = await _sessionStore.GetSessionsAsync(new SessionFilter { SubjectId = user.Id });
+        return userSessions.ToList();
     }
 
     public async Task<UserProfileEditViewModel?> GetUserForEditAsync(string userId)
@@ -164,15 +169,11 @@ public class UserEditor : IUserEditor
     public async Task<UserProfileUpdateResult> UpdateUserFromEditPostAsync(UserEditPostUpdateRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.UserId))
-        {
             return UserMissingResult("UserIdMissing", "User ID is required.");
-        }
 
         var user = await _userManager.FindByIdAsync(request.UserId);
         if (user is null)
-        {
             return UserMissingResult("UserNotFound", "User not found.");
-        }
 
         if (request.Profile is not null)
         {
@@ -183,91 +184,33 @@ public class UserEditor : IUserEditor
             user.PhoneNumberConfirmed = request.Profile.PhoneNumberConfirmed;
 
             if (!string.IsNullOrWhiteSpace(request.Profile.ConcurrencyStamp))
-            {
                 user.ConcurrencyStamp = request.Profile.ConcurrencyStamp;
-            }
 
-            var updateResult = await _userManager.UpdateAsync(user);
-            if (!updateResult.Succeeded)
-            {
-                return new UserProfileUpdateResult
-                {
-                    UserFound = true,
-                    Result = updateResult
-                };
-            }
+            if (FailIfFailed(await _userManager.UpdateAsync(user)) is { } updateFailure) return updateFailure;
         }
 
         if (request.LockoutEnabled.HasValue)
-        {
-            var lockoutResult = await _userManager.SetLockoutEnabledAsync(user, request.LockoutEnabled.Value);
-            if (!lockoutResult.Succeeded)
-            {
-                return new UserProfileUpdateResult
-                {
-                    UserFound = true,
-                    Result = lockoutResult
-                };
-            }
-        }
+            if (FailIfFailed(await _userManager.SetLockoutEnabledAsync(user, request.LockoutEnabled.Value)) is { } lockoutFailure) return lockoutFailure;
 
         if (request.TwoFactorEnabled.HasValue)
-        {
-            var twoFactorResult = await _userManager.SetTwoFactorEnabledAsync(user, request.TwoFactorEnabled.Value);
-            if (!twoFactorResult.Succeeded)
-            {
-                return new UserProfileUpdateResult
-                {
-                    UserFound = true,
-                    Result = twoFactorResult
-                };
-            }
-        }
+            if (FailIfFailed(await _userManager.SetTwoFactorEnabledAsync(user, request.TwoFactorEnabled.Value)) is { } twoFactorFailure) return twoFactorFailure;
 
         if (request.NewPassword is not null)
         {
             if (string.IsNullOrWhiteSpace(request.NewPassword))
-            {
                 return new UserProfileUpdateResult
                 {
                     UserFound = true,
-                    Result = IdentityResult.Failed(new IdentityError
-                    {
-                        Code = "PasswordMissing",
-                        Description = "New password is required."
-                    })
+                    Result = IdentityResult.Failed(new IdentityError { Code = "PasswordMissing", Description = "New password is required." })
                 };
-            }
 
             if (await _userManager.HasPasswordAsync(user))
-            {
-                var removePasswordResult = await _userManager.RemovePasswordAsync(user);
-                if (!removePasswordResult.Succeeded)
-                {
-                    return new UserProfileUpdateResult
-                    {
-                        UserFound = true,
-                        Result = removePasswordResult
-                    };
-                }
-            }
+                if (FailIfFailed(await _userManager.RemovePasswordAsync(user)) is { } removeFailure) return removeFailure;
 
-            var addPasswordResult = await _userManager.AddPasswordAsync(user, request.NewPassword);
-            if (!addPasswordResult.Succeeded)
-            {
-                return new UserProfileUpdateResult
-                {
-                    UserFound = true,
-                    Result = addPasswordResult
-                };
-            }
+            if (FailIfFailed(await _userManager.AddPasswordAsync(user, request.NewPassword)) is { } addFailure) return addFailure;
         }
 
-        return new UserProfileUpdateResult
-        {
-            UserFound = true,
-            Result = IdentityResult.Success
-        };
+        return new UserProfileUpdateResult { UserFound = true, Result = IdentityResult.Success };
     }
 
     public Task<UserProfileUpdateResult> UpdateUserProfileAsync(UserProfileEditViewModel viewModel)
@@ -308,6 +251,9 @@ public class UserEditor : IUserEditor
 
         return "Active";
     }
+
+    private static UserProfileUpdateResult? FailIfFailed(IdentityResult result)
+        => result.Succeeded ? null : new UserProfileUpdateResult { UserFound = true, Result = result };
 
     private static UserProfileUpdateResult UserMissingResult(string code, string description)
     {

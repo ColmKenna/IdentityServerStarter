@@ -950,7 +950,7 @@ public class UserEditorTests
     public async Task GetUsersAsync_NoUsers_ReturnsEmptyList()
     {
         _userManagerMock.Setup(x => x.Users)
-            .Returns(new List<ApplicationUser>().AsQueryable());
+            .Returns(new TestAsyncEnumerable<ApplicationUser>(new List<ApplicationUser>()));
 
         var result = await _sut.GetUsersAsync();
 
@@ -965,7 +965,7 @@ public class UserEditorTests
             new() { Id = "u1", UserName = "alice", Email = "alice@test.com", EmailConfirmed = true },
             new() { Id = "u2", UserName = "bob", Email = "bob@test.com", EmailConfirmed = false }
         };
-        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+        _userManagerMock.Setup(x => x.Users).Returns(new TestAsyncEnumerable<ApplicationUser>(users));
 
         var result = await _sut.GetUsersAsync();
 
@@ -988,7 +988,7 @@ public class UserEditorTests
                 TwoFactorEnabled = true
             }
         };
-        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+        _userManagerMock.Setup(x => x.Users).Returns(new TestAsyncEnumerable<ApplicationUser>(users));
 
         var result = await _sut.GetUsersAsync();
 
@@ -1008,7 +1008,7 @@ public class UserEditorTests
         {
             new() { Id = "u1", UserName = null, Email = null }
         };
-        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+        _userManagerMock.Setup(x => x.Users).Returns(new TestAsyncEnumerable<ApplicationUser>(users));
 
         var result = await _sut.GetUsersAsync();
 
@@ -1024,7 +1024,7 @@ public class UserEditorTests
         {
             new() { Id = "u1", UserName = "alice", LockoutEnd = DateTimeOffset.MaxValue }
         };
-        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+        _userManagerMock.Setup(x => x.Users).Returns(new TestAsyncEnumerable<ApplicationUser>(users));
 
         var result = await _sut.GetUsersAsync();
 
@@ -1038,7 +1038,7 @@ public class UserEditorTests
         {
             new() { Id = "u1", UserName = "alice", LockoutEnd = null }
         };
-        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+        _userManagerMock.Setup(x => x.Users).Returns(new TestAsyncEnumerable<ApplicationUser>(users));
 
         var result = await _sut.GetUsersAsync();
 
@@ -1052,7 +1052,7 @@ public class UserEditorTests
         {
             new() { Id = "u1", UserName = "alice", LockoutEnd = DateTimeOffset.UtcNow.AddHours(1) }
         };
-        _userManagerMock.Setup(x => x.Users).Returns(users.AsQueryable());
+        _userManagerMock.Setup(x => x.Users).Returns(new TestAsyncEnumerable<ApplicationUser>(users));
 
         var result = await _sut.GetUsersAsync();
 
