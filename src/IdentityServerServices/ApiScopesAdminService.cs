@@ -239,7 +239,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
     {
         return _applicationDbContext.UserClaims
             .AsNoTracking()
-            .Where(claim => claim.ClaimType != null && claim.ClaimType != string.Empty)
+            .Where(claim => !string.IsNullOrEmpty(claim.ClaimType))
             .Select(claim => claim.ClaimType!)
             .Distinct()
             .OrderBy(claimType => claimType)
