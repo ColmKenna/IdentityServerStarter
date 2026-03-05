@@ -14,14 +14,14 @@ public class SeedData
     {
         using var scope = app.Services.GetRequiredService<IServiceScopeFactory>().CreateScope();
 
-        var context = scope.ServiceProvider.GetService<ApplicationDbContext>();
-        context.Database.EnsureDeleted();
-        context.Database.Migrate();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await context.Database.EnsureDeletedAsync();
+        await context.Database.MigrateAsync();
 
         context.Roles.Add(new IdentityRole { Name = "ADMIN", NormalizedName = "ADMIN" });
         context.Roles.Add(new IdentityRole { Name = "USER", NormalizedName = "USER" });
         context.Roles.Add(new IdentityRole { Name = "GUEST", NormalizedName = "GUEST" });
-        context.SaveChanges();
+        await context.SaveChangesAsync();
 
         var aliceRequiredClaims = new Claim[]
         {

@@ -23,16 +23,16 @@ internal static class HostingExtensions
 
     private static async Task InitializeDatabaseAsync(IApplicationBuilder app)
     {
-        using var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope();
+        using var serviceScope = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>().CreateScope();
 
         var persistedGrantDbContext = serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>();
-        persistedGrantDbContext.Database.Migrate();
+        await persistedGrantDbContext.Database.MigrateAsync();
 
         var configurationDbContext = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        configurationDbContext.Database.Migrate();
+        await configurationDbContext.Database.MigrateAsync();
 
         var applicationDbContext = serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        applicationDbContext.Database.Migrate();
+        await applicationDbContext.Database.MigrateAsync();
 
         var userMgr = serviceScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var alice = await userMgr.FindByNameAsync("alice");
@@ -105,34 +105,34 @@ internal static class HostingExtensions
             Log.Debug("bob already exists");
         }
 
-        if (!configurationDbContext.Clients.Any())
+        if (!await configurationDbContext.Clients.AnyAsync())
         {
             foreach (var client in Config.Clients)
             {
                 configurationDbContext.Clients.Add(client.ToEntity());
             }
 
-            configurationDbContext.SaveChanges();
+            await configurationDbContext.SaveChangesAsync();
         }
 
-        if (!configurationDbContext.IdentityResources.Any())
+        if (!await configurationDbContext.IdentityResources.AnyAsync())
         {
             foreach (var resource in Config.IdentityResources)
             {
                 configurationDbContext.IdentityResources.Add(resource.ToEntity());
             }
 
-            configurationDbContext.SaveChanges();
+            await configurationDbContext.SaveChangesAsync();
         }
 
-        if (!configurationDbContext.ApiScopes.Any())
+        if (!await configurationDbContext.ApiScopes.AnyAsync())
         {
             foreach (var resource in Config.ApiScopes)
             {
                 configurationDbContext.ApiScopes.Add(resource.ToEntity());
             }
 
-            configurationDbContext.SaveChanges();
+            await configurationDbContext.SaveChangesAsync();
         }
     }
 
@@ -206,9 +206,7 @@ internal static class HostingExtensions
             .AddGoogle(options =>
             {
                 options.SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme;
-
-                options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
-                options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+                builder.Configuration.GetSection("Authentication:Google").Bind(options);
             });
 
         builder.Services.AddScoped<IScriptHolder,ScriptHolder>();
@@ -231,30 +229,20 @@ internal static class HostingExtensions
         {
             app.UseDeveloperExceptionPage();
         }
+        else
+        {
+            app.UseExceptionHandler("/Home/Error");
+        }
 
         if (!app.Environment.IsEnvironment("Testing"))
         {
             await InitializeDatabaseAsync(app);
         }
         // Add a Content-Security-Policy header allowing styles from cdnjs.cloudflare.com
-        app.Use(async (context, next) =>
-        {
-            // Keep a restrictive default-src to 'self' and allow styles from the CDN used for Font Awesome
-            var csp = "default-src 'self'; style-src 'self' https://cdnjs.cloudflare.com; script-src 'self' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com;";
-            context.Response.Headers["Content-Security-Policy"] = csp;
-            await next();
-        });
+        app.UseMiddleware<Middleware.ContentSecurityPolicyMiddleware>();
 
         // Route alias: serve create mode from the Edit Razor Page without a redirect.
-        app.Use(async (context, next) =>
-        {
-            if (context.Request.Path.Equals("/Admin/ApiScopes/Create", StringComparison.OrdinalIgnoreCase))
-            {
-                context.Request.Path = "/Admin/ApiScopes/0/Edit";
-            }
-
-            await next();
-        });
+        app.UseMiddleware<Middleware.ApiScopesRouteAliasMiddleware>();
 
         app.UseStaticFiles();
         app.UseRouting();

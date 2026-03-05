@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 
 namespace IdentityServerAspNetIdentity.Pages.Login;
 
@@ -21,6 +22,7 @@ public class Index : PageModel
     private readonly IEventService _events;
     private readonly IAuthenticationSchemeProvider _schemeProvider;
     private readonly IIdentityProviderStore _identityProviderStore;
+    private readonly ILogger<Index> _logger;
 
     public ViewModel View { get; set; }
         
@@ -33,7 +35,8 @@ public class Index : PageModel
         IIdentityProviderStore identityProviderStore,
         IEventService events,
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager)
+        SignInManager<ApplicationUser> signInManager,
+        ILogger<Index> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -41,6 +44,7 @@ public class Index : PageModel
         _schemeProvider = schemeProvider;
         _identityProviderStore = identityProviderStore;
         _events = events;
+        _logger = logger;
     }
         
     public async Task<IActionResult> OnGet(string returnUrl)
@@ -120,8 +124,9 @@ public class Index : PageModel
                 }
                 else
                 {
-                    // user might have clicked on a malicious link - should be logged
-                    throw new Exception("invalid return URL");
+                    // user might have clicked on a malicious link - log and redirect safely
+                    _logger.LogWarning("Invalid return URL detected after login: {ReturnUrl}", Input.ReturnUrl);
+                    return Redirect("~/");
                 }
             }
 
