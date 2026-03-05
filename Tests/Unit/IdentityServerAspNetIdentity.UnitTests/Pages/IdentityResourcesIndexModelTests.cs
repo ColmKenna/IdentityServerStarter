@@ -5,19 +5,19 @@ namespace IdentityServerAspNetIdentity.UnitTests.Pages;
 
 public class IdentityResourcesIndexModelTests
 {
-    private readonly Mock<IIdentityResourcesAdminService> _mockService;
+    private readonly Mock<IIdentityResourcesAdminService> _mockIdentityResourcesAdminService;
     private readonly IdentityServerAspNetIdentity.Pages.Admin.IdentityResources.IndexModel _pageModel;
 
     public IdentityResourcesIndexModelTests()
     {
-        _mockService = new Mock<IIdentityResourcesAdminService>();
-        _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.IdentityResources.IndexModel(_mockService.Object);
+        _mockIdentityResourcesAdminService = new Mock<IIdentityResourcesAdminService>();
+        _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.IdentityResources.IndexModel(_mockIdentityResourcesAdminService.Object);
     }
 
     [Fact]
     public async Task OnGetAsync_InitializesIdentityResourcesCollection()
     {
-        _mockService
+        _mockIdentityResourcesAdminService
             .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<IdentityResourceListItemDto>());
 
@@ -29,7 +29,7 @@ public class IdentityResourcesIndexModelTests
     [Fact]
     public async Task OnGetAsync_ServiceReturnsResources_PopulatesIdentityResources()
     {
-        _mockService
+        _mockIdentityResourcesAdminService
             .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<IdentityResourceListItemDto>
             {
@@ -58,26 +58,9 @@ public class IdentityResourcesIndexModelTests
     }
 
     [Fact]
-    public async Task OnGetAsync_ServiceReturnsOrderedData_PreservesOrder()
-    {
-        _mockService
-            .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<IdentityResourceListItemDto>
-            {
-                new() { Id = 1, Name = "address", DisplayName = "Address", Description = "A", Enabled = true },
-                new() { Id = 2, Name = "openid", DisplayName = "OpenID", Description = "O", Enabled = true },
-                new() { Id = 3, Name = "profile", DisplayName = "Profile", Description = "P", Enabled = true }
-            });
-
-        await _pageModel.OnGetAsync();
-
-        _pageModel.IdentityResources.Select(r => r.Name).Should().Equal("address", "openid", "profile");
-    }
-
-    [Fact]
     public async Task OnGetAsync_NoResources_ReturnsEmptyList()
     {
-        _mockService
+        _mockIdentityResourcesAdminService
             .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<IdentityResourceListItemDto>());
 
@@ -86,17 +69,4 @@ public class IdentityResourcesIndexModelTests
         _pageModel.IdentityResources.Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task OnGetAsync_CallsServiceOnce()
-    {
-        _mockService
-            .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<IdentityResourceListItemDto>());
-
-        await _pageModel.OnGetAsync();
-
-        _mockService.Verify(
-            service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
 }

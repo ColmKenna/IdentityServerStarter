@@ -360,7 +360,7 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     {
         int id;
         DateTime? originalUpdated;
-        using (var seedConfigurationDbContext = CreateConfigurationContext())
+        await using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
             var apiScope = new ApiScope
             {
@@ -374,8 +374,8 @@ public class ApiScopesAdminServiceEditTests : IDisposable
             originalUpdated = apiScope.Updated;
         }
 
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.AddClaimAsync(id, "  department  ");

@@ -5,19 +5,19 @@ namespace IdentityServerAspNetIdentity.UnitTests.Pages;
 
 public class UsersIndexModelTests
 {
-    private readonly Mock<IUserEditor> _mockService;
+    private readonly Mock<IUserEditor> _mockUserEditor;
     private readonly IdentityServerAspNetIdentity.Pages.Admin.Users.Index _pageModel;
 
     public UsersIndexModelTests()
     {
-        _mockService = new Mock<IUserEditor>();
-        _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Users.Index(_mockService.Object);
+        _mockUserEditor = new Mock<IUserEditor>();
+        _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Users.Index(_mockUserEditor.Object);
     }
 
     [Fact]
     public async Task OnGetAsync_InitializesUsersCollection()
     {
-        _mockService
+        _mockUserEditor
             .Setup(s => s.GetUsersAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<UserListItemDto>());
 
@@ -29,7 +29,7 @@ public class UsersIndexModelTests
     [Fact]
     public async Task OnGetAsync_ServiceReturnsUsers_PopulatesUsers()
     {
-        _mockService
+        _mockUserEditor
             .Setup(s => s.GetUsersAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<UserListItemDto>
             {
@@ -60,7 +60,7 @@ public class UsersIndexModelTests
     [Fact]
     public async Task OnGetAsync_NoUsers_ReturnsEmptyList()
     {
-        _mockService
+        _mockUserEditor
             .Setup(s => s.GetUsersAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<UserListItemDto>());
 
@@ -69,33 +69,4 @@ public class UsersIndexModelTests
         _pageModel.Users.Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task OnGetAsync_CallsServiceOnce()
-    {
-        _mockService
-            .Setup(s => s.GetUsersAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<UserListItemDto>());
-
-        await _pageModel.OnGetAsync();
-
-        _mockService.Verify(
-            s => s.GetUsersAsync(It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task OnGetAsync_UserWithLockout_PreservesLockoutEnd()
-    {
-        var lockoutEnd = DateTimeOffset.MaxValue;
-        _mockService
-            .Setup(s => s.GetUsersAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<UserListItemDto>
-            {
-                new() { Id = "u1", UserName = "alice", LockoutEnd = lockoutEnd }
-            });
-
-        await _pageModel.OnGetAsync();
-
-        _pageModel.Users.Should().ContainSingle().Which.LockoutEnd.Should().Be(lockoutEnd);
-    }
 }

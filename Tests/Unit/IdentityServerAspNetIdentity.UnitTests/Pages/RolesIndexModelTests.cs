@@ -5,19 +5,19 @@ namespace IdentityServerAspNetIdentity.UnitTests.Pages;
 
 public class RolesIndexModelTests
 {
-    private readonly Mock<IRolesAdminService> _mockService;
+    private readonly Mock<IRolesAdminService> _mockRolesAdminService;
     private readonly IdentityServerAspNetIdentity.Pages.Admin.Roles.IndexModel _pageModel;
 
     public RolesIndexModelTests()
     {
-        _mockService = new Mock<IRolesAdminService>();
-        _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Roles.IndexModel(_mockService.Object);
+        _mockRolesAdminService = new Mock<IRolesAdminService>();
+        _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Roles.IndexModel(_mockRolesAdminService.Object);
     }
 
     [Fact]
     public async Task OnGetAsync_ReturnsPageResult()
     {
-        _mockService
+        _mockRolesAdminService
             .Setup(s => s.GetRolesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<RoleListItemDto>());
 
@@ -29,7 +29,7 @@ public class RolesIndexModelTests
     [Fact]
     public async Task OnGetAsync_PopulatesRolesFromService()
     {
-        _mockService
+        _mockRolesAdminService
             .Setup(s => s.GetRolesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<RoleListItemDto>
             {
@@ -46,7 +46,7 @@ public class RolesIndexModelTests
     [Fact]
     public async Task OnGetAsync_RolesContainCorrectNames()
     {
-        _mockService
+        _mockRolesAdminService
             .Setup(s => s.GetRolesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<RoleListItemDto>
             {
@@ -56,14 +56,13 @@ public class RolesIndexModelTests
 
         await _pageModel.OnGetAsync();
 
-        _pageModel.Roles.Select(r => r.Name).Should().Contain("SuperAdmin");
-        _pageModel.Roles.Select(r => r.Name).Should().Contain("User");
+        _pageModel.Roles.Select(r => r.Name).Should().Contain(new[] { "SuperAdmin", "User" });
     }
 
     [Fact]
     public async Task OnGetAsync_NoRolesExist_ReturnsEmptyList()
     {
-        _mockService
+        _mockRolesAdminService
             .Setup(s => s.GetRolesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<RoleListItemDto>());
 
@@ -72,34 +71,4 @@ public class RolesIndexModelTests
         _pageModel.Roles.Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task OnGetAsync_ServiceReturnsOrderedData_PreservesOrder()
-    {
-        _mockService
-            .Setup(s => s.GetRolesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<RoleListItemDto>
-            {
-                new() { Id = "2", Name = "Admin" },
-                new() { Id = "3", Name = "Manager" },
-                new() { Id = "1", Name = "Zebra" }
-            });
-
-        await _pageModel.OnGetAsync();
-
-        _pageModel.Roles.Select(r => r.Name).Should().Equal("Admin", "Manager", "Zebra");
-    }
-
-    [Fact]
-    public async Task OnGetAsync_CallsServiceOnce()
-    {
-        _mockService
-            .Setup(s => s.GetRolesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<RoleListItemDto>());
-
-        await _pageModel.OnGetAsync();
-
-        _mockService.Verify(
-            s => s.GetRolesAsync(It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
 }

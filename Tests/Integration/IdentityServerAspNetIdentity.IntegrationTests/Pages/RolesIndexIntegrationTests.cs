@@ -107,15 +107,6 @@ public class RolesIndexIntegrationTests : IDisposable
         // Arrange
         await SeedRolesAsync("Admin", "Editor");
 
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<IdentityServer.EF.DataAccess.DataMigrations.ApplicationDbContext>();
-            var roleCount = db.Roles.Count();
-            if (roleCount != 2) throw new Exception("Database roles count is " + roleCount + " after SeedRoles!");
-            var roleNamesInDb = string.Join(", ", db.Roles.Select(r => r.Name));
-            if (!roleNamesInDb.Contains("Admin")) throw new Exception("Admin not in DB directly! " + roleNamesInDb);
-        }
-
         // Act
         var response = await _client.GetAsync("/Admin/Roles");
         var document = await AngleSharpHelpers.GetDocumentAsync(response);

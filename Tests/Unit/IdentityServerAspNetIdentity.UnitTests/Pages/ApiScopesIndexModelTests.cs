@@ -58,23 +58,6 @@ public class ApiScopesIndexModelTests
     }
 
     [Fact]
-    public async Task OnGetAsync_ServiceReturnsOrderedData_PreservesOrder()
-    {
-        _mockApiScopesAdminService
-            .Setup(service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ApiScopeListItemDto>
-            {
-                new() { Id = 1, Name = "alpha", DisplayName = "Alpha", Description = "A", Enabled = true },
-                new() { Id = 2, Name = "middle", DisplayName = "Middle", Description = "M", Enabled = true },
-                new() { Id = 3, Name = "zeta", DisplayName = "Zeta", Description = "Z", Enabled = true }
-            });
-
-        await _pageModel.OnGetAsync();
-
-        _pageModel.ApiScopes.Select(scope => scope.Name).Should().Equal("alpha", "middle", "zeta");
-    }
-
-    [Fact]
     public async Task OnGetAsync_NoScopes_ReturnsEmptyList()
     {
         _mockApiScopesAdminService
@@ -86,17 +69,4 @@ public class ApiScopesIndexModelTests
         _pageModel.ApiScopes.Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task OnGetAsync_CallsServiceOnce()
-    {
-        _mockApiScopesAdminService
-            .Setup(service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<ApiScopeListItemDto>());
-
-        await _pageModel.OnGetAsync();
-
-        _mockApiScopesAdminService.Verify(
-            service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
 }

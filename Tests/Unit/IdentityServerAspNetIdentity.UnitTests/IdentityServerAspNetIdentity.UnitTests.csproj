@@ -18,17 +18,13 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="FluentAssertions" Version="8.8.0" />
-    <PackageReference Include="MockQueryable.Moq" Version="10.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\IdentityServerAspNetIdentity\IdentityServerAspNetIdentity.csproj" />
+    <ProjectReference Include="..\..\..\src\IdentityServerAspNetIdentity\IdentityServerAspNetIdentity.csproj" Properties="SkipNpm=true;SkipCkTaghelpers=true" />
     <ProjectReference Include="..\..\..\src\IdentityServerServices\IdentityServerServices.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Pages\" />
-  </ItemGroup>
+
 
 </Project>

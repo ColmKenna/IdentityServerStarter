@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\IdentityServerAspNetIdentity\IdentityServerAspNetIdentity.csproj" />
+    <ProjectReference Include="..\..\..\src\IdentityServerAspNetIdentity\IdentityServerAspNetIdentity.csproj" Properties="SkipNpm=true;SkipCkTaghelpers=true" />
     <ProjectReference Include="..\..\..\src\DataTransferModels\DataTransferModels.csproj" />
   </ItemGroup>
 

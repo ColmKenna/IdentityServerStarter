@@ -410,8 +410,19 @@ public class EditModel : UserDetailPageModel
         if (!await LoadUserAsync(UserId))
             return NotFound();
 
-        await UserManager.SetLockoutEndDateAsync(TargetUser!, null);
-        await UserManager.ResetAccessFailedCountAsync(TargetUser!);
+        var lockoutResult = await UserManager.SetLockoutEndDateAsync(TargetUser!, null);
+        if (!lockoutResult.Succeeded)
+        {
+            AddIdentityErrors(lockoutResult);
+            return await ReturnPageForTabAsync("security");
+        }
+
+        var resetResult = await UserManager.ResetAccessFailedCountAsync(TargetUser!);
+        if (!resetResult.Succeeded)
+        {
+            AddIdentityErrors(resetResult);
+            return await ReturnPageForTabAsync("security");
+        }
 
         TempData["Success"] = "Lockout cleared";
         return RedirectToSelf("security");

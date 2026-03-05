@@ -49,7 +49,7 @@ public class ClientsEditModelTests
     #region OnGetAsync Tests
 
     [Fact]
-    public async Task Should_ReturnPageWithPopulatedInput_When_ClientFound()
+    public async Task OnGetAsync_ClientFound_ReturnsPageWithPopulatedInput()
     {
         var viewModel = CreateTestViewModel(clientId: "my-app", clientName: "My App");
         _mockClientAdminService
@@ -66,7 +66,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public async Task Should_ReturnNotFound_When_ClientMissing_OnGet()
+    public async Task OnGetAsync_ClientMissing_ReturnsNotFound()
     {
         _mockClientAdminService
             .Setup(s => s.GetClientForEditAsync(999))
@@ -83,7 +83,7 @@ public class ClientsEditModelTests
     #region OnPostAsync Tests
 
     [Fact]
-    public async Task Should_RedirectWithSuccessMessage_When_UpdateSucceeds()
+    public async Task OnPostAsync_UpdateSucceeds_RedirectsWithSuccessMessage()
     {
         _pageModel.Id = 3;
         _pageModel.Input = CreateTestViewModel();
@@ -102,7 +102,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public async Task Should_ReturnNotFound_When_UpdateFails()
+    public async Task OnPostAsync_UpdateFails_ReturnsNotFound()
     {
         _pageModel.Id = 1;
         _pageModel.Input = CreateTestViewModel();
@@ -116,7 +116,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public async Task Should_ReturnPage_When_ModelStateInvalid()
+    public async Task OnPostAsync_ModelStateInvalid_ReturnsPage()
     {
         _pageModel.Id = 1;
         _pageModel.Input = CreateTestViewModel();
@@ -133,7 +133,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public async Task Should_RepopulateOptions_When_ModelStateInvalid()
+    public async Task OnPostAsync_ModelStateInvalid_RepopulatesOptions()
     {
         _pageModel.Id = 1;
         _pageModel.Input = CreateTestViewModel();
@@ -154,7 +154,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public async Task Should_NotCallUpdate_When_ModelStateInvalid()
+    public async Task OnPostAsync_ModelStateInvalid_DoesNotCallUpdate()
     {
         _pageModel.Id = 1;
         _pageModel.Input = CreateTestViewModel();
@@ -169,7 +169,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public async Task Should_ReturnPage_When_ModelStateInvalid_AndClientMissing()
+    public async Task OnPostAsync_ModelStateInvalid_ClientReloadReturnsNull_RetainsExistingInputOptions()
     {
         _pageModel.Id = 999;
         _pageModel.Input = CreateTestViewModel();
@@ -181,6 +181,8 @@ public class ClientsEditModelTests
         var result = await _pageModel.OnPostAsync();
 
         result.Should().BeOfType<PageResult>();
+        _pageModel.Input.AvailableScopes.Should().BeEquivalentTo(new[] { "openid", "profile", "email" });
+        _pageModel.Input.AvailableGrantTypes.Should().BeEquivalentTo(new[] { "authorization_code", "client_credentials" });
     }
 
     #endregion
@@ -188,7 +190,7 @@ public class ClientsEditModelTests
     #region OnPostAddRedirectUri Tests
 
     [Fact]
-    public void Should_AddEmptyRedirectUri_When_AddRedirectUriPosted()
+    public void OnPostAddRedirectUri_AddsEmptyRedirectUri()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.RedirectUris.Count;
@@ -204,7 +206,7 @@ public class ClientsEditModelTests
     #region OnPostRemoveRedirectUri Tests
 
     [Fact]
-    public void Should_RemoveRedirectUri_When_IndexValid()
+    public void OnPostRemoveRedirectUri_IndexValid_RemovesRedirectUri()
     {
         _pageModel.Input = CreateTestViewModel();
         _pageModel.Input.RedirectUris = new List<string> { "https://a.com", "https://b.com", "https://c.com" };
@@ -216,7 +218,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public void Should_NotRemoveRedirectUri_When_IndexNegative()
+    public void OnPostRemoveRedirectUri_IndexNegative_DoesNotRemove()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.RedirectUris.Count;
@@ -227,7 +229,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public void Should_NotRemoveRedirectUri_When_IndexOutOfRange()
+    public void OnPostRemoveRedirectUri_IndexOutOfRange_DoesNotRemove()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.RedirectUris.Count;
@@ -242,7 +244,7 @@ public class ClientsEditModelTests
     #region OnPostAddPostLogoutRedirectUri Tests
 
     [Fact]
-    public void Should_AddEmptyPostLogoutRedirectUri_When_AddPostLogoutRedirectUriPosted()
+    public void OnPostAddPostLogoutRedirectUri_AddsEmptyPostLogoutRedirectUri()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.PostLogoutRedirectUris.Count;
@@ -258,7 +260,7 @@ public class ClientsEditModelTests
     #region OnPostRemovePostLogoutRedirectUri Tests
 
     [Fact]
-    public void Should_RemovePostLogoutRedirectUri_When_IndexValid()
+    public void OnPostRemovePostLogoutRedirectUri_IndexValid_RemovesPostLogoutRedirectUri()
     {
         _pageModel.Input = CreateTestViewModel();
         _pageModel.Input.PostLogoutRedirectUris = new List<string> { "https://a.com/logout", "https://b.com/logout" };
@@ -270,7 +272,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public void Should_NotRemovePostLogoutRedirectUri_When_IndexNegative()
+    public void OnPostRemovePostLogoutRedirectUri_IndexNegative_DoesNotRemove()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.PostLogoutRedirectUris.Count;
@@ -281,7 +283,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public void Should_NotRemovePostLogoutRedirectUri_When_IndexOutOfRange()
+    public void OnPostRemovePostLogoutRedirectUri_IndexOutOfRange_DoesNotRemove()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.PostLogoutRedirectUris.Count;
@@ -296,7 +298,7 @@ public class ClientsEditModelTests
     #region OnPostAddAllowedScope Tests
 
     [Fact]
-    public void Should_AddEmptyAllowedScope_When_AddAllowedScopePosted()
+    public void OnPostAddAllowedScope_AddsEmptyAllowedScope()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.AllowedScopes.Count;
@@ -312,7 +314,7 @@ public class ClientsEditModelTests
     #region OnPostRemoveAllowedScope Tests
 
     [Fact]
-    public void Should_RemoveAllowedScope_When_IndexValid()
+    public void OnPostRemoveAllowedScope_IndexValid_RemovesAllowedScope()
     {
         _pageModel.Input = CreateTestViewModel();
         _pageModel.Input.AllowedScopes = new List<string> { "openid", "profile", "email" };
@@ -324,7 +326,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public void Should_NotRemoveAllowedScope_When_IndexNegative()
+    public void OnPostRemoveAllowedScope_IndexNegative_DoesNotRemove()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.AllowedScopes.Count;
@@ -335,7 +337,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public void Should_NotRemoveAllowedScope_When_IndexOutOfRange()
+    public void OnPostRemoveAllowedScope_IndexOutOfRange_DoesNotRemove()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.AllowedScopes.Count;
@@ -350,7 +352,7 @@ public class ClientsEditModelTests
     #region OnPostAddGrantType Tests
 
     [Fact]
-    public void Should_AddEmptyGrantType_When_AddGrantTypePosted()
+    public void OnPostAddGrantType_AddsEmptyGrantType()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.AllowedGrantTypes.Count;
@@ -366,7 +368,7 @@ public class ClientsEditModelTests
     #region OnPostRemoveGrantType Tests
 
     [Fact]
-    public void Should_RemoveGrantType_When_IndexValid()
+    public void OnPostRemoveGrantType_IndexValid_RemovesGrantType()
     {
         _pageModel.Input = CreateTestViewModel();
         _pageModel.Input.AllowedGrantTypes = new List<string> { "authorization_code", "client_credentials" };
@@ -378,7 +380,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public void Should_NotRemoveGrantType_When_IndexNegative()
+    public void OnPostRemoveGrantType_IndexNegative_DoesNotRemove()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.AllowedGrantTypes.Count;
@@ -389,7 +391,7 @@ public class ClientsEditModelTests
     }
 
     [Fact]
-    public void Should_NotRemoveGrantType_When_IndexOutOfRange()
+    public void OnPostRemoveGrantType_IndexOutOfRange_DoesNotRemove()
     {
         _pageModel.Input = CreateTestViewModel();
         var initialCount = _pageModel.Input.AllowedGrantTypes.Count;

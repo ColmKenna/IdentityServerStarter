@@ -157,7 +157,13 @@ public class ApiScopesEditModelTests
             Enabled = true
         };
         _mockApiScopesAdminService
-            .Setup(service => service.CreateAsync(It.IsAny<CreateApiScopeRequest>(), It.IsAny<CancellationToken>()))
+            .Setup(service => service.CreateAsync(
+                It.Is<CreateApiScopeRequest>(r =>
+                    r.Name == "orders.create" &&
+                    r.DisplayName == "Orders Create" &&
+                    r.Description == "Create orders" &&
+                    r.Enabled == true),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CreateApiScopeResult
             {
                 Status = CreateApiScopeStatus.Success,
@@ -229,7 +235,7 @@ public class ApiScopesEditModelTests
     }
 
     [Fact]
-    public async Task OnPostAsync_Edit_Duplicate_AddsModelError_InputName_ExactMessage()
+    public async Task OnPostAsync_Edit_Duplicate_AddsModelError_InputName_ExactMessage_AndRepopulatesClaims()
     {
         _pageModel.Id = 17;
         _pageModel.Input = new EditModel.ApiScopeInputModel
@@ -241,7 +247,9 @@ public class ApiScopesEditModelTests
         };
         _mockApiScopesAdminService
             .Setup(service => service.GetForEditAsync(17, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+            .ReturnsAsync(CreatePageData(
+                appliedClaims: ["department"],
+                availableClaims: ["location", "region"]));
         _mockApiScopesAdminService
             .Setup(service => service.UpdateAsync(17, It.IsAny<UpdateApiScopeRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new UpdateApiScopeResult
@@ -255,6 +263,8 @@ public class ApiScopesEditModelTests
         _pageModel.ModelState.Should().ContainKey("Input.Name");
         _pageModel.ModelState["Input.Name"]!.Errors.Single().ErrorMessage
             .Should().Be("An API scope with this name already exists.");
+        _pageModel.AppliedUserClaims.Should().Equal("department");
+        _pageModel.AvailableUserClaims.Should().Equal("location", "region");
     }
 
     [Fact]
@@ -288,13 +298,22 @@ public class ApiScopesEditModelTests
         _pageModel.Input = new EditModel.ApiScopeInputModel
         {
             Name = "orders.read",
+            DisplayName = "Orders Read",
+            Description = "Read orders",
             Enabled = true
         };
         _mockApiScopesAdminService
             .Setup(service => service.GetForEditAsync(19, It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePageData());
         _mockApiScopesAdminService
-            .Setup(service => service.UpdateAsync(19, It.IsAny<UpdateApiScopeRequest>(), It.IsAny<CancellationToken>()))
+            .Setup(service => service.UpdateAsync(
+                19,
+                It.Is<UpdateApiScopeRequest>(r =>
+                    r.Name == "orders.read" &&
+                    r.DisplayName == "Orders Read" &&
+                    r.Description == "Read orders" &&
+                    r.Enabled == true),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new UpdateApiScopeResult
             {
                 Status = UpdateApiScopeStatus.Success
