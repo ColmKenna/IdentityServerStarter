@@ -15,6 +15,12 @@ public class ApiScopesEditModelTests
     public ApiScopesEditModelTests()
     {
         _mockApiScopesAdminService = new Mock<IApiScopesAdminService>();
+
+        // Default: any GetForEditAsync returns standard page data
+        _mockApiScopesAdminService
+            .Setup(s => s.GetForEditAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+
         _pageModel = new EditModel(_mockApiScopesAdminService.Object)
         {
             TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>())
@@ -41,6 +47,36 @@ public class ApiScopesEditModelTests
             AppliedUserClaims = appliedClaims ?? new List<string> { "department" },
             AvailableUserClaims = availableClaims ?? new List<string> { "location", "region" }
         };
+    }
+
+    private static EditModel.ApiScopeInputModel CreateInput(
+        string name = "orders.read",
+        string? displayName = "Orders Read",
+        string? description = "Read orders",
+        bool enabled = true)
+    {
+        return new EditModel.ApiScopeInputModel
+        {
+            Name = name,
+            DisplayName = displayName,
+            Description = description,
+            Enabled = enabled
+        };
+    }
+
+    private void ArrangePage(int id, EditModel.ApiScopeInputModel? input = null, string? modelError = null)
+    {
+        _pageModel.Id = id;
+        if (input != null) _pageModel.Input = input;
+        if (modelError != null) _pageModel.ModelState.AddModelError("Input.Name", modelError);
+    }
+
+    private void AssertRedirectToEdit(IActionResult result, int expectedId, string expectedMessage)
+    {
+        var redirect = result.Should().BeOfType<RedirectToPageResult>().Subject;
+        redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
+        redirect.RouteValues!["id"].Should().Be(expectedId);
+        _pageModel.TempData["Success"].Should().Be(expectedMessage);
     }
 
     [Fact]
@@ -103,13 +139,7 @@ public class ApiScopesEditModelTests
     [Fact]
     public async Task OnPostAsync_Create_ModelStateInvalid_ReturnsPage_WithoutCallingCreate()
     {
-        _pageModel.Id = 0;
-        _pageModel.Input = new EditModel.ApiScopeInputModel
-        {
-            Name = string.Empty,
-            Enabled = true
-        };
-        _pageModel.ModelState.AddModelError("Input.Name", "Name is required");
+        ArrangePage(0, CreateInput(name: string.Empty), "Name is required");
 
         var result = await _pageModel.OnPostAsync();
 
@@ -122,20 +152,10 @@ public class ApiScopesEditModelTests
     [Fact]
     public async Task OnPostAsync_Create_Duplicate_AddsModelError_InputName_ExactMessage()
     {
-        _pageModel.Id = 0;
-        _pageModel.Input = new EditModel.ApiScopeInputModel
-        {
-            Name = "orders.read",
-            DisplayName = "Orders Read",
-            Description = "Read orders",
-            Enabled = true
-        };
+        ArrangePage(0, CreateInput());
         _mockApiScopesAdminService
             .Setup(service => service.CreateAsync(It.IsAny<CreateApiScopeRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CreateApiScopeResult
-            {
-                Status = CreateApiScopeStatus.DuplicateName
-            });
+            .ReturnsAsync(new CreateApiScopeResult { Status = CreateApiScopeStatus.DuplicateName });
 
         var result = await _pageModel.OnPostAsync();
 
@@ -148,14 +168,7 @@ public class ApiScopesEditModelTests
     [Fact]
     public async Task OnPostAsync_Create_Success_RedirectsToEdit_WithCreatedId_AndTempDataSuccessExact()
     {
-        _pageModel.Id = 0;
-        _pageModel.Input = new EditModel.ApiScopeInputModel
-        {
-            Name = "orders.create",
-            DisplayName = "Orders Create",
-            Description = "Create orders",
-            Enabled = true
-        };
+        ArrangePage(0, CreateInput(name: "orders.create", displayName: "Orders Create", description: "Create orders"));
         _mockApiScopesAdminService
             .Setup(service => service.CreateAsync(
                 It.Is<CreateApiScopeRequest>(r =>
@@ -164,31 +177,17 @@ public class ApiScopesEditModelTests
                     r.Description == "Create orders" &&
                     r.Enabled == true),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CreateApiScopeResult
-            {
-                Status = CreateApiScopeStatus.Success,
-                CreatedId = 25
-            });
+            .ReturnsAsync(new CreateApiScopeResult { Status = CreateApiScopeStatus.Success, CreatedId = 25 });
 
         var result = await _pageModel.OnPostAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        var redirect = (RedirectToPageResult)result;
-        redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
-        redirect.RouteValues.Should().ContainKey("id");
-        redirect.RouteValues!["id"].Should().Be(25);
-        _pageModel.TempData["Success"].Should().Be("API scope created successfully");
+        AssertRedirectToEdit(result, 25, "API scope created successfully");
     }
 
     [Fact]
     public async Task OnPostAsync_Edit_MissingOnLoad_ReturnsNotFound()
     {
-        _pageModel.Id = 15;
-        _pageModel.Input = new EditModel.ApiScopeInputModel
-        {
-            Name = "orders.write",
-            Enabled = true
-        };
+        ArrangePage(15, CreateInput(name: "orders.write"));
         _mockApiScopesAdminService
             .Setup(service => service.GetForEditAsync(15, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ApiScopeEditPageDataDto?)null);
@@ -204,15 +203,8 @@ public class ApiScopesEditModelTests
     [Fact]
     public async Task OnPostAsync_Edit_ModelStateInvalid_RepopulatesClaimsWithoutOverwritingInput()
     {
-        _pageModel.Id = 16;
-        _pageModel.Input = new EditModel.ApiScopeInputModel
-        {
-            Name = "user-entered-name",
-            DisplayName = "User Entered Display Name",
-            Description = "User Entered Description",
-            Enabled = false
-        };
-        _pageModel.ModelState.AddModelError("Input.Name", "Name is required");
+        ArrangePage(16, CreateInput(name: "user-entered-name", displayName: "User Entered Display Name",
+            description: "User Entered Description", enabled: false), "Name is required");
         _mockApiScopesAdminService
             .Setup(service => service.GetForEditAsync(16, It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePageData(
@@ -237,14 +229,7 @@ public class ApiScopesEditModelTests
     [Fact]
     public async Task OnPostAsync_Edit_Duplicate_AddsModelError_InputName_ExactMessage_AndRepopulatesClaims()
     {
-        _pageModel.Id = 17;
-        _pageModel.Input = new EditModel.ApiScopeInputModel
-        {
-            Name = "orders.read",
-            DisplayName = "Duplicate",
-            Description = "Duplicate",
-            Enabled = true
-        };
+        ArrangePage(17, CreateInput(displayName: "Duplicate", description: "Duplicate"));
         _mockApiScopesAdminService
             .Setup(service => service.GetForEditAsync(17, It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePageData(
@@ -252,10 +237,7 @@ public class ApiScopesEditModelTests
                 availableClaims: ["location", "region"]));
         _mockApiScopesAdminService
             .Setup(service => service.UpdateAsync(17, It.IsAny<UpdateApiScopeRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new UpdateApiScopeResult
-            {
-                Status = UpdateApiScopeStatus.DuplicateName
-            });
+            .ReturnsAsync(new UpdateApiScopeResult { Status = UpdateApiScopeStatus.DuplicateName });
 
         var result = await _pageModel.OnPostAsync();
 
@@ -270,21 +252,10 @@ public class ApiScopesEditModelTests
     [Fact]
     public async Task OnPostAsync_Edit_UpdateNotFound_ReturnsNotFound()
     {
-        _pageModel.Id = 18;
-        _pageModel.Input = new EditModel.ApiScopeInputModel
-        {
-            Name = "orders.read",
-            Enabled = true
-        };
-        _mockApiScopesAdminService
-            .Setup(service => service.GetForEditAsync(18, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangePage(18, CreateInput());
         _mockApiScopesAdminService
             .Setup(service => service.UpdateAsync(18, It.IsAny<UpdateApiScopeRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new UpdateApiScopeResult
-            {
-                Status = UpdateApiScopeStatus.NotFound
-            });
+            .ReturnsAsync(new UpdateApiScopeResult { Status = UpdateApiScopeStatus.NotFound });
 
         var result = await _pageModel.OnPostAsync();
 
@@ -294,17 +265,7 @@ public class ApiScopesEditModelTests
     [Fact]
     public async Task OnPostAsync_Edit_Success_RedirectsAndTempDataSuccessExact()
     {
-        _pageModel.Id = 19;
-        _pageModel.Input = new EditModel.ApiScopeInputModel
-        {
-            Name = "orders.read",
-            DisplayName = "Orders Read",
-            Description = "Read orders",
-            Enabled = true
-        };
-        _mockApiScopesAdminService
-            .Setup(service => service.GetForEditAsync(19, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangePage(19, CreateInput());
         _mockApiScopesAdminService
             .Setup(service => service.UpdateAsync(
                 19,
@@ -314,19 +275,11 @@ public class ApiScopesEditModelTests
                     r.Description == "Read orders" &&
                     r.Enabled == true),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new UpdateApiScopeResult
-            {
-                Status = UpdateApiScopeStatus.Success
-            });
+            .ReturnsAsync(new UpdateApiScopeResult { Status = UpdateApiScopeStatus.Success });
 
         var result = await _pageModel.OnPostAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        var redirect = (RedirectToPageResult)result;
-        redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
-        redirect.RouteValues.Should().ContainKey("id");
-        redirect.RouteValues!["id"].Should().Be(19);
-        _pageModel.TempData["Success"].Should().Be("API scope updated successfully");
+        AssertRedirectToEdit(result, 19, "API scope updated successfully");
     }
 
     [Fact]
@@ -348,9 +301,6 @@ public class ApiScopesEditModelTests
     {
         _pageModel.Id = 21;
         _pageModel.SelectedClaimType = "   ";
-        _mockApiScopesAdminService
-            .Setup(service => service.GetForEditAsync(21, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
 
         var result = await _pageModel.OnPostAddClaimAsync();
 
@@ -368,9 +318,6 @@ public class ApiScopesEditModelTests
     {
         _pageModel.Id = 22;
         _pageModel.SelectedClaimType = "department";
-        _mockApiScopesAdminService
-            .Setup(service => service.GetForEditAsync(22, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
         _mockApiScopesAdminService
             .Setup(service => service.AddClaimAsync(22, "department", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AddApiScopeClaimResult
@@ -393,9 +340,6 @@ public class ApiScopesEditModelTests
         _pageModel.Id = 23;
         _pageModel.SelectedClaimType = "  department  ";
         _mockApiScopesAdminService
-            .Setup(service => service.GetForEditAsync(23, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
-        _mockApiScopesAdminService
             .Setup(service => service.AddClaimAsync(23, "  department  ", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AddApiScopeClaimResult
             {
@@ -405,12 +349,7 @@ public class ApiScopesEditModelTests
 
         var result = await _pageModel.OnPostAddClaimAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        var redirect = (RedirectToPageResult)result;
-        redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
-        redirect.RouteValues.Should().ContainKey("id");
-        redirect.RouteValues!["id"].Should().Be(23);
-        _pageModel.TempData["Success"].Should().Be("User claim 'department' added successfully");
+        AssertRedirectToEdit(result, 23, "User claim 'department' added successfully");
     }
 
     [Fact]
@@ -432,9 +371,6 @@ public class ApiScopesEditModelTests
     {
         _pageModel.Id = 25;
         _pageModel.RemoveClaimType = string.Empty;
-        _mockApiScopesAdminService
-            .Setup(service => service.GetForEditAsync(25, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
 
         var result = await _pageModel.OnPostRemoveClaimAsync();
 
@@ -452,9 +388,6 @@ public class ApiScopesEditModelTests
     {
         _pageModel.Id = 26;
         _pageModel.RemoveClaimType = "department";
-        _mockApiScopesAdminService
-            .Setup(service => service.GetForEditAsync(26, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
         _mockApiScopesAdminService
             .Setup(service => service.RemoveClaimAsync(26, "department", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RemoveApiScopeClaimResult
@@ -477,9 +410,6 @@ public class ApiScopesEditModelTests
         _pageModel.Id = 27;
         _pageModel.RemoveClaimType = "  department  ";
         _mockApiScopesAdminService
-            .Setup(service => service.GetForEditAsync(27, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
-        _mockApiScopesAdminService
             .Setup(service => service.RemoveClaimAsync(27, "  department  ", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RemoveApiScopeClaimResult
             {
@@ -489,11 +419,6 @@ public class ApiScopesEditModelTests
 
         var result = await _pageModel.OnPostRemoveClaimAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        var redirect = (RedirectToPageResult)result;
-        redirect.PageName.Should().Be("/Admin/ApiScopes/Edit");
-        redirect.RouteValues.Should().ContainKey("id");
-        redirect.RouteValues!["id"].Should().Be(27);
-        _pageModel.TempData["Success"].Should().Be("User claim 'department' removed successfully");
+        AssertRedirectToEdit(result, 27, "User claim 'department' removed successfully");
     }
 }
