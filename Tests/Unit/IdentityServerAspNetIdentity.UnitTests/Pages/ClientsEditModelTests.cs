@@ -14,6 +14,12 @@ public class ClientsEditModelTests
     public ClientsEditModelTests()
     {
         _mockClientAdminService = new Mock<IClientAdminService>();
+
+        // Default: any GetClientForEditAsync returns standard view model
+        _mockClientAdminService
+            .Setup(s => s.GetClientForEditAsync(It.IsAny<int>()))
+            .ReturnsAsync(CreateTestViewModel());
+
         _pageModel = new EditModel(_mockClientAdminService.Object)
         {
             TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>())
@@ -38,7 +44,7 @@ public class ClientsEditModelTests
             IdentityTokenLifetime = 300,
             SlidingRefreshTokenLifetime = 1296000,
             AllowedGrantTypes = new List<string> { "authorization_code" },
-            RedirectUris = new List<string> { "https://example.com/callback" },
+            RedirectUris = ["https://example.com/callback"],
             PostLogoutRedirectUris = new List<string> { "https://example.com/logout" },
             AllowedScopes = new List<string> { "openid", "profile" },
             AvailableScopes = new List<string> { "openid", "profile", "email" },
@@ -46,7 +52,21 @@ public class ClientsEditModelTests
         };
     }
 
-    #region OnGetAsync Tests
+    private void ArrangePage(int id, ClientEditViewModel? input = null, string? modelError = null)
+    {
+        _pageModel.Id = id;
+        _pageModel.Input = input ?? CreateTestViewModel();
+        if (modelError != null) _pageModel.ModelState.AddModelError("Input.ClientName", modelError);
+    }
+
+    private void AssertRedirectToEdit(IActionResult result, int expectedId, string expectedMessage)
+    {
+        var redirect = result.Should().BeOfType<RedirectToPageResult>().Subject;
+        redirect.PageName.Should().Be("/Admin/Clients/Edit");
+        redirect.RouteValues.Should().ContainKey("id");
+        redirect.RouteValues!["id"].Should().Be(expectedId);
+        _pageModel.TempData["Success"].Should().Be(expectedMessage);
+    }
 
     [Fact]
     public async Task OnGetAsync_ClientFound_ReturnsPageWithPopulatedInput()
@@ -78,34 +98,23 @@ public class ClientsEditModelTests
         result.Should().BeOfType<NotFoundResult>();
     }
 
-    #endregion
-
-    #region OnPostAsync Tests
-
     [Fact]
     public async Task OnPostAsync_UpdateSucceeds_RedirectsWithSuccessMessage()
     {
-        _pageModel.Id = 3;
-        _pageModel.Input = CreateTestViewModel();
+        ArrangePage(3);
         _mockClientAdminService
             .Setup(s => s.UpdateClientAsync(3, _pageModel.Input))
             .ReturnsAsync(true);
 
         var result = await _pageModel.OnPostAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        var redirect = (RedirectToPageResult)result;
-        redirect.PageName.Should().Be("/Admin/Clients/Edit");
-        redirect.RouteValues.Should().ContainKey("id");
-        redirect.RouteValues!["id"].Should().Be(3);
-        _pageModel.TempData["Success"].Should().Be("Client updated successfully");
+        AssertRedirectToEdit(result, 3, "Client updated successfully");
     }
 
     [Fact]
     public async Task OnPostAsync_UpdateFails_ReturnsNotFound()
     {
-        _pageModel.Id = 1;
-        _pageModel.Input = CreateTestViewModel();
+        ArrangePage(1);
         _mockClientAdminService
             .Setup(s => s.UpdateClientAsync(1, _pageModel.Input))
             .ReturnsAsync(false);
@@ -118,14 +127,7 @@ public class ClientsEditModelTests
     [Fact]
     public async Task OnPostAsync_ModelStateInvalid_ReturnsPage()
     {
-        _pageModel.Id = 1;
-        _pageModel.Input = CreateTestViewModel();
-        _pageModel.ModelState.AddModelError("Input.ClientName", "Required");
-
-        var existingClient = CreateTestViewModel();
-        _mockClientAdminService
-            .Setup(s => s.GetClientForEditAsync(1))
-            .ReturnsAsync(existingClient);
+        ArrangePage(1, modelError: "Required");
 
         var result = await _pageModel.OnPostAsync();
 
@@ -135,10 +137,8 @@ public class ClientsEditModelTests
     [Fact]
     public async Task OnPostAsync_ModelStateInvalid_RepopulatesOptions()
     {
-        _pageModel.Id = 1;
-        _pageModel.Input = CreateTestViewModel();
+        ArrangePage(1, modelError: "Required");
         _pageModel.Input.AvailableScopes = new List<string>(); // cleared
-        _pageModel.ModelState.AddModelError("Input.ClientName", "Required");
 
         var existingClient = CreateTestViewModel();
         existingClient.AvailableScopes = new List<string> { "openid", "profile", "email" };
@@ -156,12 +156,7 @@ public class ClientsEditModelTests
     [Fact]
     public async Task OnPostAsync_ModelStateInvalid_DoesNotCallUpdate()
     {
-        _pageModel.Id = 1;
-        _pageModel.Input = CreateTestViewModel();
-        _pageModel.ModelState.AddModelError("Input.ClientName", "Required");
-        _mockClientAdminService
-            .Setup(s => s.GetClientForEditAsync(1))
-            .ReturnsAsync(CreateTestViewModel());
+        ArrangePage(1, modelError: "Required");
 
         await _pageModel.OnPostAsync();
 
@@ -171,9 +166,7 @@ public class ClientsEditModelTests
     [Fact]
     public async Task OnPostAsync_ModelStateInvalid_ClientReloadReturnsNull_RetainsExistingInputOptions()
     {
-        _pageModel.Id = 999;
-        _pageModel.Input = CreateTestViewModel();
-        _pageModel.ModelState.AddModelError("Input.ClientName", "Required");
+        ArrangePage(999, modelError: "Required");
         _mockClientAdminService
             .Setup(s => s.GetClientForEditAsync(999))
             .ReturnsAsync((ClientEditViewModel?)null);
@@ -184,10 +177,6 @@ public class ClientsEditModelTests
         _pageModel.Input.AvailableScopes.Should().BeEquivalentTo(new[] { "openid", "profile", "email" });
         _pageModel.Input.AvailableGrantTypes.Should().BeEquivalentTo(new[] { "authorization_code", "client_credentials" });
     }
-
-    #endregion
-
-    #region OnPostAddRedirectUri Tests
 
     [Fact]
     public void OnPostAddRedirectUri_AddsEmptyRedirectUri()
@@ -200,10 +189,6 @@ public class ClientsEditModelTests
         _pageModel.Input.RedirectUris.Should().HaveCount(initialCount + 1);
         _pageModel.Input.RedirectUris.Last().Should().BeEmpty();
     }
-
-    #endregion
-
-    #region OnPostRemoveRedirectUri Tests
 
     [Fact]
     public void OnPostRemoveRedirectUri_IndexValid_RemovesRedirectUri()
@@ -239,10 +224,6 @@ public class ClientsEditModelTests
         _pageModel.Input.RedirectUris.Should().HaveCount(initialCount);
     }
 
-    #endregion
-
-    #region OnPostAddPostLogoutRedirectUri Tests
-
     [Fact]
     public void OnPostAddPostLogoutRedirectUri_AddsEmptyPostLogoutRedirectUri()
     {
@@ -254,10 +235,6 @@ public class ClientsEditModelTests
         _pageModel.Input.PostLogoutRedirectUris.Should().HaveCount(initialCount + 1);
         _pageModel.Input.PostLogoutRedirectUris.Last().Should().BeEmpty();
     }
-
-    #endregion
-
-    #region OnPostRemovePostLogoutRedirectUri Tests
 
     [Fact]
     public void OnPostRemovePostLogoutRedirectUri_IndexValid_RemovesPostLogoutRedirectUri()
@@ -293,10 +270,6 @@ public class ClientsEditModelTests
         _pageModel.Input.PostLogoutRedirectUris.Should().HaveCount(initialCount);
     }
 
-    #endregion
-
-    #region OnPostAddAllowedScope Tests
-
     [Fact]
     public void OnPostAddAllowedScope_AddsEmptyAllowedScope()
     {
@@ -308,10 +281,6 @@ public class ClientsEditModelTests
         _pageModel.Input.AllowedScopes.Should().HaveCount(initialCount + 1);
         _pageModel.Input.AllowedScopes.Last().Should().BeEmpty();
     }
-
-    #endregion
-
-    #region OnPostRemoveAllowedScope Tests
 
     [Fact]
     public void OnPostRemoveAllowedScope_IndexValid_RemovesAllowedScope()
@@ -347,10 +316,6 @@ public class ClientsEditModelTests
         _pageModel.Input.AllowedScopes.Should().HaveCount(initialCount);
     }
 
-    #endregion
-
-    #region OnPostAddGrantType Tests
-
     [Fact]
     public void OnPostAddGrantType_AddsEmptyGrantType()
     {
@@ -362,10 +327,6 @@ public class ClientsEditModelTests
         _pageModel.Input.AllowedGrantTypes.Should().HaveCount(initialCount + 1);
         _pageModel.Input.AllowedGrantTypes.Last().Should().BeEmpty();
     }
-
-    #endregion
-
-    #region OnPostRemoveGrantType Tests
 
     [Fact]
     public void OnPostRemoveGrantType_IndexValid_RemovesGrantType()
@@ -400,6 +361,4 @@ public class ClientsEditModelTests
 
         _pageModel.Input.AllowedGrantTypes.Should().HaveCount(initialCount);
     }
-
-    #endregion
 }
