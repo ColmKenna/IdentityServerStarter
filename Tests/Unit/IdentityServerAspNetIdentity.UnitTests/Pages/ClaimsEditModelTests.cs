@@ -13,6 +13,12 @@ public class ClaimsEditModelTests
     public ClaimsEditModelTests()
     {
         _mockClaimsAdminService = new Mock<IClaimsAdminService>();
+
+        // Default: any GetForEditAsync returns standard page data
+        _mockClaimsAdminService
+            .Setup(s => s.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePageData());
+
         _pageModel = new IdentityServerAspNetIdentity.Pages.Admin.Claims.EditModel(_mockClaimsAdminService.Object)
         {
             TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>())
@@ -48,6 +54,29 @@ public class ClaimsEditModelTests
             },
             NewClaimValue = newClaimValue
         };
+    }
+
+    private void ArrangeForAddUser(string claimType = "department", string? userId = "u1", string claimValue = "engineering")
+    {
+        _pageModel.ClaimType = claimType;
+        _pageModel.SelectedUserId = userId;
+        _pageModel.NewClaimValue = claimValue;
+    }
+
+    private void ArrangeForRemoveUser(string claimType = "department", string userId = "u1", string claimValue = "engineering")
+    {
+        _pageModel.ClaimType = claimType;
+        _pageModel.RemoveUserId = userId;
+        _pageModel.RemoveClaimValue = claimValue;
+    }
+
+    private void AssertRedirectToEdit(IActionResult result, string claimType, string expectedMessage)
+    {
+        var redirect = result.Should().BeOfType<RedirectToPageResult>().Subject;
+        redirect.PageName.Should().Be("/Admin/Claims/Edit");
+        redirect.RouteValues.Should().ContainKey("claimType");
+        redirect.RouteValues!["claimType"].Should().Be(claimType);
+        _pageModel.TempData["Success"].Should().Be(expectedMessage);
     }
 
     [Fact]
@@ -119,9 +148,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostAddUserAsync_MissingClaimType_ReturnsBadRequest()
     {
-        _pageModel.ClaimType = " ";
-        _pageModel.SelectedUserId = "u1";
-        _pageModel.NewClaimValue = "engineering";
+        ArrangeForAddUser(claimType: " ");
 
         var result = await _pageModel.OnPostAddUserAsync();
 
@@ -134,9 +161,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostAddUserAsync_UnknownClaimType_ReturnsNotFound()
     {
-        _pageModel.ClaimType = "unknown";
-        _pageModel.SelectedUserId = "u1";
-        _pageModel.NewClaimValue = "engineering";
+        ArrangeForAddUser(claimType: "unknown");
         _mockClaimsAdminService
             .Setup(service => service.GetForEditAsync("unknown", "engineering", It.IsAny<CancellationToken>()))
             .ReturnsAsync((ClaimEditPageDataDto?)null);
@@ -149,11 +174,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostAddUserAsync_NoUserSelected_AddsModelError_SelectedUserId_ExactMessage()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.NewClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", "engineering", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForAddUser(userId: null);
 
         var result = await _pageModel.OnPostAddUserAsync();
 
@@ -169,12 +190,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostAddUserAsync_MissingClaimValue_AddsModelError_NewClaimValue_ExactMessage()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.SelectedUserId = "u1";
-        _pageModel.NewClaimValue = string.Empty;
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", string.Empty, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForAddUser(claimValue: string.Empty);
 
         var result = await _pageModel.OnPostAddUserAsync();
 
@@ -190,18 +206,10 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostAddUserAsync_UserNotFound_ReturnsNotFound()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.SelectedUserId = "u1";
-        _pageModel.NewClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", "engineering", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForAddUser();
         _mockClaimsAdminService
             .Setup(service => service.AddUserToClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AddClaimAssignmentResult
-            {
-                Status = AddClaimAssignmentStatus.UserNotFound
-            });
+            .ReturnsAsync(new AddClaimAssignmentResult { Status = AddClaimAssignmentStatus.UserNotFound });
 
         var result = await _pageModel.OnPostAddUserAsync();
 
@@ -211,18 +219,10 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostAddUserAsync_AlreadyAssigned_AddsModelError_ModelOnly_ExactMessage()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.SelectedUserId = "u1";
-        _pageModel.NewClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", "engineering", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForAddUser();
         _mockClaimsAdminService
             .Setup(service => service.AddUserToClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AddClaimAssignmentResult
-            {
-                Status = AddClaimAssignmentStatus.AlreadyAssigned
-            });
+            .ReturnsAsync(new AddClaimAssignmentResult { Status = AddClaimAssignmentStatus.AlreadyAssigned });
 
         var result = await _pageModel.OnPostAddUserAsync();
 
@@ -235,12 +235,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostAddUserAsync_IdentityFailure_AddsModelOnlyErrors_ExactDescriptions()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.SelectedUserId = "u1";
-        _pageModel.NewClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", "engineering", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForAddUser();
         _mockClaimsAdminService
             .Setup(service => service.AddUserToClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AddClaimAssignmentResult
@@ -260,12 +255,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostAddUserAsync_Success_RedirectsToEdit_WithExactSuccessTempData()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.SelectedUserId = "u1";
-        _pageModel.NewClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", "engineering", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForAddUser();
         _mockClaimsAdminService
             .Setup(service => service.AddUserToClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AddClaimAssignmentResult
@@ -276,20 +266,13 @@ public class ClaimsEditModelTests
 
         var result = await _pageModel.OnPostAddUserAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        var redirect = (RedirectToPageResult)result;
-        redirect.PageName.Should().Be("/Admin/Claims/Edit");
-        redirect.RouteValues.Should().ContainKey("claimType");
-        redirect.RouteValues!["claimType"].Should().Be("department");
-        _pageModel.TempData["Success"].Should().Be("Claim 'department' assigned to user 'alice'.");
+        AssertRedirectToEdit(result, "department", "Claim 'department' assigned to user 'alice'.");
     }
 
     [Fact]
     public async Task OnPostRemoveUserAsync_MissingClaimType_ReturnsBadRequest()
     {
-        _pageModel.ClaimType = " ";
-        _pageModel.RemoveUserId = "u1";
-        _pageModel.RemoveClaimValue = "engineering";
+        ArrangeForRemoveUser(claimType: " ");
 
         var result = await _pageModel.OnPostRemoveUserAsync();
 
@@ -302,9 +285,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostRemoveUserAsync_UnknownClaimType_ReturnsNotFound()
     {
-        _pageModel.ClaimType = "unknown";
-        _pageModel.RemoveUserId = "u1";
-        _pageModel.RemoveClaimValue = "engineering";
+        ArrangeForRemoveUser(claimType: "unknown");
         _mockClaimsAdminService
             .Setup(service => service.GetForEditAsync("unknown", null, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ClaimEditPageDataDto?)null);
@@ -317,12 +298,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostRemoveUserAsync_MissingAssignmentDetails_AddsModelError_ModelOnly_ExactMessage()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.RemoveUserId = string.Empty;
-        _pageModel.RemoveClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForRemoveUser(userId: string.Empty);
 
         var result = await _pageModel.OnPostRemoveUserAsync();
 
@@ -338,18 +314,10 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostRemoveUserAsync_UserNotFound_ReturnsNotFound()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.RemoveUserId = "u1";
-        _pageModel.RemoveClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForRemoveUser();
         _mockClaimsAdminService
             .Setup(service => service.RemoveUserFromClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RemoveClaimAssignmentResult
-            {
-                Status = RemoveClaimAssignmentStatus.UserNotFound
-            });
+            .ReturnsAsync(new RemoveClaimAssignmentResult { Status = RemoveClaimAssignmentStatus.UserNotFound });
 
         var result = await _pageModel.OnPostRemoveUserAsync();
 
@@ -359,18 +327,10 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostRemoveUserAsync_AssignmentMissing_AddsModelError_ModelOnly_ExactMessage()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.RemoveUserId = "u1";
-        _pageModel.RemoveClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForRemoveUser();
         _mockClaimsAdminService
             .Setup(service => service.RemoveUserFromClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RemoveClaimAssignmentResult
-            {
-                Status = RemoveClaimAssignmentStatus.AssignmentNotFound
-            });
+            .ReturnsAsync(new RemoveClaimAssignmentResult { Status = RemoveClaimAssignmentStatus.AssignmentNotFound });
 
         var result = await _pageModel.OnPostRemoveUserAsync();
 
@@ -383,12 +343,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostRemoveUserAsync_IdentityFailure_AddsModelOnlyErrors_ExactDescriptions()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.RemoveUserId = "u1";
-        _pageModel.RemoveClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForRemoveUser();
         _mockClaimsAdminService
             .Setup(service => service.RemoveUserFromClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RemoveClaimAssignmentResult
@@ -408,12 +363,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostRemoveUserAsync_LastAssignmentRemoved_RedirectsIndex_WithExactWarningTempData()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.RemoveUserId = "u1";
-        _pageModel.RemoveClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForRemoveUser();
         _mockClaimsAdminService
             .Setup(service => service.RemoveUserFromClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RemoveClaimAssignmentResult
@@ -435,12 +385,7 @@ public class ClaimsEditModelTests
     [Fact]
     public async Task OnPostRemoveUserAsync_RemainingAssignments_RedirectsEdit_WithExactSuccessTempData()
     {
-        _pageModel.ClaimType = "department";
-        _pageModel.RemoveUserId = "u1";
-        _pageModel.RemoveClaimValue = "engineering";
-        _mockClaimsAdminService
-            .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreatePageData());
+        ArrangeForRemoveUser();
         _mockClaimsAdminService
             .Setup(service => service.RemoveUserFromClaimAsync("department", "u1", "engineering", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RemoveClaimAssignmentResult
@@ -452,11 +397,6 @@ public class ClaimsEditModelTests
 
         var result = await _pageModel.OnPostRemoveUserAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        var redirect = (RedirectToPageResult)result;
-        redirect.PageName.Should().Be("/Admin/Claims/Edit");
-        redirect.RouteValues.Should().ContainKey("claimType");
-        redirect.RouteValues!["claimType"].Should().Be("department");
-        _pageModel.TempData["Success"].Should().Be("Claim 'department' removed from user 'alice'.");
+        AssertRedirectToEdit(result, "department", "Claim 'department' removed from user 'alice'.");
     }
 }
