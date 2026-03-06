@@ -104,7 +104,6 @@ public class ClientAdminServiceTests : IDisposable
         };
     }
 
-    // --- GetClientForEditAsync ---
 
     [Fact]
     public async Task GetClientForEditAsync_ReturnsNull_WhenClientDoesNotExist()
@@ -241,7 +240,6 @@ public class ClientAdminServiceTests : IDisposable
         result!.ClientName.Should().BeEmpty();
     }
 
-    // --- UpdateClientAsync ---
 
     [Fact]
     public async Task UpdateClientAsync_ReturnsFalse_WhenClientDoesNotExist()
@@ -703,7 +701,6 @@ public class ClientAdminServiceTests : IDisposable
         }
     }
 
-    // --- GetClientsAsync ---
 
     [Fact]
     public async Task GetClientsAsync_NoClients_ReturnsEmptyList()
@@ -831,7 +828,6 @@ public class ClientAdminServiceTests : IDisposable
         item.Description.Should().BeNull();
     }
 
-    // --- GetClientForEditAsync: PopulateAvailableOptionsAsync edge cases ---
 
     [Fact]
     public async Task GetClientForEditAsync_WithNoIdentityResourcesOrApiScopes_ReturnsEmptyAvailableScopes()
