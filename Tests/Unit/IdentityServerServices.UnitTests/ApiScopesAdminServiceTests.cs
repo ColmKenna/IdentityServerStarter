@@ -62,7 +62,7 @@ public class ApiScopesAdminServiceTests : IDisposable
         return new ApplicationDbContext(_applicationOptions);
     }
 
-    private ApiScopesAdminService CreateService(
+    private static ApiScopesAdminService CreateService(
         ConfigurationDbContext configurationDbContext,
         ApplicationDbContext applicationDbContext)
     {
@@ -99,7 +99,7 @@ public class ApiScopesAdminServiceTests : IDisposable
         var result = await service.GetApiScopesAsync();
 
         result.Should().HaveCount(2);
-        result.Select(scope => scope.Name).Should().Contain(new[] { "orders.read", "orders.write" });
+        result.Select(scope => scope.Name).Should().Contain(["orders.read", "orders.write"]);
     }
 
     [Fact]

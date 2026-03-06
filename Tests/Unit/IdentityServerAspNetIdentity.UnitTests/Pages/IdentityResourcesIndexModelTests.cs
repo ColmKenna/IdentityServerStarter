@@ -19,7 +19,7 @@ public class IdentityResourcesIndexModelTests
     {
         _mockIdentityResourcesAdminService
             .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<IdentityResourceListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 
@@ -31,8 +31,8 @@ public class IdentityResourcesIndexModelTests
     {
         _mockIdentityResourcesAdminService
             .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<IdentityResourceListItemDto>
-            {
+            .ReturnsAsync(
+            [
                 new()
                 {
                     Id = 1,
@@ -49,12 +49,12 @@ public class IdentityResourcesIndexModelTests
                     Description = "User profile",
                     Enabled = false
                 }
-            });
+            ]);
 
         await _pageModel.OnGetAsync();
 
         _pageModel.IdentityResources.Should().HaveCount(2);
-        _pageModel.IdentityResources.Select(r => r.Name).Should().Contain(new[] { "openid", "profile" });
+        _pageModel.IdentityResources.Select(r => r.Name).Should().Contain(["openid", "profile"]);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class IdentityResourcesIndexModelTests
     {
         _mockIdentityResourcesAdminService
             .Setup(service => service.GetIdentityResourcesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<IdentityResourceListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 

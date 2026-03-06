@@ -4,14 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IdentityServerServices;
 
-public class IdentityResourcesAdminService : IIdentityResourcesAdminService
+public class IdentityResourcesAdminService(ConfigurationDbContext configurationDbContext) : IIdentityResourcesAdminService
 {
-    private readonly ConfigurationDbContext _configurationDbContext;
-
-    public IdentityResourcesAdminService(ConfigurationDbContext configurationDbContext)
-    {
-        _configurationDbContext = configurationDbContext;
-    }
+    private readonly ConfigurationDbContext _configurationDbContext = configurationDbContext;
 
     public async Task<IReadOnlyList<IdentityResourceListItemDto>> GetIdentityResourcesAsync(CancellationToken ct = default)
     {

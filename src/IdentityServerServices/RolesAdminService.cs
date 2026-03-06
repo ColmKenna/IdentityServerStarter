@@ -5,18 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IdentityServerServices;
 
-public class RolesAdminService : IRolesAdminService
+public class RolesAdminService(
+    RoleManager<IdentityRole> roleManager,
+    UserManager<ApplicationUser> userManager) : IRolesAdminService
 {
-    private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly UserManager<ApplicationUser> _userManager;
-
-    public RolesAdminService(
-        RoleManager<IdentityRole> roleManager,
-        UserManager<ApplicationUser> userManager)
-    {
-        _roleManager = roleManager;
-        _userManager = userManager;
-    }
+    private readonly RoleManager<IdentityRole> _roleManager = roleManager;
+    private readonly UserManager<ApplicationUser> _userManager = userManager;
 
     public async Task<IReadOnlyList<RoleListItemDto>> GetRolesAsync(CancellationToken ct = default)
     {
@@ -87,7 +81,7 @@ public class RolesAdminService : IRolesAdminService
             return new AddUserToRoleResult
             {
                 Status = AddUserToRoleStatus.Failed,
-                Errors = result.Errors.Select(e => e.Description).ToList()
+                Errors = [.. result.Errors.Select(e => e.Description)]
             };
         }
 
@@ -115,7 +109,7 @@ public class RolesAdminService : IRolesAdminService
             return new RemoveUserFromRoleResult
             {
                 Status = RemoveUserFromRoleStatus.Failed,
-                Errors = result.Errors.Select(e => e.Description).ToList()
+                Errors = [.. result.Errors.Select(e => e.Description)]
             };
         }
 

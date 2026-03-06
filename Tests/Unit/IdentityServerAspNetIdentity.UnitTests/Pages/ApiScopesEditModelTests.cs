@@ -44,8 +44,8 @@ public class ApiScopesEditModelTests
                 Description = description,
                 Enabled = enabled
             },
-            AppliedUserClaims = appliedClaims ?? new List<string> { "department" },
-            AvailableUserClaims = availableClaims ?? new List<string> { "location", "region" }
+            AppliedUserClaims = appliedClaims ?? ["department"],
+            AvailableUserClaims = availableClaims ?? ["location", "region"]
         };
     }
 
@@ -86,8 +86,8 @@ public class ApiScopesEditModelTests
         _mockApiScopesAdminService
             .Setup(service => service.GetForCreateAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePageData(name: string.Empty, displayName: null, description: null, enabled: true,
-                appliedClaims: Array.Empty<string>(),
-                availableClaims: new[] { "department", "region" }));
+                appliedClaims: [],
+                availableClaims: ["department", "region"]));
 
         var result = await _pageModel.OnGetAsync();
 
@@ -109,8 +109,8 @@ public class ApiScopesEditModelTests
                 displayName: "Orders Write",
                 description: "Write orders",
                 enabled: false,
-                appliedClaims: new[] { "department", "location" },
-                availableClaims: new[] { "region" }));
+                appliedClaims: ["department", "location"],
+                availableClaims: ["region"]));
 
         var result = await _pageModel.OnGetAsync();
 
@@ -212,8 +212,8 @@ public class ApiScopesEditModelTests
                 displayName: "Server Display",
                 description: "Server Description",
                 enabled: true,
-                appliedClaims: new[] { "department" },
-                availableClaims: new[] { "location", "region" }));
+                appliedClaims: ["department"],
+                availableClaims: ["location", "region"]));
 
         var result = await _pageModel.OnPostAsync();
 

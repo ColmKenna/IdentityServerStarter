@@ -50,12 +50,7 @@ public class ClaimsIndexIntegrationTests : IDisposable
     {
         using var scope = _factory.Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        var user = await userManager.FindByIdAsync(userId);
-        if (user is null)
-        {
-            throw new InvalidOperationException($"User '{userId}' not found.");
-        }
-
+        var user = await userManager.FindByIdAsync(userId) ?? throw new InvalidOperationException($"User '{userId}' not found.");
         var result = await userManager.AddClaimAsync(user, new Claim(claimType, claimValue));
         if (!result.Succeeded)
         {

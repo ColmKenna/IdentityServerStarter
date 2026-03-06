@@ -50,7 +50,7 @@ public class ClaimsAdminServiceTests
             store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         mockUserManager.SetupGet(manager => manager.Users)
-            .Returns(new TestAsyncEnumerable<ApplicationUser>(users ?? Array.Empty<ApplicationUser>()));
+            .Returns(new TestAsyncEnumerable<ApplicationUser>(users ?? []));
 
         return mockUserManager;
     }
@@ -148,7 +148,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager(new[] { user1, user2, user3, user4 });
+        var mockUserManager = CreateMockUserManager([user1, user2, user3, user4]);
         var service = CreateService(dbContext, mockUserManager);
 
         var result = await service.GetForEditAsync("department");
@@ -181,7 +181,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager(new[] { user }));
+        var service = CreateService(dbContext, CreateMockUserManager([user]));
 
         var result = await service.GetForEditAsync("department");
 
@@ -206,7 +206,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager(new[] { user }));
+        var service = CreateService(dbContext, CreateMockUserManager([user]));
 
         var result = await service.GetForEditAsync("department");
 
@@ -233,7 +233,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager(new[] { user1, user2, user3 }));
+        var service = CreateService(dbContext, CreateMockUserManager([user1, user2, user3]));
 
         var resultWithNull = await service.GetForEditAsync("feature-enabled", null);
         var resultWithWhitespace = await service.GetForEditAsync("feature-enabled", "   ");
@@ -264,7 +264,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager(new[] { user1, user2 }));
+        var service = CreateService(dbContext, CreateMockUserManager([user1, user2]));
 
         var result = await service.GetForEditAsync("department", null);
 
@@ -289,7 +289,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager(new[] { user1, user2 }));
+        var service = CreateService(dbContext, CreateMockUserManager([user1, user2]));
 
         var result = await service.GetForEditAsync("feature-enabled", "  custom-value  ");
 
@@ -331,7 +331,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager(new[] { user });
+        var mockUserManager = CreateMockUserManager([user]);
         mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
             .ReturnsAsync(user);
         var service = CreateService(dbContext, mockUserManager);
@@ -357,7 +357,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager(new[] { user });
+        var mockUserManager = CreateMockUserManager([user]);
         mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
             .ReturnsAsync(user);
         mockUserManager.Setup(manager => manager.AddClaimAsync(user, It.IsAny<Claim>()))
@@ -385,7 +385,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager(new[] { user });
+        var mockUserManager = CreateMockUserManager([user]);
         mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
             .ReturnsAsync(user);
         mockUserManager.Setup(manager => manager.AddClaimAsync(user, It.IsAny<Claim>()))
@@ -437,7 +437,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager(new[] { user });
+        var mockUserManager = CreateMockUserManager([user]);
         mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
             .ReturnsAsync(user);
         var service = CreateService(dbContext, mockUserManager);
@@ -469,7 +469,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager(new[] { user });
+        var mockUserManager = CreateMockUserManager([user]);
         mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
             .ReturnsAsync(user);
         mockUserManager.Setup(manager => manager.RemoveClaimAsync(user, It.IsAny<Claim>()))
@@ -501,7 +501,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager(new[] { user1, user2 });
+        var mockUserManager = CreateMockUserManager([user1, user2]);
         mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
             .ReturnsAsync(user1);
         mockUserManager.Setup(manager => manager.RemoveClaimAsync(user1, It.IsAny<Claim>()))
@@ -547,7 +547,7 @@ public class ClaimsAdminServiceTests
         }
 
         await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager(new[] { user });
+        var mockUserManager = CreateMockUserManager([user]);
         mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
             .ReturnsAsync(user);
         mockUserManager.Setup(manager => manager.RemoveClaimAsync(user, It.IsAny<Claim>()))

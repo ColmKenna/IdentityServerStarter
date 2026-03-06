@@ -9,19 +9,12 @@ using PrimativeExtensions;
 
 namespace IdentityServerServices;
 
-public class ApiScopesAdminService : IApiScopesAdminService
+public class ApiScopesAdminService(
+    ConfigurationDbContext configurationDbContext,
+    ApplicationDbContext applicationDbContext) : IApiScopesAdminService
 {
-    private readonly ConfigurationDbContext _configurationDbContext;
-    private readonly ApplicationDbContext _applicationDbContext;
-
-    public ApiScopesAdminService(
-        ConfigurationDbContext configurationDbContext,
-        ApplicationDbContext applicationDbContext)
-    {
-        _configurationDbContext = configurationDbContext;
-        _applicationDbContext = applicationDbContext;
-    }
-
+    private readonly ConfigurationDbContext _configurationDbContext = configurationDbContext;
+    private readonly ApplicationDbContext _applicationDbContext = applicationDbContext;
 
     private static Expression<Func<ApiScope, ApiScopeListItemDto>> MapToListItemDto => scope => new ApiScopeListItemDto
     {
@@ -41,7 +34,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
                 Name = string.Empty,
                 Enabled = true
             },
-            AppliedUserClaims = Array.Empty<string>(),
+            AppliedUserClaims = [],
             AvailableUserClaims = allUserClaims
         };
     }
@@ -61,7 +54,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
 
     public async Task<ApiScopeEditPageDataDto> GetForCreateAsync(CancellationToken cancellationToken = default)
     {
-        var allUserClaims = 
+        var allUserClaims =
             await GetAllUserClaimTypesAsync(cancellationToken);
         return CreateApiScopeEditPageData(allUserClaims);
     }
@@ -101,7 +94,7 @@ public class ApiScopesAdminService : IApiScopesAdminService
     private Task<bool> DuplicateNameExists(string normalizedName, CancellationToken cancellationToken)
     {
         return _configurationDbContext.ApiScopes
-            .AnyAsync(scope => scope.Name == normalizedName , cancellationToken);
+            .AnyAsync(scope => scope.Name == normalizedName, cancellationToken);
     }
 
     public async Task<CreateApiScopeResult> CreateAsync(CreateApiScopeRequest request, CancellationToken cancellationToken = default)

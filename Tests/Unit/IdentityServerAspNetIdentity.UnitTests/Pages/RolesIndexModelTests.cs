@@ -19,7 +19,7 @@ public class RolesIndexModelTests
     {
         _mockRolesAdminService
             .Setup(s => s.GetRolesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<RoleListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 
@@ -31,12 +31,12 @@ public class RolesIndexModelTests
     {
         _mockRolesAdminService
             .Setup(s => s.GetRolesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<RoleListItemDto>
-            {
+            .ReturnsAsync(
+            [
                 new() { Id = "1", Name = "Admin" },
                 new() { Id = "2", Name = "Editor" },
                 new() { Id = "3", Name = "Viewer" }
-            });
+            ]);
 
         await _pageModel.OnGetAsync();
 
@@ -48,15 +48,15 @@ public class RolesIndexModelTests
     {
         _mockRolesAdminService
             .Setup(s => s.GetRolesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<RoleListItemDto>
-            {
+            .ReturnsAsync(
+            [
                 new() { Id = "1", Name = "SuperAdmin" },
                 new() { Id = "2", Name = "User" }
-            });
+            ]);
 
         await _pageModel.OnGetAsync();
 
-        _pageModel.Roles.Select(r => r.Name).Should().Contain(new[] { "SuperAdmin", "User" });
+        _pageModel.Roles.Select(r => r.Name).Should().Contain(["SuperAdmin", "User"]);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class RolesIndexModelTests
     {
         _mockRolesAdminService
             .Setup(s => s.GetRolesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<RoleListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 

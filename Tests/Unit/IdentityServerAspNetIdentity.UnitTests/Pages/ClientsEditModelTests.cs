@@ -43,12 +43,12 @@ public class ClientsEditModelTests
             AccessTokenLifetime = 3600,
             IdentityTokenLifetime = 300,
             SlidingRefreshTokenLifetime = 1296000,
-            AllowedGrantTypes = new List<string> { "authorization_code" },
+            AllowedGrantTypes = ["authorization_code"],
             RedirectUris = ["https://example.com/callback"],
-            PostLogoutRedirectUris = new List<string> { "https://example.com/logout" },
-            AllowedScopes = new List<string> { "openid", "profile" },
-            AvailableScopes = new List<string> { "openid", "profile", "email" },
-            AvailableGrantTypes = new List<string> { "authorization_code", "client_credentials" },
+            PostLogoutRedirectUris = ["https://example.com/logout"],
+            AllowedScopes = ["openid", "profile"],
+            AvailableScopes = ["openid", "profile", "email"],
+            AvailableGrantTypes = ["authorization_code", "client_credentials"],
         };
     }
 
@@ -138,19 +138,19 @@ public class ClientsEditModelTests
     public async Task OnPostAsync_ModelStateInvalid_RepopulatesOptions()
     {
         ArrangePage(1, modelError: "Required");
-        _pageModel.Input.AvailableScopes = new List<string>(); // cleared
+        _pageModel.Input.AvailableScopes = []; // cleared
 
         var existingClient = CreateTestViewModel();
-        existingClient.AvailableScopes = new List<string> { "openid", "profile", "email" };
-        existingClient.AvailableGrantTypes = new List<string> { "authorization_code", "client_credentials" };
+        existingClient.AvailableScopes = ["openid", "profile", "email"];
+        existingClient.AvailableGrantTypes = ["authorization_code", "client_credentials"];
         _mockClientAdminService
             .Setup(s => s.GetClientForEditAsync(1))
             .ReturnsAsync(existingClient);
 
         await _pageModel.OnPostAsync();
 
-        _pageModel.Input.AvailableScopes.Should().BeEquivalentTo(new[] { "openid", "profile", "email" });
-        _pageModel.Input.AvailableGrantTypes.Should().BeEquivalentTo(new[] { "authorization_code", "client_credentials" });
+        _pageModel.Input.AvailableScopes.Should().BeEquivalentTo(["openid", "profile", "email"]);
+        _pageModel.Input.AvailableGrantTypes.Should().BeEquivalentTo(["authorization_code", "client_credentials"]);
     }
 
     [Fact]
@@ -174,8 +174,8 @@ public class ClientsEditModelTests
         var result = await _pageModel.OnPostAsync();
 
         result.Should().BeOfType<PageResult>();
-        _pageModel.Input.AvailableScopes.Should().BeEquivalentTo(new[] { "openid", "profile", "email" });
-        _pageModel.Input.AvailableGrantTypes.Should().BeEquivalentTo(new[] { "authorization_code", "client_credentials" });
+        _pageModel.Input.AvailableScopes.Should().BeEquivalentTo(["openid", "profile", "email"]);
+        _pageModel.Input.AvailableGrantTypes.Should().BeEquivalentTo(["authorization_code", "client_credentials"]);
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class ClientsEditModelTests
     public void OnPostRemoveRedirectUri_IndexValid_RemovesRedirectUri()
     {
         _pageModel.Input = CreateTestViewModel();
-        _pageModel.Input.RedirectUris = new List<string> { "https://a.com", "https://b.com", "https://c.com" };
+        _pageModel.Input.RedirectUris = ["https://a.com", "https://b.com", "https://c.com"];
 
         _pageModel.OnPostRemoveRedirectUri(1);
 
@@ -240,7 +240,7 @@ public class ClientsEditModelTests
     public void OnPostRemovePostLogoutRedirectUri_IndexValid_RemovesPostLogoutRedirectUri()
     {
         _pageModel.Input = CreateTestViewModel();
-        _pageModel.Input.PostLogoutRedirectUris = new List<string> { "https://a.com/logout", "https://b.com/logout" };
+        _pageModel.Input.PostLogoutRedirectUris = ["https://a.com/logout", "https://b.com/logout"];
 
         _pageModel.OnPostRemovePostLogoutRedirectUri(0);
 
@@ -286,7 +286,7 @@ public class ClientsEditModelTests
     public void OnPostRemoveAllowedScope_IndexValid_RemovesAllowedScope()
     {
         _pageModel.Input = CreateTestViewModel();
-        _pageModel.Input.AllowedScopes = new List<string> { "openid", "profile", "email" };
+        _pageModel.Input.AllowedScopes = ["openid", "profile", "email"];
 
         _pageModel.OnPostRemoveAllowedScope(2);
 
@@ -332,7 +332,7 @@ public class ClientsEditModelTests
     public void OnPostRemoveGrantType_IndexValid_RemovesGrantType()
     {
         _pageModel.Input = CreateTestViewModel();
-        _pageModel.Input.AllowedGrantTypes = new List<string> { "authorization_code", "client_credentials" };
+        _pageModel.Input.AllowedGrantTypes = ["authorization_code", "client_credentials"];
 
         _pageModel.OnPostRemoveGrantType(0);
 

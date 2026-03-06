@@ -8,14 +8,9 @@ using Client = Duende.IdentityServer.EntityFramework.Entities.Client;
 
 namespace IdentityServerServices;
 
-public class ClientAdminService : IClientAdminService
+public class ClientAdminService(ConfigurationDbContext context) : IClientAdminService
 {
-    private readonly ConfigurationDbContext _context;
-
-    public ClientAdminService(ConfigurationDbContext context)
-    {
-        _context = context;
-    }
+    private readonly ConfigurationDbContext _context = context;
 
     public async Task<IReadOnlyList<ClientListItemDto>> GetClientsAsync(CancellationToken ct = default)
     {
@@ -61,10 +56,10 @@ public class ClientAdminService : IClientAdminService
             RefreshTokenExpiration = client.RefreshTokenExpiration,
             RefreshTokenUsage = client.RefreshTokenUsage,
             AlwaysIncludeUserClaimsInIdToken = client.AlwaysIncludeUserClaimsInIdToken,
-            AllowedGrantTypes = client.AllowedGrantTypes.Select(gt => gt.GrantType).ToList(),
-            RedirectUris = client.RedirectUris.Select(ru => ru.RedirectUri).ToList(),
-            PostLogoutRedirectUris = client.PostLogoutRedirectUris.Select(pru => pru.PostLogoutRedirectUri).ToList(),
-            AllowedScopes = client.AllowedScopes.Select(s => s.Scope).ToList()
+            AllowedGrantTypes = [.. client.AllowedGrantTypes.Select(gt => gt.GrantType)],
+            RedirectUris = [.. client.RedirectUris.Select(ru => ru.RedirectUri)],
+            PostLogoutRedirectUris = [.. client.PostLogoutRedirectUris.Select(pru => pru.PostLogoutRedirectUri)],
+            AllowedScopes = [.. client.AllowedScopes.Select(s => s.Scope)]
         };
 
         await PopulateAvailableOptionsAsync(viewModel, ct);
@@ -145,11 +140,11 @@ public class ClientAdminService : IClientAdminService
     {
         var identityResources = await _context.IdentityResources.AsNoTracking().Select(ir => ir.Name).ToListAsync(ct);
         var apiScopes = await _context.ApiScopes.AsNoTracking().Select(aps => aps.Name).ToListAsync(ct);
-        
-        viewModel.AvailableScopes = identityResources.Concat(apiScopes).ToList();
 
-        viewModel.AvailableGrantTypes = new List<string>
-        {
+        viewModel.AvailableScopes = [.. identityResources, .. apiScopes];
+
+        viewModel.AvailableGrantTypes =
+        [
             "authorization_code",
             "client_credentials",
             "refresh_token",
@@ -157,7 +152,7 @@ public class ClientAdminService : IClientAdminService
             "password",
             "hybrid",
             "device_flow"
-        };
+        ];
     }
 
     private static void SyncCollection<T>(

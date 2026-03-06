@@ -7,18 +7,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IdentityServerServices;
 
-public class ClaimsAdminService : IClaimsAdminService
+public class ClaimsAdminService(
+    ApplicationDbContext applicationDbContext,
+    UserManager<ApplicationUser> userManager) : IClaimsAdminService
 {
-    private readonly ApplicationDbContext _applicationDbContext;
-    private readonly UserManager<ApplicationUser> _userManager;
-
-    public ClaimsAdminService(
-        ApplicationDbContext applicationDbContext,
-        UserManager<ApplicationUser> userManager)
-    {
-        _applicationDbContext = applicationDbContext;
-        _userManager = userManager;
-    }
+    private readonly ApplicationDbContext _applicationDbContext = applicationDbContext;
+    private readonly UserManager<ApplicationUser> _userManager = userManager;
 
     public async Task<IReadOnlyList<ClaimTypeListItemDto>> GetClaimsAsync(CancellationToken ct = default)
     {
@@ -106,7 +100,7 @@ public class ClaimsAdminService : IClaimsAdminService
         List<ApplicationUser> users,
         HashSet<string> assignedUserIds)
     {
-        return users
+        return [.. users
             .Where(user => !assignedUserIds.Contains(user.Id))
             .OrderBy(user => user.UserName)
             .Select(user => new AvailableClaimUserItemDto
@@ -114,8 +108,7 @@ public class ClaimsAdminService : IClaimsAdminService
                 UserId = user.Id,
                 UserName = user.UserName ?? string.Empty,
                 Email = user.Email ?? string.Empty
-            })
-            .ToList();
+            })];
     }
 
     public async Task<AddClaimAssignmentResult> AddUserToClaimAsync(
@@ -149,7 +142,7 @@ public class ClaimsAdminService : IClaimsAdminService
             return new AddClaimAssignmentResult
             {
                 Status = AddClaimAssignmentStatus.IdentityFailure,
-                Errors = result.Errors.Select(error => error.Description).ToList()
+                Errors = [.. result.Errors.Select(error => error.Description)]
             };
         }
 
@@ -193,7 +186,7 @@ public class ClaimsAdminService : IClaimsAdminService
             return new RemoveClaimAssignmentResult
             {
                 Status = RemoveClaimAssignmentStatus.IdentityFailure,
-                Errors = result.Errors.Select(error => error.Description).ToList()
+                Errors = [.. result.Errors.Select(error => error.Description)]
             };
         }
 

@@ -42,7 +42,7 @@ public class IdentityResourcesAdminServiceTests : IDisposable
         return new ConfigurationDbContext(_configurationOptions);
     }
 
-    private IdentityResourcesAdminService CreateService(ConfigurationDbContext configCtx)
+    private static IdentityResourcesAdminService CreateService(ConfigurationDbContext configCtx)
     {
         return new IdentityResourcesAdminService(configCtx);
     }
@@ -75,7 +75,7 @@ public class IdentityResourcesAdminServiceTests : IDisposable
         var result = await service.GetIdentityResourcesAsync();
 
         result.Should().HaveCount(2);
-        result.Select(r => r.Name).Should().Contain(new[] { "openid", "profile" });
+        result.Select(r => r.Name).Should().Contain(["openid", "profile"]);
     }
 
     [Fact]

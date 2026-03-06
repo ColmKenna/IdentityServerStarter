@@ -9,8 +9,8 @@ public sealed class RoleListItemDto
 public sealed class RoleEditPageDataDto
 {
     public string RoleName { get; init; } = string.Empty;
-    public IReadOnlyList<RoleUserDto> UsersInRole { get; init; } = Array.Empty<RoleUserDto>();
-    public IReadOnlyList<RoleUserDto> AvailableUsers { get; init; } = Array.Empty<RoleUserDto>();
+    public IReadOnlyList<RoleUserDto> UsersInRole { get; init; } = [];
+    public IReadOnlyList<RoleUserDto> AvailableUsers { get; init; } = [];
 }
 
 public sealed class RoleUserDto
@@ -27,7 +27,7 @@ public sealed class AddUserToRoleResult
     public AddUserToRoleStatus Status { get; init; }
     public string? UserName { get; init; }
     public string? RoleName { get; init; }
-    public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Errors { get; init; } = [];
 }
 
 public enum RemoveUserFromRoleStatus { Success, RoleNotFound, UserNotFound, Failed }
@@ -37,5 +37,5 @@ public sealed class RemoveUserFromRoleResult
     public RemoveUserFromRoleStatus Status { get; init; }
     public string? UserName { get; init; }
     public string? RoleName { get; init; }
-    public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Errors { get; init; } = [];
 }

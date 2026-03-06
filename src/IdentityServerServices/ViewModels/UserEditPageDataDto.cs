@@ -23,19 +23,19 @@ public class UserEditPageDataDto
 {
     public UserProfileEditViewModel Profile { get; init; } = new();
 
-    public IList<Claim> Claims { get; init; } = new List<Claim>();
+    public IList<Claim> Claims { get; init; } = [];
 
-    public IList<string> AvailableClaims { get; init; } = new List<string>();
+    public IList<string> AvailableClaims { get; init; } = [];
 
-    public IList<string> Roles { get; init; } = new List<string>();
+    public IList<string> Roles { get; init; } = [];
 
-    public IList<string> AvailableRoles { get; init; } = new List<string>();
+    public IList<string> AvailableRoles { get; init; } = [];
 
-    public IList<UserLoginInfo> ExternalLogins { get; init; } = new List<UserLoginInfo>();
+    public IList<UserLoginInfo> ExternalLogins { get; init; } = [];
 
-    public IList<PersistedGrant> Grants { get; init; } = new List<PersistedGrant>();
+    public IList<PersistedGrant> Grants { get; init; } = [];
 
-    public IList<ServerSideSession> Sessions { get; init; } = new List<ServerSideSession>();
+    public IList<ServerSideSession> Sessions { get; init; } = [];
 
     public bool HasPassword { get; init; }
 
@@ -45,7 +45,7 @@ public class UserEditPageDataDto
 
     public bool TwoFactorEnabled { get; init; }
 
-    public IList<string> TwoFactorProviders { get; init; } = new List<string>();
+    public IList<string> TwoFactorProviders { get; init; } = [];
 
     public string AccountStatus { get; init; } = "Active";
 }

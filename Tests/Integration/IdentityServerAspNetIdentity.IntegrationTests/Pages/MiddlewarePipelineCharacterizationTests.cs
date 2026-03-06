@@ -56,7 +56,7 @@ public class MiddlewarePipelineCharacterizationTests : IDisposable
         var response = await _client.GetAsync("/css/site.css");
 
         // A 200 or 404 is fine — what matters is the header is present either way
-        response.Headers.TryGetValues("Content-Security-Policy", out var values)
+        response.Headers.TryGetValues("Content-Security-Policy", out _)
             .Should().BeTrue("CSP middleware runs before static file serving");
     }
 

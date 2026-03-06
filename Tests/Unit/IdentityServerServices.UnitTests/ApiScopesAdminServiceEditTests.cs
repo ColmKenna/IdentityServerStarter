@@ -64,7 +64,7 @@ public class ApiScopesAdminServiceEditTests : IDisposable
         return new ApplicationDbContext(_applicationOptions);
     }
 
-    private ApiScopesAdminService CreateService(
+    private static ApiScopesAdminService CreateService(
         ConfigurationDbContext configurationDbContext,
         ApplicationDbContext applicationDbContext)
     {
@@ -74,7 +74,7 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     [Fact]
     public async Task GetForCreateAsync_ReturnsDefaultsAndKnownClaimsOrderedDistinct()
     {
-        using (var seedApplicationDbContext = CreateApplicationContext())
+        await using (var seedApplicationDbContext = CreateApplicationContext())
         {
             seedApplicationDbContext.Users.AddRange(
                 new ApplicationUser { Id = "u1", UserName = "u1", NormalizedUserName = "U1" },
@@ -87,8 +87,8 @@ public class ApiScopesAdminServiceEditTests : IDisposable
             await seedApplicationDbContext.SaveChangesAsync();
         }
 
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.GetForCreateAsync();
@@ -102,8 +102,8 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     [Fact]
     public async Task GetForEditAsync_Missing_ReturnsNull()
     {
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.GetForEditAsync(999);
@@ -115,7 +115,7 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     public async Task GetForEditAsync_ReturnsInputAndClaimLists_WithTrimDistinctOrderAndAvailableMinusApplied()
     {
         int id;
-        using (var seedConfigurationDbContext = CreateConfigurationContext())
+        await using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
             var apiScope = new ApiScope
             {
@@ -123,20 +123,20 @@ public class ApiScopesAdminServiceEditTests : IDisposable
                 DisplayName = "Orders Read",
                 Description = "Read orders",
                 Enabled = true,
-                UserClaims = new List<ApiScopeClaim>
-                {
+                UserClaims =
+                [
                     new() { Type = " department " },
                     new() { Type = "location" },
                     new() { Type = "department" },
                     new() { Type = "  " }
-                }
+                ]
             };
             seedConfigurationDbContext.ApiScopes.Add(apiScope);
             await seedConfigurationDbContext.SaveChangesAsync();
             id = apiScope.Id;
         }
 
-        using (var seedApplicationDbContext = CreateApplicationContext())
+        await using (var seedApplicationDbContext = CreateApplicationContext())
         {
             seedApplicationDbContext.Users.AddRange(
                 new ApplicationUser { Id = "u1", UserName = "u1", NormalizedUserName = "U1" },
@@ -151,14 +151,14 @@ public class ApiScopesAdminServiceEditTests : IDisposable
             await seedApplicationDbContext.SaveChangesAsync();
         }
 
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.GetForEditAsync(id);
 
         result.Should().NotBeNull();
-        result!.Input.Name.Should().Be("orders.read");
+        result.Input.Name.Should().Be("orders.read");
         result.Input.DisplayName.Should().Be("Orders Read");
         result.Input.Description.Should().Be("Read orders");
         result.Input.Enabled.Should().BeTrue();
@@ -169,14 +169,14 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     [Fact]
     public async Task CreateAsync_DuplicateName_ReturnsDuplicateName()
     {
-        using (var seedConfigurationDbContext = CreateConfigurationContext())
+        await using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
             seedConfigurationDbContext.ApiScopes.Add(new ApiScope { Name = "orders.read", Enabled = true });
             await seedConfigurationDbContext.SaveChangesAsync();
         }
 
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.CreateAsync(new CreateApiScopeRequest
@@ -192,8 +192,8 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     [Fact]
     public async Task CreateAsync_Success_PersistsWithTrimmedName_NormalizedOptionals_DefaultFlags_Timestamps()
     {
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
         var before = DateTime.UtcNow;
 
@@ -211,7 +211,7 @@ public class ApiScopesAdminServiceEditTests : IDisposable
 
         var created = await configurationDbContext.ApiScopes.FindAsync(result.CreatedId);
         created.Should().NotBeNull();
-        created!.Name.Should().Be("orders.create");
+        created.Name.Should().Be("orders.create");
         created.DisplayName.Should().Be("Orders Create");
         created.Description.Should().BeNull();
         created.Enabled.Should().BeFalse();
@@ -226,8 +226,8 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     [Fact]
     public async Task UpdateAsync_Missing_ReturnsNotFound()
     {
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.UpdateAsync(999, new UpdateApiScopeRequest
@@ -243,7 +243,7 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     public async Task UpdateAsync_DuplicateName_ReturnsDuplicateName()
     {
         int id;
-        using (var seedConfigurationDbContext = CreateConfigurationContext())
+        await using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
             seedConfigurationDbContext.ApiScopes.AddRange(
                 new ApiScope { Name = "orders.read", Enabled = true },
@@ -255,8 +255,8 @@ public class ApiScopesAdminServiceEditTests : IDisposable
                 .SingleAsync();
         }
 
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.UpdateAsync(id, new UpdateApiScopeRequest
@@ -273,7 +273,7 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     {
         int id;
         DateTime? originalUpdated;
-        using (var seedConfigurationDbContext = CreateConfigurationContext())
+        await using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
             var apiScope = new ApiScope
             {
@@ -289,8 +289,8 @@ public class ApiScopesAdminServiceEditTests : IDisposable
             originalUpdated = apiScope.Updated;
         }
 
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.UpdateAsync(id, new UpdateApiScopeRequest
@@ -305,7 +305,7 @@ public class ApiScopesAdminServiceEditTests : IDisposable
 
         var updated = await configurationDbContext.ApiScopes.FindAsync(id);
         updated.Should().NotBeNull();
-        updated!.Name.Should().Be("orders.write");
+        updated.Name.Should().Be("orders.write");
         updated.DisplayName.Should().Be("Orders Write");
         updated.Description.Should().BeNull();
         updated.Enabled.Should().BeFalse();
@@ -316,8 +316,8 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     [Fact]
     public async Task AddClaimAsync_MissingScope_ReturnsNotFound()
     {
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.AddClaimAsync(999, "department");
@@ -329,24 +329,24 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     public async Task AddClaimAsync_AlreadyApplied_ReturnsAlreadyApplied()
     {
         int id;
-        using (var seedConfigurationDbContext = CreateConfigurationContext())
+        await using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
             var apiScope = new ApiScope
             {
                 Name = "orders.read",
                 Enabled = true,
-                UserClaims = new List<ApiScopeClaim>
-                {
+                UserClaims =
+                [
                     new() { Type = "department" }
-                }
+                ]
             };
             seedConfigurationDbContext.ApiScopes.Add(apiScope);
             await seedConfigurationDbContext.SaveChangesAsync();
             id = apiScope.Id;
         }
 
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.AddClaimAsync(id, "department");
@@ -394,8 +394,8 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     [Fact]
     public async Task RemoveClaimAsync_MissingScope_ReturnsNotFound()
     {
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.RemoveClaimAsync(999, "department");
@@ -407,24 +407,24 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     public async Task RemoveClaimAsync_NotApplied_ReturnsNotApplied()
     {
         int id;
-        using (var seedConfigurationDbContext = CreateConfigurationContext())
+        await using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
             var apiScope = new ApiScope
             {
                 Name = "orders.read",
                 Enabled = true,
-                UserClaims = new List<ApiScopeClaim>
-                {
+                UserClaims =
+                [
                     new() { Type = "location" }
-                }
+                ]
             };
             seedConfigurationDbContext.ApiScopes.Add(apiScope);
             await seedConfigurationDbContext.SaveChangesAsync();
             id = apiScope.Id;
         }
 
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.RemoveClaimAsync(id, "department");
@@ -438,18 +438,18 @@ public class ApiScopesAdminServiceEditTests : IDisposable
     {
         int id;
         DateTime? originalUpdated;
-        using (var seedConfigurationDbContext = CreateConfigurationContext())
+        await using (var seedConfigurationDbContext = CreateConfigurationContext())
         {
             var apiScope = new ApiScope
             {
                 Name = "orders.read",
                 Enabled = true,
                 Updated = DateTime.UtcNow.AddDays(-1),
-                UserClaims = new List<ApiScopeClaim>
-                {
+                UserClaims =
+                [
                     new() { Type = "department" },
                     new() { Type = "location" }
-                }
+                ]
             };
             seedConfigurationDbContext.ApiScopes.Add(apiScope);
             await seedConfigurationDbContext.SaveChangesAsync();
@@ -457,8 +457,8 @@ public class ApiScopesAdminServiceEditTests : IDisposable
             originalUpdated = apiScope.Updated;
         }
 
-        using var configurationDbContext = CreateConfigurationContext();
-        using var applicationDbContext = CreateApplicationContext();
+        await using var configurationDbContext = CreateConfigurationContext();
+        await using var applicationDbContext = CreateApplicationContext();
         var service = CreateService(configurationDbContext, applicationDbContext);
 
         var result = await service.RemoveClaimAsync(id, "  department  ");

@@ -33,8 +33,8 @@ public class RolesEditModelTests
         return new RoleEditPageDataDto
         {
             RoleName = roleName,
-            UsersInRole = usersInRole ?? Array.Empty<RoleUserDto>(),
-            AvailableUsers = availableUsers ?? Array.Empty<RoleUserDto>()
+            UsersInRole = usersInRole ?? [],
+            AvailableUsers = availableUsers ?? []
         };
     }
 
@@ -90,7 +90,7 @@ public class RolesEditModelTests
         await _pageModel.OnGetAsync();
 
         _pageModel.UsersInRole.Should().HaveCount(2);
-        _pageModel.UsersInRole.Select(u => u.UserName).Should().Contain(new[] { "alice", "bob" });
+        _pageModel.UsersInRole.Select(u => u.UserName).Should().Contain(["alice", "bob"]);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class RolesEditModelTests
         await _pageModel.OnGetAsync();
 
         _pageModel.AvailableUsers.Should().HaveCount(2);
-        _pageModel.AvailableUsers.Select(u => u.UserName).Should().Contain(new[] { "bob", "charlie" });
+        _pageModel.AvailableUsers.Select(u => u.UserName).Should().Contain(["bob", "charlie"]);
     }
 
     [Fact]
@@ -213,7 +213,7 @@ public class RolesEditModelTests
             .ReturnsAsync(new AddUserToRoleResult
             {
                 Status = AddUserToRoleStatus.Failed,
-                Errors = new[] { "User already in role" }
+                Errors = ["User already in role"]
             });
 
         var result = await _pageModel.OnPostAddUserAsync();
@@ -284,7 +284,7 @@ public class RolesEditModelTests
             .ReturnsAsync(new RemoveUserFromRoleResult
             {
                 Status = RemoveUserFromRoleStatus.Failed,
-                Errors = new[] { "Cannot remove last admin" }
+                Errors = ["Cannot remove last admin"]
             });
 
         var result = await _pageModel.OnPostRemoveUserAsync();

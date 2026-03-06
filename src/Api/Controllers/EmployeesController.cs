@@ -13,28 +13,28 @@ public class EmployeesController : ControllerBase
     {
         return new JsonResult("Employee List");
     }
-    
+
     [HttpGet("{id}")]
     [Authorize(Policy = PolicyConstants.CanViewEmployeesScope)]
     public IActionResult Get(int id)
     {
         return new JsonResult($"Employee {id}");
     }
-    
+
     [HttpPost]
     [Authorize(Policy = PolicyConstants.CanAmendEmployeeScope)]
     public IActionResult Post()
     {
         return new JsonResult("Employee Created");
     }
-    
+
     [HttpPut("{id}")]
     [Authorize(Policy = PolicyConstants.CanAmendEmployeeScope)]
     public IActionResult Put(int id)
     {
         return new JsonResult($"Employee {id} Updated");
     }
-    
+
     [HttpDelete("{id}")]
     [Authorize(Policy = PolicyConstants.CanAmendEmployeeScope)]
     public IActionResult Delete(int id)

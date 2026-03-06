@@ -11,8 +11,8 @@ public sealed class ApiScopeEditInputDto
 public sealed class ApiScopeEditPageDataDto
 {
     public ApiScopeEditInputDto Input { get; init; } = new();
-    public IReadOnlyList<string> AppliedUserClaims { get; init; } = Array.Empty<string>();
-    public IReadOnlyList<string> AvailableUserClaims { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> AppliedUserClaims { get; init; } = [];
+    public IReadOnlyList<string> AvailableUserClaims { get; init; } = [];
 }
 
 public sealed class CreateApiScopeRequest
@@ -42,7 +42,7 @@ public sealed class CreateApiScopeResult
     public CreateApiScopeStatus Status { get; init; }
     public int CreatedId { get; init; }
 
-    public static CreateApiScopeResult DuplicateName () => new() { Status = CreateApiScopeStatus.DuplicateName };
+    public static CreateApiScopeResult DuplicateName() => new() { Status = CreateApiScopeStatus.DuplicateName };
     public static CreateApiScopeResult Success(int createdId) => new() { Status = CreateApiScopeStatus.Success, CreatedId = createdId };
 }
 
@@ -60,7 +60,7 @@ public sealed class UpdateApiScopeResult
     public static UpdateApiScopeResult NotFound() => new() { Status = UpdateApiScopeStatus.NotFound };
     public static UpdateApiScopeResult DuplicateName() => new() { Status = UpdateApiScopeStatus.DuplicateName };
     public static UpdateApiScopeResult Success() => new() { Status = UpdateApiScopeStatus.Success };
-    }
+}
 
 public enum AddApiScopeClaimStatus
 {

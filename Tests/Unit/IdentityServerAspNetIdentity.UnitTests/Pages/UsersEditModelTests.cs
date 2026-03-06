@@ -51,7 +51,7 @@ public class UsersEditModelTests
     private static HttpContext CreateMockHttpContext()
     {
         var httpContext = new DefaultHttpContext();
-        var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, "admin") }));
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "admin")]));
         httpContext.User = user;
         return httpContext;
     }
@@ -84,18 +84,18 @@ public class UsersEditModelTests
                 PhoneNumberConfirmed = false,
                 ConcurrencyStamp = "concurrency-1"
             },
-            Claims = new List<Claim>(),
-            AvailableClaims = new List<string> { "department", "location" },
-            Roles = new List<string>(),
-            AvailableRoles = new List<string> { "Admin", "User" },
-            ExternalLogins = new List<UserLoginInfo>(),
-            Grants = new List<PersistedGrant>(),
-            Sessions = new List<ServerSideSession>(),
+            Claims = [],
+            AvailableClaims = ["department", "location"],
+            Roles = [],
+            AvailableRoles = ["Admin", "User"],
+            ExternalLogins = [],
+            Grants = [],
+            Sessions = [],
             HasPassword = true,
             LockoutEnabled = true,
             AccessFailedCount = 0,
             TwoFactorEnabled = false,
-            TwoFactorProviders = new List<string>(),
+            TwoFactorProviders = [],
             AccountStatus = "Active"
         };
     }
@@ -538,7 +538,7 @@ public class UsersEditModelTests
         SetupAuthorizationMock(UserPolicyConstants.UserClaimsDelete, false);
 
         _pageModel.UserId = "test-user-1";
-        _pageModel.SelectedClaims = new List<string> { "claim:value" };
+        _pageModel.SelectedClaims = ["claim:value"];
 
         var result = await _pageModel.OnPostClaimsRemoveAsync();
 
@@ -554,7 +554,7 @@ public class UsersEditModelTests
         _mockUserManager.Setup(m => m.FindByIdAsync(user.Id)).ReturnsAsync(user);
         _mockUserManager.Setup(m => m.RemoveClaimsAsync(user, It.IsAny<IEnumerable<Claim>>())).ReturnsAsync(IdentityResult.Success);
 
-        _pageModel.SelectedClaims = new List<string> { "custom-claim:custom-value" };
+        _pageModel.SelectedClaims = ["custom-claim:custom-value"];
         _pageModel.UserId = user.Id;
 
         var result = await _pageModel.OnPostClaimsRemoveAsync();
@@ -571,7 +571,7 @@ public class UsersEditModelTests
         SetupAllAuthorizationsAllowed();
         SetupUserFoundWithPageData(user, userData);
 
-        _pageModel.SelectedClaims = new List<string>();
+        _pageModel.SelectedClaims = [];
         _pageModel.UserId = user.Id;
 
         var result = await _pageModel.OnPostClaimsRemoveAsync();
@@ -999,7 +999,7 @@ public class UsersEditModelTests
         SetupAuthorizationMock(UserPolicyConstants.UserRolesWrite, false);
 
         _pageModel.UserId = "test-user-1";
-        _pageModel.SelectedRolesToAdd = new List<string> { "Admin" };
+        _pageModel.SelectedRolesToAdd = ["Admin"];
 
         var result = await _pageModel.OnPostRolesAddAsync();
 
@@ -1016,7 +1016,7 @@ public class UsersEditModelTests
         SetupUserFoundWithPageData(user, userData);
 
         _pageModel.UserId = user.Id;
-        _pageModel.SelectedRolesToAdd = new List<string>();
+        _pageModel.SelectedRolesToAdd = [];
 
         var result = await _pageModel.OnPostRolesAddAsync();
 
@@ -1034,7 +1034,7 @@ public class UsersEditModelTests
         _mockUserManager.Setup(m => m.AddToRolesAsync(user, It.IsAny<IEnumerable<string>>())).ReturnsAsync(IdentityResult.Success);
 
         _pageModel.UserId = user.Id;
-        _pageModel.SelectedRolesToAdd = new List<string> { "Admin", "User" };
+        _pageModel.SelectedRolesToAdd = ["Admin", "User"];
 
         var result = await _pageModel.OnPostRolesAddAsync();
 
@@ -1047,7 +1047,7 @@ public class UsersEditModelTests
         SetupAuthorizationMock(UserPolicyConstants.UserRolesDelete, false);
 
         _pageModel.UserId = "test-user-1";
-        _pageModel.SelectedRolesToRemove = new List<string> { "Admin" };
+        _pageModel.SelectedRolesToRemove = ["Admin"];
 
         var result = await _pageModel.OnPostRolesRemoveAsync();
 
@@ -1063,7 +1063,7 @@ public class UsersEditModelTests
         _mockUserManager.Setup(m => m.FindByIdAsync(user.Id)).ReturnsAsync(user);
         _mockUserManager.Setup(m => m.RemoveFromRolesAsync(user, It.IsAny<IEnumerable<string>>())).ReturnsAsync(IdentityResult.Success);
 
-        _pageModel.SelectedRolesToRemove = new List<string> { "Admin" };
+        _pageModel.SelectedRolesToRemove = ["Admin"];
         _pageModel.UserId = user.Id;
 
         var result = await _pageModel.OnPostRolesRemoveAsync();
@@ -1080,7 +1080,7 @@ public class UsersEditModelTests
         SetupAllAuthorizationsAllowed();
         SetupUserFoundWithPageData(user, userData);
 
-        _pageModel.SelectedRolesToRemove = new List<string>();
+        _pageModel.SelectedRolesToRemove = [];
         _pageModel.UserId = user.Id;
 
         var result = await _pageModel.OnPostRolesRemoveAsync();

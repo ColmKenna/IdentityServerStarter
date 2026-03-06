@@ -9,27 +9,18 @@ using IdentityServer.EF.DataAccess.DataMigrations;
 
 namespace IdentityServerServices;
 
-public class UserEditor : IUserEditor
+public class UserEditor(
+    UserManager<ApplicationUser> userManager,
+    RoleManager<IdentityRole> roleManager,
+    IPersistedGrantStore grantStore,
+    ApplicationDbContext dbContext,
+    IServerSideSessionStore? sessionStore = null) : IUserEditor
 {
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly IPersistedGrantStore _grantStore;
-    private readonly IServerSideSessionStore? _sessionStore;
-    private readonly ApplicationDbContext _dbContext;
-
-    public UserEditor(
-        UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
-        IPersistedGrantStore grantStore,
-        ApplicationDbContext dbContext,
-        IServerSideSessionStore? sessionStore = null)
-    {
-        _userManager = userManager;
-        _roleManager = roleManager;
-        _grantStore = grantStore;
-        _dbContext = dbContext;
-        _sessionStore = sessionStore;
-    }
+    private readonly UserManager<ApplicationUser> _userManager = userManager;
+    private readonly RoleManager<IdentityRole> _roleManager = roleManager;
+    private readonly IPersistedGrantStore _grantStore = grantStore;
+    private readonly IServerSideSessionStore? _sessionStore = sessionStore;
+    private readonly ApplicationDbContext _dbContext = dbContext;
 
     public async Task<IReadOnlyList<UserListItemDto>> GetUsersAsync(CancellationToken ct = default)
     {
@@ -73,11 +64,11 @@ public class UserEditor : IUserEditor
 
         var grants = request.IncludeGrants
             ? await FetchGrantsAsync(user)
-            : new List<PersistedGrant>();
+            : [];
 
         var sessions = request.IncludeSessions
             ? await FetchSessionsAsync(user)
-            : new List<ServerSideSession>();
+            : [];
 
         return new UserEditPageDataDto
         {
@@ -140,15 +131,15 @@ public class UserEditor : IUserEditor
     private async Task<List<PersistedGrant>> FetchGrantsAsync(ApplicationUser user)
     {
         var persistedGrants = await _grantStore.GetAllAsync(new PersistedGrantFilter { SubjectId = user.Id });
-        return persistedGrants.ToList();
+        return [.. persistedGrants];
     }
 
     private async Task<List<ServerSideSession>> FetchSessionsAsync(ApplicationUser user)
     {
         if (_sessionStore is null)
-            return new List<ServerSideSession>();
+            return [];
         var userSessions = await _sessionStore.GetSessionsAsync(new SessionFilter { SubjectId = user.Id });
-        return userSessions.ToList();
+        return [.. userSessions];
     }
 
     public async Task<UserProfileEditViewModel?> GetUserForEditAsync(string userId)

@@ -19,7 +19,7 @@ public class ClaimsIndexModelTests
     {
         _mockClaimsAdminService
             .Setup(service => service.GetClaimsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<ClaimTypeListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 
@@ -31,11 +31,11 @@ public class ClaimsIndexModelTests
     {
         _mockClaimsAdminService
             .Setup(service => service.GetClaimsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ClaimTypeListItemDto>
-            {
+            .ReturnsAsync(
+            [
                 new() { ClaimType = "department" },
                 new() { ClaimType = "location" }
-            });
+            ]);
 
         await _pageModel.OnGetAsync();
 

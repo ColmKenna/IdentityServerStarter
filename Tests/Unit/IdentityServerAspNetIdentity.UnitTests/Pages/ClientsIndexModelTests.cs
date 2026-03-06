@@ -19,7 +19,7 @@ public class ClientsIndexModelTests
     {
         _mockClientAdminService
             .Setup(service => service.GetClientsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ClientListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 
@@ -31,8 +31,8 @@ public class ClientsIndexModelTests
     {
         _mockClientAdminService
             .Setup(service => service.GetClientsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ClientListItemDto>
-            {
+            .ReturnsAsync(
+            [
                 new()
                 {
                     Id = 1,
@@ -49,12 +49,12 @@ public class ClientsIndexModelTests
                     Description = null,
                     Enabled = false
                 }
-            });
+            ]);
 
         await _pageModel.OnGetAsync();
 
         _pageModel.Clients.Should().HaveCount(2);
-        _pageModel.Clients.Select(c => c.ClientId).Should().Contain(new[] { "web-app", "api-client" });
+        _pageModel.Clients.Select(c => c.ClientId).Should().Contain(["web-app", "api-client"]);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class ClientsIndexModelTests
     {
         _mockClientAdminService
             .Setup(service => service.GetClientsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<ClientListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 

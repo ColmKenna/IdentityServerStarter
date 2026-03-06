@@ -87,11 +87,11 @@ public class UserEditorTests
         List<string>? twoFactorProviders = null)
     {
         _userManagerMock.Setup(x => x.GetLoginsAsync(user))
-            .ReturnsAsync(externalLogins ?? new List<UserLoginInfo>());
+            .ReturnsAsync(externalLogins ?? []);
         _userManagerMock.Setup(x => x.HasPasswordAsync(user)).ReturnsAsync(hasPassword);
         _userManagerMock.Setup(x => x.GetTwoFactorEnabledAsync(user)).ReturnsAsync(twoFactorEnabled);
         _userManagerMock.Setup(x => x.GetValidTwoFactorProvidersAsync(user))
-            .ReturnsAsync(twoFactorProviders ?? new List<string>());
+            .ReturnsAsync(twoFactorProviders ?? []);
     }
 
     private void SetupSuccessfulUpdatePipeline(
@@ -264,7 +264,7 @@ public class UserEditorTests
         var user = CreateTestUser();
         SetupUserExists(user);
         _userManagerMock.Setup(x => x.GetClaimsAsync(user))
-            .ReturnsAsync(new List<Claim> { new("role", "admin") });
+            .ReturnsAsync([new("role", "admin")]);
         SeedUserClaim("other-1", "department");
         SeedUserClaim("other-2", "location");
 
@@ -282,7 +282,7 @@ public class UserEditorTests
         var user = CreateTestUser();
         SetupUserExists(user);
         _userManagerMock.Setup(x => x.GetClaimsAsync(user))
-            .ReturnsAsync(new List<Claim> { new("department", "engineering") });
+            .ReturnsAsync([new("department", "engineering")]);
         SeedUserClaim("other-1", "department");
         SeedUserClaim("other-2", "location");
 
@@ -299,7 +299,7 @@ public class UserEditorTests
     {
         var user = CreateTestUser();
         SetupUserExists(user);
-        _userManagerMock.Setup(x => x.GetClaimsAsync(user)).ReturnsAsync(new List<Claim>());
+        _userManagerMock.Setup(x => x.GetClaimsAsync(user)).ReturnsAsync([]);
         SeedUserClaim("other-1", "department");
         SeedUserClaim("other-2", "department");
         SeedUserClaim("other-3", "location");
@@ -318,7 +318,7 @@ public class UserEditorTests
     {
         var user = CreateTestUser();
         SetupUserExists(user);
-        _userManagerMock.Setup(x => x.GetClaimsAsync(user)).ReturnsAsync(new List<Claim>());
+        _userManagerMock.Setup(x => x.GetClaimsAsync(user)).ReturnsAsync([]);
         SeedUserClaim("other-1", "zebra");
         SeedUserClaim("other-2", "apple");
         SeedUserClaim("other-3", "mango");
@@ -335,7 +335,7 @@ public class UserEditorTests
     {
         var user = CreateTestUser();
         SetupUserExists(user);
-        _userManagerMock.Setup(x => x.GetClaimsAsync(user)).ReturnsAsync(new List<Claim>());
+        _userManagerMock.Setup(x => x.GetClaimsAsync(user)).ReturnsAsync([]);
         _dbContext.UserClaims.Add(new IdentityUserClaim<string>
         {
             UserId = "other-1",
@@ -389,7 +389,7 @@ public class UserEditorTests
     {
         var user = CreateTestUser();
         SetupUserExists(user);
-        _userManagerMock.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string>());
+        _userManagerMock.Setup(x => x.GetRolesAsync(user)).ReturnsAsync([]);
 
         var allRoles = new List<IdentityRole>
         {
@@ -454,7 +454,7 @@ public class UserEditorTests
         user.AccessFailedCount = 2;
         SetupUserExists(user);
         SetupUserTabDataMocks(user, hasPassword: true, twoFactorEnabled: true,
-            twoFactorProviders: new List<string> { "Authenticator" });
+            twoFactorProviders: ["Authenticator"]);
 
         var claims = new List<Claim> { new("role", "admin") };
         _userManagerMock.Setup(x => x.GetClaimsAsync(user)).ReturnsAsync(claims);
@@ -512,7 +512,7 @@ public class UserEditorTests
         user.AccessFailedCount = 3;
         SetupUserExists(user);
         SetupUserTabDataMocks(user, hasPassword: true, twoFactorEnabled: true,
-            twoFactorProviders: new List<string> { "Authenticator" });
+            twoFactorProviders: ["Authenticator"]);
 
         var request = new UserEditPageDataRequest { UserId = user.Id, IncludeUserTabData = true };
 
@@ -1004,7 +1004,7 @@ public class UserEditorTests
         var result = await _sut.GetUsersAsync();
 
         result.Should().HaveCount(2);
-        result.Select(u => u.UserName).Should().Contain(new[] { "alice", "bob" });
+        result.Select(u => u.UserName).Should().Contain(["alice", "bob"]);
     }
 
     [Fact]

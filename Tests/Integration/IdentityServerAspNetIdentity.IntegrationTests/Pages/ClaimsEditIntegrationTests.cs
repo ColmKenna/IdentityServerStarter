@@ -51,12 +51,7 @@ public class ClaimsEditIntegrationTests : IDisposable
     {
         using var scope = _factory.Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        var user = await userManager.FindByIdAsync(userId);
-        if (user is null)
-        {
-            throw new InvalidOperationException($"User '{userId}' not found.");
-        }
-
+        var user = await userManager.FindByIdAsync(userId) ?? throw new InvalidOperationException($"User '{userId}' not found.");
         var result = await userManager.AddClaimAsync(user, new Claim(claimType, claimValue));
         if (!result.Succeeded)
         {
@@ -181,7 +176,7 @@ public class ClaimsEditIntegrationTests : IDisposable
     public async Task Get_ClaimEdit_RendersAddUserFormWithUserSelectAndClaimValueInput()
     {
         var assignedUserId = await SeedUserAsync("claims-user");
-        var availableUserId = await SeedUserAsync("available-user");
+        _ = await SeedUserAsync("available-user");
         await AddUserClaimAsync(assignedUserId, "department", "engineering");
 
         var response = await _client.GetAsync("/Admin/Claims/Edit?claimType=department");
@@ -198,7 +193,7 @@ public class ClaimsEditIntegrationTests : IDisposable
     {
         var assignedUser1Id = await SeedUserAsync("claims-user");
         var assignedUser2Id = await SeedUserAsync("claims-user");
-        var availableUserId = await SeedUserAsync("available-user");
+        _ = await SeedUserAsync("available-user");
         await AddUserClaimAsync(assignedUser1Id, "feature-enabled", "true");
         await AddUserClaimAsync(assignedUser2Id, "feature-enabled", "false");
 

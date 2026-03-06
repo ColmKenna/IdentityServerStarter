@@ -136,7 +136,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 /// </summary>
 internal class InMemoryServerSideSessionStore : IServerSideSessionStore
 {
-    private readonly List<ServerSideSession> _sessions = new();
+    private readonly List<ServerSideSession> _sessions = [];
 
     public Task CreateSessionAsync(ServerSideSession session, CancellationToken cancellationToken = default)
     {
@@ -194,6 +194,6 @@ internal class InMemoryServerSideSessionStore : IServerSideSessionStore
 
     public Task<IReadOnlyCollection<ServerSideSession>> GetAndRemoveExpiredSessionsAsync(int count, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult<IReadOnlyCollection<ServerSideSession>>(Array.Empty<ServerSideSession>());
+        return Task.FromResult<IReadOnlyCollection<ServerSideSession>>([]);
     }
 }

@@ -43,7 +43,7 @@ public class ClientAdminServiceTests : IDisposable
         return new ConfigurationDbContext(_options);
     }
 
-    private Client CreateTestClient(string clientId = "test-client", string clientName = "Test Client")
+    private static Client CreateTestClient(string clientId = "test-client", string clientName = "Test Client")
     {
         return new Client
         {
@@ -57,23 +57,23 @@ public class ClientAdminServiceTests : IDisposable
             SlidingRefreshTokenLifetime = 1296000,
             RefreshTokenExpiration = 1,
             RefreshTokenUsage = 1,
-            AllowedGrantTypes = new List<ClientGrantType>
-            {
+            AllowedGrantTypes =
+            [
                 new() { GrantType = "authorization_code" }
-            },
-            RedirectUris = new List<ClientRedirectUri>
-            {
+            ],
+            RedirectUris =
+            [
                 new() { RedirectUri = "https://localhost/callback" }
-            },
-            PostLogoutRedirectUris = new List<ClientPostLogoutRedirectUri>
-            {
+            ],
+            PostLogoutRedirectUris =
+            [
                 new() { PostLogoutRedirectUri = "https://localhost/signout" }
-            },
-            AllowedScopes = new List<ClientScope>
-            {
+            ],
+            AllowedScopes =
+            [
                 new() { Scope = "openid" },
                 new() { Scope = "profile" }
-            }
+            ]
         };
     }
 
@@ -86,21 +86,21 @@ public class ClientAdminServiceTests : IDisposable
         return client.Id;
     }
 
-    private ClientAdminService CreateService(ConfigurationDbContext context)
+    private static ClientAdminService CreateService(ConfigurationDbContext context)
     {
         return new ClientAdminService(context);
     }
 
-    private ClientEditViewModel CreateDefaultEditViewModel()
+    private static ClientEditViewModel CreateDefaultEditViewModel()
     {
         return new ClientEditViewModel
         {
             ClientId = "test-client",
             ClientName = "Test Client",
-            AllowedGrantTypes = new List<string>(),
-            RedirectUris = new List<string>(),
-            PostLogoutRedirectUris = new List<string>(),
-            AllowedScopes = new List<string>()
+            AllowedGrantTypes = [],
+            RedirectUris = [],
+            PostLogoutRedirectUris = [],
+            AllowedScopes = []
         };
     }
 
@@ -268,7 +268,7 @@ public class ClientAdminServiceTests : IDisposable
             viewModel.RequirePkce = false;
             viewModel.RequireClientSecret = false;
             viewModel.AccessTokenLifetime = 7200;
-            viewModel.AllowedGrantTypes = new List<string> { "client_credentials" };
+            viewModel.AllowedGrantTypes = ["client_credentials"];
 
             var result = await service.UpdateClientAsync(clientId, viewModel);
             result.Should().BeTrue();
@@ -296,7 +296,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.AllowedGrantTypes = new List<string> { "client_credentials", "refresh_token" };
+            viewModel.AllowedGrantTypes = ["client_credentials", "refresh_token"];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -321,7 +321,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.RedirectUris = new List<string> { "https://new/callback" };
+            viewModel.RedirectUris = ["https://new/callback"];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -346,7 +346,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.PostLogoutRedirectUris = new List<string> { "https://new/signout" };
+            viewModel.PostLogoutRedirectUris = ["https://new/signout"];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -371,7 +371,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.AllowedScopes = new List<string> { "api1", "api2" };
+            viewModel.AllowedScopes = ["api1", "api2"];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -472,15 +472,15 @@ public class ClientAdminServiceTests : IDisposable
     public async Task UpdateClientAsync_PreservesExistingSecrets_WhenNewSecretAdded()
     {
         var client = CreateTestClient();
-        client.ClientSecrets = new List<ClientSecret>
-        {
+        client.ClientSecrets =
+        [
             new()
             {
                 Value = "existing-hashed-value",
                 Description = "Existing secret",
                 Type = "SharedSecret"
             }
-        };
+        ];
         var clientId = await SeedClientAsync(client);
 
         using (var context = CreateContext())
@@ -514,7 +514,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.AllowedGrantTypes = new List<string> { "authorization_code", "", "  " };
+            viewModel.AllowedGrantTypes = ["authorization_code", "", "  "];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -539,7 +539,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.AllowedGrantTypes = new List<string> { "  authorization_code  " };
+            viewModel.AllowedGrantTypes = ["  authorization_code  "];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -563,7 +563,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.RedirectUris = new List<string> { "https://valid/callback", "", "  " };
+            viewModel.RedirectUris = ["https://valid/callback", "", "  "];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -588,7 +588,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.RedirectUris = new List<string> { "  https://valid/callback  " };
+            viewModel.RedirectUris = ["  https://valid/callback  "];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -612,7 +612,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.PostLogoutRedirectUris = new List<string> { "https://valid/signout", "", "  " };
+            viewModel.PostLogoutRedirectUris = ["https://valid/signout", "", "  "];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -637,7 +637,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.PostLogoutRedirectUris = new List<string> { "  https://valid/signout  " };
+            viewModel.PostLogoutRedirectUris = ["  https://valid/signout  "];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -661,7 +661,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.AllowedScopes = new List<string> { "openid", "", "  " };
+            viewModel.AllowedScopes = ["openid", "", "  "];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -686,7 +686,7 @@ public class ClientAdminServiceTests : IDisposable
         {
             var service = CreateService(context);
             var viewModel = CreateDefaultEditViewModel();
-            viewModel.AllowedScopes = new List<string> { "  openid  " };
+            viewModel.AllowedScopes = ["  openid  "];
 
             await service.UpdateClientAsync(clientId, viewModel);
         }
@@ -730,7 +730,7 @@ public class ClientAdminServiceTests : IDisposable
         var result = await service.GetClientsAsync();
 
         result.Should().HaveCount(2);
-        result.Select(c => c.ClientId).Should().Contain(new[] { "client-a", "client-b" });
+        result.Select(c => c.ClientId).Should().Contain(["client-a", "client-b"]);
     }
 
     [Fact]

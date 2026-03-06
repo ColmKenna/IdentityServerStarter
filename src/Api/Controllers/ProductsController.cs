@@ -13,28 +13,28 @@ public class ProductsController : ControllerBase
     {
         return new JsonResult("Product List");
     }
-    
+
     [HttpGet("{id}")]
     [Authorize(Policy = PolicyConstants.CanViewProductsScope)]
     public IActionResult Get(int id)
     {
         return new JsonResult($"Product {id}");
     }
-    
+
     [HttpPost]
     [Authorize(Policy = PolicyConstants.CanAmendProductScope)]
     public IActionResult Post()
     {
         return new JsonResult("Product Created");
     }
-    
+
     [HttpPut("{id}")]
     [Authorize(Policy = PolicyConstants.CanAmendProductScope)]
     public IActionResult Put(int id)
     {
         return new JsonResult($"Product {id} Updated");
     }
-    
+
     [HttpDelete("{id}")]
     [Authorize(Policy = PolicyConstants.CanAmendProductScope)]
     public IActionResult Delete(int id)

@@ -103,7 +103,7 @@ public static class AngleSharpHelpers
             if (formValues != null)
             {
                 var overriddenNames = new HashSet<string>(formValues.Keys);
-                formData = formData.Where(f => !overriddenNames.Contains(f.Key)).ToList();
+                formData = [.. formData.Where(f => !overriddenNames.Contains(f.Key))];
                 formData.AddRange(formValues.Select(kvp => new KeyValuePair<string, string>(kvp.Key, kvp.Value)));
             }
 

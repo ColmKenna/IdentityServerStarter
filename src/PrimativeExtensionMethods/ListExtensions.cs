@@ -5,9 +5,9 @@ public static class DictionaryExtensions
     public static TValue GetValueOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key,
         TValue defaultValue)
     {
-        if (dictionary.ContainsKey(key))
+        if (dictionary.TryGetValue(key, out TValue? value))
         {
-            return dictionary[key];
+            return value;
         }
 
         return defaultValue;
@@ -72,7 +72,7 @@ public static class ListExtensions
 
         return list;
     }
-    
+
     public static IList<T> AddIfNotExists<T>(this IList<T> list, T newItem)
     {
         if (!list.Contains(newItem))
@@ -82,7 +82,7 @@ public static class ListExtensions
 
         return list;
     }
-    
+
 
     public static void UpdateWhere<T>(this IList<T> list,
         IEnumerable<T> newList, Func<T, T, bool> predicate, Action<T, T> updateAction

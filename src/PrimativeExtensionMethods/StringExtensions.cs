@@ -12,12 +12,12 @@ public static class StringExtensions
         if (str.Length == 1)
             return str.ToLower();
 
-        return char.ToLowerInvariant(str[0]) + str.Substring(1);
+        return char.ToLowerInvariant(str[0]) + str[1..];
     }
-    
+
     public static string ConCat(this string str, params string[] strings)
     {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new();
         sb.Append(str);
         foreach (string s in strings)
         {

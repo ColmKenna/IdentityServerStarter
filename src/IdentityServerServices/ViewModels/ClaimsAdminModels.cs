@@ -23,8 +23,8 @@ public sealed class AvailableClaimUserItemDto
 
 public sealed class ClaimEditPageDataDto
 {
-    public IReadOnlyList<ClaimUserAssignmentItemDto> UsersInClaim { get; init; } = Array.Empty<ClaimUserAssignmentItemDto>();
-    public IReadOnlyList<AvailableClaimUserItemDto> AvailableUsers { get; init; } = Array.Empty<AvailableClaimUserItemDto>();
+    public IReadOnlyList<ClaimUserAssignmentItemDto> UsersInClaim { get; init; } = [];
+    public IReadOnlyList<AvailableClaimUserItemDto> AvailableUsers { get; init; } = [];
     public string? NewClaimValue { get; init; }
 }
 
@@ -40,7 +40,7 @@ public sealed class AddClaimAssignmentResult
 {
     public AddClaimAssignmentStatus Status { get; init; }
     public string UserName { get; init; } = string.Empty;
-    public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Errors { get; init; } = [];
 }
 
 public enum RemoveClaimAssignmentStatus
@@ -56,5 +56,5 @@ public sealed class RemoveClaimAssignmentResult
     public RemoveClaimAssignmentStatus Status { get; init; }
     public string UserName { get; init; } = string.Empty;
     public bool HasRemainingAssignments { get; init; }
-    public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Errors { get; init; } = [];
 }

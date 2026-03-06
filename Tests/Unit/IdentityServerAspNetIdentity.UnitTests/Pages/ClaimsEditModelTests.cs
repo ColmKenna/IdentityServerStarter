@@ -32,8 +32,8 @@ public class ClaimsEditModelTests
     {
         return new ClaimEditPageDataDto
         {
-            UsersInClaim = usersInClaim ?? new List<ClaimUserAssignmentItemDto>
-            {
+            UsersInClaim = usersInClaim ??
+            [
                 new()
                 {
                     UserId = "u1",
@@ -42,16 +42,16 @@ public class ClaimsEditModelTests
                     ClaimValue = "engineering",
                     IsLastUserAssignment = false
                 }
-            },
-            AvailableUsers = availableUsers ?? new List<AvailableClaimUserItemDto>
-            {
+            ],
+            AvailableUsers = availableUsers ??
+            [
                 new()
                 {
                     UserId = "u2",
                     UserName = "bob",
                     Email = "bob@test.com"
                 }
-            },
+            ],
             NewClaimValue = newClaimValue
         };
     }
@@ -112,8 +112,8 @@ public class ClaimsEditModelTests
         _mockClaimsAdminService
             .Setup(service => service.GetForEditAsync("department", null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreatePageData(
-                usersInClaim: new List<ClaimUserAssignmentItemDto>
-                {
+                usersInClaim:
+                [
                     new()
                     {
                         UserId = "u1",
@@ -122,16 +122,16 @@ public class ClaimsEditModelTests
                         ClaimValue = "engineering",
                         IsLastUserAssignment = true
                     }
-                },
-                availableUsers: new List<AvailableClaimUserItemDto>
-                {
+                ],
+                availableUsers:
+                [
                     new()
                     {
                         UserId = "u2",
                         UserName = "bob",
                         Email = "bob@test.com"
                     }
-                },
+                ],
                 newClaimValue: "true"));
 
         var result = await _pageModel.OnGetAsync();
@@ -241,7 +241,7 @@ public class ClaimsEditModelTests
             .ReturnsAsync(new AddClaimAssignmentResult
             {
                 Status = AddClaimAssignmentStatus.IdentityFailure,
-                Errors = new List<string> { "error-1", "error-2" }
+                Errors = ["error-1", "error-2"]
             });
 
         var result = await _pageModel.OnPostAddUserAsync();
@@ -349,7 +349,7 @@ public class ClaimsEditModelTests
             .ReturnsAsync(new RemoveClaimAssignmentResult
             {
                 Status = RemoveClaimAssignmentStatus.IdentityFailure,
-                Errors = new List<string> { "error-1", "error-2" }
+                Errors = ["error-1", "error-2"]
             });
 
         var result = await _pageModel.OnPostRemoveUserAsync();

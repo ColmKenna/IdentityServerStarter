@@ -50,12 +50,7 @@ public static class TestDataHelper
     {
         using var scope = factory.Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        var user = await userManager.FindByIdAsync(userId);
-        if (user is null)
-        {
-            throw new InvalidOperationException($"User '{userId}' not found.");
-        }
-
+        var user = await userManager.FindByIdAsync(userId) ?? throw new InvalidOperationException($"User '{userId}' not found.");
         var result = await userManager.AddClaimAsync(user, new Claim(claimType, claimValue));
         if (!result.Succeeded)
         {
@@ -91,12 +86,7 @@ public static class TestDataHelper
         using var scope = factory.Services.CreateScope();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        var user = await userManager.FindByIdAsync(userId);
-        if (user is null)
-        {
-            throw new InvalidOperationException($"User '{userId}' not found.");
-        }
-
+        var user = await userManager.FindByIdAsync(userId) ?? throw new InvalidOperationException($"User '{userId}' not found.");
         if (!await roleManager.RoleExistsAsync(roleName))
         {
             var createRoleResult = await roleManager.CreateAsync(new IdentityRole(roleName));

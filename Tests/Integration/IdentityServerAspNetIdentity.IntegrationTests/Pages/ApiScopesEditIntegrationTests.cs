@@ -41,7 +41,7 @@ public class ApiScopesEditIntegrationTests : IDisposable
             DisplayName = displayName,
             Description = description,
             Enabled = enabled,
-            UserClaims = userClaims.Select(claimType => new ApiScopeClaim { Type = claimType }).ToList()
+            UserClaims = [.. userClaims.Select(claimType => new ApiScopeClaim { Type = claimType })]
         };
 
         context.ApiScopes.Add(apiScope);
@@ -161,7 +161,7 @@ public class ApiScopesEditIntegrationTests : IDisposable
     [Fact]
     public async Task Get_EditApiScope_UserClaimsTab_ShowsAppliedAndAvailableClaims()
     {
-        var id = SeedApiScope(userClaims: new[] { "department" });
+        var id = SeedApiScope(userClaims: ["department"]);
         await SeedUserClaimTypeAsync("department", "engineering");
         await SeedUserClaimTypeAsync("location", "dublin");
 
@@ -276,7 +276,7 @@ public class ApiScopesEditIntegrationTests : IDisposable
     [Fact]
     public async Task PostEdit_DuplicateName_Returns200AndValidationMessage()
     {
-        var firstId = SeedApiScope(name: "orders.read");
+        _ = SeedApiScope(name: "orders.read");
         var secondId = SeedApiScope(name: "orders.write");
 
         var response = await _client.PostAsync(
@@ -360,7 +360,7 @@ public class ApiScopesEditIntegrationTests : IDisposable
     [Fact]
     public async Task PostRemoveClaim_ValidSelection_RemovesApiScopeClaim()
     {
-        var id = SeedApiScope(userClaims: new[] { "department", "location" });
+        var id = SeedApiScope(userClaims: ["department", "location"]);
 
         await _client.PostAsync(
             $"/Admin/ApiScopes/{id}/Edit?handler=RemoveClaim",
@@ -382,7 +382,7 @@ public class ApiScopesEditIntegrationTests : IDisposable
     [Fact]
     public async Task PostRemoveClaim_NotApplied_Returns200AndValidationMessage()
     {
-        var id = SeedApiScope(userClaims: new[] { "location" });
+        var id = SeedApiScope(userClaims: ["location"]);
 
         var response = await _client.PostAsync(
             $"/Admin/ApiScopes/{id}/Edit?handler=RemoveClaim",
@@ -400,7 +400,7 @@ public class ApiScopesEditIntegrationTests : IDisposable
     [Fact]
     public async Task PostRemoveClaim_NoSelection_Returns200AndValidationMessage()
     {
-        var id = SeedApiScope(userClaims: new[] { "department" });
+        var id = SeedApiScope(userClaims: ["department"]);
 
         var response = await _client.PostAsync(
             $"/Admin/ApiScopes/{id}/Edit?handler=RemoveClaim",

@@ -19,7 +19,7 @@ public class UsersIndexModelTests
     {
         _mockUserEditor
             .Setup(s => s.GetUsersAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<UserListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 
@@ -31,8 +31,8 @@ public class UsersIndexModelTests
     {
         _mockUserEditor
             .Setup(s => s.GetUsersAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<UserListItemDto>
-            {
+            .ReturnsAsync(
+            [
                 new()
                 {
                     Id = "u1",
@@ -49,12 +49,12 @@ public class UsersIndexModelTests
                     EmailConfirmed = false,
                     TwoFactorEnabled = true
                 }
-            });
+            ]);
 
         await _pageModel.OnGetAsync();
 
         _pageModel.Users.Should().HaveCount(2);
-        _pageModel.Users.Select(u => u.UserName).Should().Contain(new[] { "alice", "bob" });
+        _pageModel.Users.Select(u => u.UserName).Should().Contain(["alice", "bob"]);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class UsersIndexModelTests
     {
         _mockUserEditor
             .Setup(s => s.GetUsersAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<UserListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 

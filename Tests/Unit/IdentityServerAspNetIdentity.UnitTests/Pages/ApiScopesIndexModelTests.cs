@@ -19,7 +19,7 @@ public class ApiScopesIndexModelTests
     {
         _mockApiScopesAdminService
             .Setup(service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ApiScopeListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 
@@ -31,8 +31,8 @@ public class ApiScopesIndexModelTests
     {
         _mockApiScopesAdminService
             .Setup(service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ApiScopeListItemDto>
-            {
+            .ReturnsAsync(
+            [
                 new()
                 {
                     Id = 1,
@@ -49,12 +49,12 @@ public class ApiScopesIndexModelTests
                     Description = "Write orders",
                     Enabled = false
                 }
-            });
+            ]);
 
         await _pageModel.OnGetAsync();
 
         _pageModel.ApiScopes.Should().HaveCount(2);
-        _pageModel.ApiScopes.Select(scope => scope.Name).Should().Contain(new[] { "orders.read", "orders.write" });
+        _pageModel.ApiScopes.Select(scope => scope.Name).Should().Contain(["orders.read", "orders.write"]);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class ApiScopesIndexModelTests
     {
         _mockApiScopesAdminService
             .Setup(service => service.GetApiScopesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<ApiScopeListItemDto>());
+            .ReturnsAsync([]);
 
         await _pageModel.OnGetAsync();
 

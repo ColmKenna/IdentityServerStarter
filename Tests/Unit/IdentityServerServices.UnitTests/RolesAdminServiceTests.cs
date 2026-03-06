@@ -24,7 +24,7 @@ public class RolesAdminServiceTests
             userStore.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         _mockUserManager.SetupGet(m => m.Users)
-            .Returns(new TestAsyncEnumerable<ApplicationUser>(Array.Empty<ApplicationUser>()));
+            .Returns(new TestAsyncEnumerable<ApplicationUser>([]));
 
         _service = new RolesAdminService(_mockRoleManager.Object, _mockUserManager.Object);
     }
@@ -50,7 +50,7 @@ public class RolesAdminServiceTests
         _mockUserManager.Setup(m => m.GetUsersInRoleAsync(role.Name!))
             .ReturnsAsync(usersInRole);
         if (allUsers != null)
-            SetupAllUsers(allUsers.ToArray());
+            SetupAllUsers([.. allUsers]);
     }
 
     private static IdentityRole CreateRole(string name = "Editor", string id = "role-1")
@@ -84,7 +84,7 @@ public class RolesAdminServiceTests
         var result = await _service.GetRolesAsync();
 
         result.Should().HaveCount(3);
-        result.Select(r => r.Name).Should().Contain(new[] { "Admin", "Editor", "Viewer" });
+        result.Select(r => r.Name).Should().Contain(["Admin", "Editor", "Viewer"]);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class RolesAdminServiceTests
     public async Task GetRoleForEditAsync_RoleExists_ReturnsRoleName()
     {
         var role = CreateRole();
-        ArrangeRoleWithUsers(role, new List<ApplicationUser>());
+        ArrangeRoleWithUsers(role, []);
 
         var result = await _service.GetRoleForEditAsync("role-1");
 
@@ -188,7 +188,7 @@ public class RolesAdminServiceTests
     {
         var role = CreateRole("EmptyRole", "role-2");
         var allUsers = new List<ApplicationUser> { CreateUser("u1", "alice") };
-        ArrangeRoleWithUsers(role, new List<ApplicationUser>(), allUsers);
+        ArrangeRoleWithUsers(role, [], allUsers);
 
         var result = await _service.GetRoleForEditAsync("role-2");
 
@@ -224,7 +224,7 @@ public class RolesAdminServiceTests
             CreateUser("u2", "bob"),
             CreateUser("u3", "charlie")
         };
-        ArrangeRoleWithUsers(role, new List<ApplicationUser> { alice }, allUsers);
+        ArrangeRoleWithUsers(role, [alice], allUsers);
 
         var result = await _service.GetRoleForEditAsync("role-1");
 
@@ -236,7 +236,7 @@ public class RolesAdminServiceTests
     {
         var role = new IdentityRole { Id = "role-1", Name = null };
         _mockRoleManager.Setup(m => m.FindByIdAsync("role-1")).ReturnsAsync(role);
-        _mockUserManager.Setup(m => m.GetUsersInRoleAsync(null!)).ReturnsAsync(new List<ApplicationUser>());
+        _mockUserManager.Setup(m => m.GetUsersInRoleAsync(null!)).ReturnsAsync([]);
 
         var result = await _service.GetRoleForEditAsync("role-1");
 

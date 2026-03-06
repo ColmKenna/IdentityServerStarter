@@ -68,16 +68,16 @@ public class ClientEditViewModel
     public bool AlwaysIncludeUserClaimsInIdToken { get; set; }
 
     [Display(Name = "Allowed Grant Types")]
-    public List<string> AllowedGrantTypes { get; set; } = new();
+    public List<string> AllowedGrantTypes { get; set; } = [];
 
     [Display(Name = "Redirect URIs")]
-    public List<string> RedirectUris { get; set; } = new();
+    public List<string> RedirectUris { get; set; } = [];
 
     [Display(Name = "Post Logout Redirect URIs")]
-    public List<string> PostLogoutRedirectUris { get; set; } = new();
+    public List<string> PostLogoutRedirectUris { get; set; } = [];
 
     [Display(Name = "Allowed Scopes")]
-    public List<string> AllowedScopes { get; set; } = new();
+    public List<string> AllowedScopes { get; set; } = [];
 
     [Display(Name = "New Client Secret")]
     [DataType(DataType.Password)]
@@ -87,6 +87,6 @@ public class ClientEditViewModel
     public string? NewSecretDescription { get; set; }
 
     // Available options for dropdowns/checkboxes
-    public List<string> AvailableScopes { get; set; } = new();
-    public List<string> AvailableGrantTypes { get; set; } = new();
+    public List<string> AvailableScopes { get; set; } = [];
+    public List<string> AvailableGrantTypes { get; set; } = [];
 }
