@@ -16,10 +16,10 @@ builder.Services.AddAuthentication(options =>
     .AddCookie("Cookies")
     .AddOpenIdConnect("oidc", options =>
     {
-        options.Authority = "https://localhost:5001";
+        options.Authority = builder.Configuration["Oidc:Authority"] ?? "https://localhost:5001";
 
-        options.ClientId = "web";
-        options.ClientSecret = "secret";
+        options.ClientId = builder.Configuration["Oidc:ClientId"] ?? "web";
+        options.ClientSecret = builder.Configuration["Oidc:ClientSecret"] ?? throw new InvalidOperationException("Oidc:ClientSecret must be configured via user-secrets or environment variables.");
         options.ResponseType = "code";
 
         options.SaveTokens = true;

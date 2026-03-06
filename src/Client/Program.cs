@@ -1,9 +1,14 @@
 ﻿using System.Text.Json;
 using IdentityModel.Client;
 
+var authority = Environment.GetEnvironmentVariable("OIDC_AUTHORITY") ?? "https://localhost:5001";
+var clientId = Environment.GetEnvironmentVariable("OIDC_CLIENT_ID") ?? "client";
+var clientSecret = Environment.GetEnvironmentVariable("OIDC_CLIENT_SECRET")
+    ?? throw new InvalidOperationException("OIDC_CLIENT_SECRET environment variable must be set.");
+
 // discover endpoints from metadata
 var client = new HttpClient();
-var disco = await client.GetDiscoveryDocumentAsync("https://localhost:5001");
+var disco = await client.GetDiscoveryDocumentAsync(authority);
 if (disco.IsError)
 {
     Console.WriteLine(disco.Error);
@@ -15,8 +20,8 @@ var tokenResponse = await client.RequestClientCredentialsTokenAsync(new ClientCr
 {
     Address = disco.TokenEndpoint,
 
-    ClientId = "client",
-    ClientSecret = "secret",
+    ClientId = clientId,
+    ClientSecret = clientSecret,
     Scope = "api1",
 });
 
