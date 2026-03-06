@@ -48,8 +48,6 @@ public class UsersEditModelTests
         };
     }
 
-    #region Test Helpers
-
     private static HttpContext CreateMockHttpContext()
     {
         var httpContext = new DefaultHttpContext();
@@ -148,9 +146,11 @@ public class UsersEditModelTests
         };
     }
 
-    #endregion
-
-    #region OnGetAsync Tests
+    private void AssertRedirectWithSuccess(IActionResult result, string expectedMessage)
+    {
+        result.Should().BeOfType<RedirectToPageResult>();
+        _pageModel.TempData["Success"].Should().Be(expectedMessage);
+    }
 
     [Fact]
     public async Task OnGetAsync_UserFoundAndAuthorized_ReturnsPageWithUserData()
@@ -216,10 +216,6 @@ public class UsersEditModelTests
         result.Should().BeOfType<NotFoundResult>();
     }
 
-    #endregion
-
-    #region OnPostAsync Tests
-
     [Fact]
     public async Task OnPostAsync_UserNotAuthorizedToWrite_ReturnsForbid()
     {
@@ -283,8 +279,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostAsync(user.Id);
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("User updated successfully");
+        AssertRedirectWithSuccess(result, "User updated successfully");
 
         capturedRequest.Should().NotBeNull();
         capturedRequest!.UserId.Should().Be(user.Id);
@@ -378,10 +373,6 @@ public class UsersEditModelTests
         allErrors.Should().Contain("The user was modified by another administrator. Please reload and try again.");
     }
 
-    #endregion
-
-    #region OnPostDeleteAsync Tests
-
     [Fact]
     public async Task OnPostDeleteAsync_NotAuthorizedToDelete_ReturnsForbid()
     {
@@ -466,10 +457,6 @@ public class UsersEditModelTests
         result.Should().BeOfType<NotFoundResult>();
     }
 
-    #endregion
-
-    #region Claims Handler Tests
-
     [Fact]
     public async Task OnPostClaimsAddAsync_NotAuthorizedToClaims_ReturnsForbid()
     {
@@ -517,8 +504,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostClaimsAddAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Claim added successfully");
+        AssertRedirectWithSuccess(result, "Claim added successfully");
     }
 
     [Fact]
@@ -573,8 +559,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostClaimsRemoveAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("1 claim(s) removed");
+        AssertRedirectWithSuccess(result, "1 claim(s) removed");
     }
 
     [Fact]
@@ -644,13 +629,8 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostClaimsReplaceAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Claim replaced successfully");
+        AssertRedirectWithSuccess(result, "Claim replaced successfully");
     }
-
-    #endregion
-
-    #region Security Handler Tests
 
     [Fact]
     public async Task OnPostSecurityResetPasswordAsync_NotAuthorized_ReturnsForbid()
@@ -702,8 +682,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostSecurityResetPasswordAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Password reset successfully");
+        AssertRedirectWithSuccess(result, "Password reset successfully");
 
         capturedRequest.Should().NotBeNull();
         capturedRequest!.NewPassword.Should().Be("NewPassword123!");
@@ -735,8 +714,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostSecurityDisableAccountAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Account disabled");
+        AssertRedirectWithSuccess(result, "Account disabled");
     }
 
     [Fact]
@@ -764,8 +742,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostSecurityEnableAccountAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Account enabled");
+        AssertRedirectWithSuccess(result, "Account enabled");
     }
 
     [Fact]
@@ -793,8 +770,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostSecurityClearLockoutAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Lockout cleared");
+        AssertRedirectWithSuccess(result, "Lockout cleared");
         _mockUserManager.Verify(m => m.SetLockoutEndDateAsync(user, null), Times.Once);
         _mockUserManager.Verify(m => m.ResetAccessFailedCountAsync(user), Times.Once);
     }
@@ -892,8 +868,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostSecurityToggleLockoutEnabledAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Lockout enabled");
+        AssertRedirectWithSuccess(result, "Lockout enabled");
 
         capturedRequest.Should().NotBeNull();
         capturedRequest!.LockoutEnabled.Should().Be(true);
@@ -924,8 +899,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostSecurityResetFailedCountAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Failed access count reset");
+        AssertRedirectWithSuccess(result, "Failed access count reset");
     }
 
     [Fact]
@@ -958,8 +932,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostSecurityToggleTwoFactorAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Two-factor authentication enabled");
+        AssertRedirectWithSuccess(result, "Two-factor authentication enabled");
 
         capturedRequest.Should().NotBeNull();
         capturedRequest!.TwoFactorEnabled.Should().Be(true);
@@ -990,8 +963,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostSecurityResetAuthenticatorAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Authenticator key reset");
+        AssertRedirectWithSuccess(result, "Authenticator key reset");
     }
 
     [Fact]
@@ -1018,13 +990,8 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostSecurityForceSignOutAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("User has been signed out of all sessions");
+        AssertRedirectWithSuccess(result, "User has been signed out of all sessions");
     }
-
-    #endregion
-
-    #region Roles Handler Tests
 
     [Fact]
     public async Task OnPostRolesAddAsync_NotAuthorizedForRoles_ReturnsForbid()
@@ -1071,8 +1038,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostRolesAddAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Added to 2 role(s)");
+        AssertRedirectWithSuccess(result, "Added to 2 role(s)");
     }
 
     [Fact]
@@ -1102,8 +1068,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostRolesRemoveAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Removed from 1 role(s)");
+        AssertRedirectWithSuccess(result, "Removed from 1 role(s)");
     }
 
     [Fact]
@@ -1123,10 +1088,6 @@ public class UsersEditModelTests
         result.Should().BeOfType<PageResult>();
         _pageModel.ModelState.ErrorCount.Should().BeGreaterThan(0);
     }
-
-    #endregion
-
-    #region Grants & Sessions Handler Tests
 
     [Fact]
     public async Task OnPostGrantsSessionsRevokeGrantAsync_NotAuthorized_ReturnsForbid()
@@ -1152,8 +1113,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostGrantsSessionsRevokeGrantAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Grant revoked");
+        AssertRedirectWithSuccess(result, "Grant revoked");
         _mockGrantStore.Verify(s => s.RemoveAsync("grant-key-1"), Times.Once);
     }
 
@@ -1180,8 +1140,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostGrantsSessionsRevokeAllGrantsAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("All grants revoked");
+        AssertRedirectWithSuccess(result, "All grants revoked");
         _mockGrantStore.Verify(
             s => s.RemoveAllAsync(It.Is<PersistedGrantFilter>(f => f.SubjectId == user.Id)),
             Times.Once);
@@ -1211,8 +1170,7 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostGrantsSessionsEndSessionAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("Session ended");
+        AssertRedirectWithSuccess(result, "Session ended");
         _mockSessionStore.Verify(s => s.DeleteSessionAsync("session-key-1", default), Times.Once);
     }
 
@@ -1239,12 +1197,10 @@ public class UsersEditModelTests
 
         var result = await _pageModel.OnPostGrantsSessionsEndAllSessionsAsync();
 
-        result.Should().BeOfType<RedirectToPageResult>();
-        _pageModel.TempData["Success"].Should().Be("All sessions ended");
+        AssertRedirectWithSuccess(result, "All sessions ended");
         _mockSessionStore.Verify(
             s => s.DeleteSessionsAsync(It.Is<SessionFilter>(f => f.SubjectId == user.Id), default),
             Times.Once);
     }
 
-    #endregion
 }
