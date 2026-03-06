@@ -12,7 +12,7 @@ using System.Security.Claims;
 
 namespace IdentityServerAspNetIdentity.Pages.Admin.Users;
 
-//[Authorize(Policy = UserPolicyConstants.UsersRead)]
+[Authorize(Policy = UserPolicyConstants.UsersRead)]
 public class EditModel : UserDetailPageModel
 {
     private readonly IPersistedGrantStore _grantStore;
