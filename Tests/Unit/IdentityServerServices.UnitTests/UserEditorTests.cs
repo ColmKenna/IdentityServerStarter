@@ -132,7 +132,6 @@ public class UserEditorTests
         };
     }
 
-    #region GetUserForEditAsync
 
     [Fact]
     public async Task GetUserForEditAsync_WithNullUserId_ReturnsNull()
@@ -194,9 +193,7 @@ public class UserEditorTests
         result.Email.Should().Be(string.Empty);
     }
 
-    #endregion
 
-    #region GetUserEditPageDataAsync
 
     [Fact]
     public async Task GetUserEditPageDataAsync_WithNullUserId_ReturnsNull()
@@ -592,9 +589,7 @@ public class UserEditorTests
         result!.AccountStatus.Should().Be("Active");
     }
 
-    #endregion
 
-    #region UpdateUserFromEditPostAsync
 
     [Theory]
     [InlineData(null)]
@@ -936,9 +931,7 @@ public class UserEditorTests
         result.Result.Succeeded.Should().BeTrue();
     }
 
-    #endregion
 
-    #region UpdateUserProfileAsync
 
     [Fact]
     public async Task UpdateUserProfileAsync_WithValidProfile_DelegatesToUpdatePipeline()
@@ -961,9 +954,7 @@ public class UserEditorTests
         _userManagerMock.Verify(x => x.UpdateAsync(It.IsAny<ApplicationUser>()), Times.Once);
     }
 
-    #endregion
 
-    #region Constructor - optional sessionStore
 
     [Fact]
     public async Task GetUserEditPageDataAsync_WithoutSessionStore_SkipsSessions()
@@ -987,9 +978,7 @@ public class UserEditorTests
             x => x.GetSessionsAsync(It.IsAny<SessionFilter>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    #endregion
 
-    #region GetUsersAsync
 
     [Fact]
     public async Task GetUsersAsync_NoUsers_ReturnsEmptyList()
@@ -1104,5 +1093,4 @@ public class UserEditorTests
         result.Should().ContainSingle().Which.LockoutStatus.Should().Be("Locked Out");
     }
 
-    #endregion
 }
