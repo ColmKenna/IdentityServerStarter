@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
+using IdentityServerAspNetIdentity.TestSupport.Infrastructure;
 
 namespace IdentityServerAspNetIdentity.IntegrationTests.Infrastructure;
 

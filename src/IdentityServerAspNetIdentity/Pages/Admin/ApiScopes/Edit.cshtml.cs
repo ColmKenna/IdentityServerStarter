@@ -62,6 +62,8 @@ public class EditModel : PageModel
         {
             if (!ModelState.IsValid)
             {
+                var createPageData = await _apiScopesAdminService.GetForCreateAsync(cancellationToken);
+                ApplyPageData(createPageData, mapInput: false);
                 return Page();
             }
 
@@ -76,6 +78,8 @@ public class EditModel : PageModel
             if (createResult.Status == CreateApiScopeStatus.DuplicateName)
             {
                 ModelState.AddModelError("Input.Name", "An API scope with this name already exists.");
+                var createPageData = await _apiScopesAdminService.GetForCreateAsync(cancellationToken);
+                ApplyPageData(createPageData, mapInput: false);
                 return Page();
             }
 

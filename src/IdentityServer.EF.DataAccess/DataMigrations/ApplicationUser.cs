@@ -23,8 +23,9 @@ public class ApplicationUserWithClaims
     private List<KeyValuePair<string, string>> userUserClaims;
     private List<string> userRoles;
 
-    public ApplicationUserWithClaims(List<string> userRoles)
+    public ApplicationUserWithClaims(ApplicationUser applicationUser, List<string> userRoles)
     {
+        this.applicationUser = applicationUser;
         this.userRoles = userRoles;
         userUserClaims = new List<KeyValuePair<string, string>>();
     }

@@ -2,6 +2,7 @@ using FluentAssertions;
 using IdentityServerAspNetIdentity.Models;
 using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Identity;
+using MockQueryable;
 using Moq;
 using Xunit;
 
@@ -9,347 +10,388 @@ namespace IdentityServerServices.UnitTests;
 
 public class RolesAdminServiceTests
 {
-    private readonly Mock<RoleManager<IdentityRole>> _mockRoleManager;
-    private readonly Mock<UserManager<ApplicationUser>> _mockUserManager;
-    private readonly RolesAdminService _service;
+    private readonly Mock<RoleManager<IdentityRole>> _roleManagerMock;
+    private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
 
     public RolesAdminServiceTests()
     {
-        var roleStore = new Mock<IRoleStore<IdentityRole>>();
-        _mockRoleManager = new Mock<RoleManager<IdentityRole>>(
-            roleStore.Object, null!, null!, null!, null!);
-
-        var userStore = new Mock<IUserStore<ApplicationUser>>();
-        _mockUserManager = new Mock<UserManager<ApplicationUser>>(
-            userStore.Object, null!, null!, null!, null!, null!, null!, null!, null!);
-
-        _mockUserManager.SetupGet(m => m.Users)
-            .Returns(new TestAsyncEnumerable<ApplicationUser>([]));
-
-        _service = new RolesAdminService(_mockRoleManager.Object, _mockUserManager.Object);
+        _roleManagerMock = MockRoleManager<IdentityRole>();
+        _userManagerMock = MockUserManager<ApplicationUser>();
     }
 
-    private void SetupRoles(params IdentityRole[] roles)
+    private RolesAdminService CreateSut() =>
+        new(_roleManagerMock.Object, _userManagerMock.Object);
+
+    private static Mock<UserManager<TUser>> MockUserManager<TUser>() where TUser : class
     {
-        _mockRoleManager.Setup(m => m.Roles)
-            .Returns(new TestAsyncEnumerable<IdentityRole>(roles));
+        var store = new Mock<IUserStore<TUser>>();
+        return new Mock<UserManager<TUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
     }
 
-    private void SetupAllUsers(params ApplicationUser[] users)
+    private static Mock<RoleManager<TRole>> MockRoleManager<TRole>() where TRole : class
     {
-        _mockUserManager.SetupGet(m => m.Users)
-            .Returns(new TestAsyncEnumerable<ApplicationUser>(users));
+        var store = new Mock<IRoleStore<TRole>>();
+        return new Mock<RoleManager<TRole>>(store.Object, null!, null!, null!, null!);
     }
 
-    private void ArrangeRoleWithUsers(
-        IdentityRole role,
-        IList<ApplicationUser> usersInRole,
-        IReadOnlyList<ApplicationUser>? allUsers = null)
-    {
-        _mockRoleManager.Setup(m => m.FindByIdAsync(role.Id)).ReturnsAsync(role);
-        _mockUserManager.Setup(m => m.GetUsersInRoleAsync(role.Name!))
-            .ReturnsAsync(usersInRole);
-        if (allUsers != null)
-            SetupAllUsers([.. allUsers]);
-    }
-
-    private static IdentityRole CreateRole(string name = "Editor", string id = "role-1")
-    {
-        return new IdentityRole(name) { Id = id };
-    }
-
-    private static ApplicationUser CreateUser(string id, string userName, string? email = null)
-    {
-        return new ApplicationUser { Id = id, UserName = userName, Email = email ?? $"{userName}@t.com" };
-    }
+    // -------------------------------------------------------------------------
+    // GetRolesAsync
+    // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task GetRolesAsync_NoRoles_ReturnsEmptyList()
+    public async Task GetRolesAsync_ShouldReturnEmptyList_WhenNoRolesExist()
     {
-        SetupRoles();
+        // Arrange
+        var roles = new List<IdentityRole>();
+        _roleManagerMock.Setup(m => m.Roles).Returns(roles.BuildMock());
 
-        var result = await _service.GetRolesAsync();
+        var sut = CreateSut();
 
+        // Act
+        var result = await sut.GetRolesAsync();
+
+        // Assert
         result.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task GetRolesAsync_RolesExist_ReturnsAllRoles()
+    public async Task GetRolesAsync_ShouldReturnRolesSortedByName()
     {
-        SetupRoles(
-            new IdentityRole("Admin") { Id = "1" },
-            new IdentityRole("Editor") { Id = "2" },
-            new IdentityRole("Viewer") { Id = "3" });
+        // Arrange
+        var roles = new List<IdentityRole>
+        {
+            new() { Id = "3", Name = "Zebra" },
+            new() { Id = "1", Name = "Admin" },
+            new() { Id = "2", Name = "Manager" }
+        };
+        _roleManagerMock.Setup(m => m.Roles).Returns(roles.BuildMock());
 
-        var result = await _service.GetRolesAsync();
+        var sut = CreateSut();
 
-        result.Should().HaveCount(3);
-        result.Select(r => r.Name).Should().Contain(["Admin", "Editor", "Viewer"]);
-    }
+        // Act
+        var result = await sut.GetRolesAsync();
 
-    [Fact]
-    public async Task GetRolesAsync_RolesExist_ReturnedInAscendingOrderByName()
-    {
-        SetupRoles(
-            new IdentityRole("Zebra") { Id = "1" },
-            new IdentityRole("Admin") { Id = "2" },
-            new IdentityRole("Manager") { Id = "3" });
-
-        var result = await _service.GetRolesAsync();
-
+        // Assert
         result.Select(r => r.Name).Should().BeInAscendingOrder();
     }
 
     [Fact]
-    public async Task GetRolesAsync_NullRoleName_ReturnsEmptyString()
+    public async Task GetRolesAsync_ShouldMapRoleIdAndNameToDto()
     {
-        SetupRoles(new IdentityRole { Id = "1", Name = null });
+        // Arrange
+        var roles = new List<IdentityRole>
+        {
+            new() { Id = "role-123", Name = "Admin" }
+        };
+        _roleManagerMock.Setup(m => m.Roles).Returns(roles.BuildMock());
 
-        var result = await _service.GetRolesAsync();
+        var sut = CreateSut();
 
-        result.Should().ContainSingle().Which.Name.Should().BeEmpty();
+        // Act
+        var result = await sut.GetRolesAsync();
+
+        // Assert
+        result.Should().ContainSingle().Which.Should().BeEquivalentTo(new RoleListItemDto
+        {
+            Id = "role-123",
+            Name = "Admin"
+        });
     }
 
-    [Fact]
-    public async Task GetRolesAsync_MapsIdCorrectly()
-    {
-        SetupRoles(new IdentityRole("Admin") { Id = "abc-123" });
-
-        var result = await _service.GetRolesAsync();
-
-        result.Should().ContainSingle().Which.Id.Should().Be("abc-123");
-    }
+    // -------------------------------------------------------------------------
+    // GetRoleForEditAsync
+    // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task GetRoleForEditAsync_RoleNotFound_ReturnsNull()
+    public async Task GetRoleForEditAsync_ShouldReturnNull_WhenRoleNotFound()
     {
-        _mockRoleManager.Setup(m => m.FindByIdAsync("bad"))
+        // Arrange
+        _roleManagerMock.Setup(m => m.FindByIdAsync("missing"))
             .ReturnsAsync((IdentityRole?)null);
 
-        var result = await _service.GetRoleForEditAsync("bad");
+        var sut = CreateSut();
 
+        // Act
+        var result = await sut.GetRoleForEditAsync("missing");
+
+        // Assert
         result.Should().BeNull();
+        _userManagerMock.Verify(m => m.GetUsersInRoleAsync(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public async Task GetRoleForEditAsync_RoleExists_ReturnsRoleName()
+    public async Task GetRoleForEditAsync_ShouldReturnRoleNameFromRole()
     {
-        var role = CreateRole();
-        ArrangeRoleWithUsers(role, []);
+        // Arrange
+        var role = new IdentityRole { Id = "r1", Name = "Admin" };
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1")).ReturnsAsync(role);
+        _userManagerMock.Setup(m => m.GetUsersInRoleAsync("Admin"))
+            .ReturnsAsync([]);
+        _userManagerMock.Setup(m => m.Users)
+            .Returns(new List<ApplicationUser>().BuildMock());
 
-        var result = await _service.GetRoleForEditAsync("role-1");
+        var sut = CreateSut();
 
-        result.Should().NotBeNull();
-        result!.RoleName.Should().Be("Editor");
+        // Act
+        var result = await sut.GetRoleForEditAsync("r1");
+
+        // Assert
+        result!.RoleName.Should().Be("Admin");
     }
 
     [Fact]
-    public async Task GetRoleForEditAsync_RoleHasUsers_PopulatesUsersInRole()
+    public async Task GetRoleForEditAsync_ShouldPartitionUsersCorrectly_IntoUsersInRoleAndAvailableUsers()
     {
-        var role = CreateRole();
+        // Arrange
+        var role = new IdentityRole { Id = "r1", Name = "Admin" };
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1")).ReturnsAsync(role);
+
+        var userA = new ApplicationUser { Id = "A", UserName = "Alice", Email = "alice@test.com" };
+        var userB = new ApplicationUser { Id = "B", UserName = "Bob", Email = "bob@test.com" };
+        var userC = new ApplicationUser { Id = "C", UserName = "Carol", Email = "carol@test.com" };
+
+        _userManagerMock.Setup(m => m.GetUsersInRoleAsync("Admin"))
+            .ReturnsAsync([userA, userB]);
+        _userManagerMock.Setup(m => m.Users)
+            .Returns(new List<ApplicationUser> { userA, userB, userC }.BuildMock());
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.GetRoleForEditAsync("r1");
+
+        // Assert
+        result!.UsersInRole.Should().HaveCount(2)
+            .And.Contain(u => u.Id == "A")
+            .And.Contain(u => u.Id == "B");
+
+        result.AvailableUsers.Should().ContainSingle()
+            .Which.Id.Should().Be("C");
+    }
+
+    [Fact]
+    public async Task GetRoleForEditAsync_ShouldSortUsersInRoleByUserName()
+    {
+        // Arrange
+        var role = new IdentityRole { Id = "r1", Name = "Admin" };
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1")).ReturnsAsync(role);
+
         var usersInRole = new List<ApplicationUser>
         {
-            CreateUser("u1", "alice"),
-            CreateUser("u2", "bob")
+            new() { Id = "2", UserName = "Zelda", Email = "z@test.com" },
+            new() { Id = "1", UserName = "Alice", Email = "a@test.com" }
         };
-        ArrangeRoleWithUsers(role, usersInRole, usersInRole);
 
-        var result = await _service.GetRoleForEditAsync("role-1");
+        _userManagerMock.Setup(m => m.GetUsersInRoleAsync("Admin"))
+            .ReturnsAsync(usersInRole);
+        _userManagerMock.Setup(m => m.Users)
+            .Returns(usersInRole.BuildMock());
 
-        result!.UsersInRole.Should().HaveCount(2);
-        result.UsersInRole.Select(u => u.UserName).Should().Contain("alice");
-        result.UsersInRole.Select(u => u.UserName).Should().Contain("bob");
-    }
+        var sut = CreateSut();
 
-    [Fact]
-    public async Task GetRoleForEditAsync_UsersNotInRole_PopulatesAvailableUsers()
-    {
-        var role = CreateRole();
-        var alice = CreateUser("u1", "alice");
-        var usersInRole = new List<ApplicationUser> { alice };
-        var allUsers = new List<ApplicationUser>
-        {
-            alice,
-            CreateUser("u2", "bob"),
-            CreateUser("u3", "charlie")
-        };
-        ArrangeRoleWithUsers(role, usersInRole, allUsers);
+        // Act
+        var result = await sut.GetRoleForEditAsync("r1");
 
-        var result = await _service.GetRoleForEditAsync("role-1");
-
-        result!.AvailableUsers.Should().HaveCount(2);
-        result.AvailableUsers.Select(u => u.UserName).Should().Contain("bob");
-        result.AvailableUsers.Select(u => u.UserName).Should().Contain("charlie");
-        result.AvailableUsers.Select(u => u.UserName).Should().NotContain("alice");
-    }
-
-    [Fact]
-    public async Task GetRoleForEditAsync_NoUsersInRole_UsersInRoleIsEmpty()
-    {
-        var role = CreateRole("EmptyRole", "role-2");
-        var allUsers = new List<ApplicationUser> { CreateUser("u1", "alice") };
-        ArrangeRoleWithUsers(role, [], allUsers);
-
-        var result = await _service.GetRoleForEditAsync("role-2");
-
-        result!.UsersInRole.Should().BeEmpty();
-        result.AvailableUsers.Should().HaveCount(1);
-    }
-
-    [Fact]
-    public async Task GetRoleForEditAsync_UsersInRole_OrderedByUserName()
-    {
-        var role = CreateRole();
-        var usersInRole = new List<ApplicationUser>
-        {
-            CreateUser("u2", "zara"),
-            CreateUser("u1", "alice")
-        };
-        ArrangeRoleWithUsers(role, usersInRole, usersInRole);
-
-        var result = await _service.GetRoleForEditAsync("role-1");
-
+        // Assert
         result!.UsersInRole.Select(u => u.UserName).Should().BeInAscendingOrder();
     }
 
     [Fact]
-    public async Task GetRoleForEditAsync_AvailableUsers_OrderedByUserName()
+    public async Task GetRoleForEditAsync_ShouldSortAvailableUsersByUserName()
     {
-        var role = CreateRole();
-        var alice = CreateUser("u1", "alice");
-        var allUsers = new List<ApplicationUser>
+        // Arrange
+        var role = new IdentityRole { Id = "r1", Name = "Admin" };
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1")).ReturnsAsync(role);
+
+        var availableUsers = new List<ApplicationUser>
         {
-            alice,
-            CreateUser("u4", "zara"),
-            CreateUser("u2", "bob"),
-            CreateUser("u3", "charlie")
+            new() { Id = "2", UserName = "Zelda", Email = "z@test.com" },
+            new() { Id = "1", UserName = "Alice", Email = "a@test.com" }
         };
-        ArrangeRoleWithUsers(role, [alice], allUsers);
 
-        var result = await _service.GetRoleForEditAsync("role-1");
+        _userManagerMock.Setup(m => m.GetUsersInRoleAsync("Admin"))
+            .ReturnsAsync([]);
+        _userManagerMock.Setup(m => m.Users)
+            .Returns(availableUsers.BuildMock());
 
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.GetRoleForEditAsync("r1");
+
+        // Assert
         result!.AvailableUsers.Select(u => u.UserName).Should().BeInAscendingOrder();
     }
 
-    [Fact]
-    public async Task GetRoleForEditAsync_NullRoleName_MapsToEmptyString()
-    {
-        var role = new IdentityRole { Id = "role-1", Name = null };
-        _mockRoleManager.Setup(m => m.FindByIdAsync("role-1")).ReturnsAsync(role);
-        _mockUserManager.Setup(m => m.GetUsersInRoleAsync(null!)).ReturnsAsync([]);
-
-        var result = await _service.GetRoleForEditAsync("role-1");
-
-        result!.RoleName.Should().BeEmpty();
-    }
+    // -------------------------------------------------------------------------
+    // AddUserToRoleAsync
+    // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task AddUserToRoleAsync_RoleNotFound_ReturnsRoleNotFound()
+    public async Task AddUserToRoleAsync_ShouldReturnRoleNotFound_WhenRoleDoesNotExist()
     {
-        _mockRoleManager.Setup(m => m.FindByIdAsync("bad")).ReturnsAsync((IdentityRole?)null);
+        // Arrange
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1"))
+            .ReturnsAsync((IdentityRole?)null);
 
-        var result = await _service.AddUserToRoleAsync("bad", "u1");
+        var sut = CreateSut();
 
+        // Act
+        var result = await sut.AddUserToRoleAsync("r1", "u1");
+
+        // Assert
         result.Status.Should().Be(AddUserToRoleStatus.RoleNotFound);
+        _userManagerMock.Verify(m => m.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public async Task AddUserToRoleAsync_UserNotFound_ReturnsUserNotFound()
+    public async Task AddUserToRoleAsync_ShouldReturnUserNotFound_WhenUserDoesNotExist()
     {
-        var role = CreateRole();
-        _mockRoleManager.Setup(m => m.FindByIdAsync("role-1")).ReturnsAsync(role);
-        _mockUserManager.Setup(m => m.FindByIdAsync("bad")).ReturnsAsync((ApplicationUser?)null);
+        // Arrange
+        var role = new IdentityRole { Id = "r1", Name = "Admin" };
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1")).ReturnsAsync(role);
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1"))
+            .ReturnsAsync((ApplicationUser?)null);
 
-        var result = await _service.AddUserToRoleAsync("role-1", "bad");
+        var sut = CreateSut();
 
+        // Act
+        var result = await sut.AddUserToRoleAsync("r1", "u1");
+
+        // Assert
         result.Status.Should().Be(AddUserToRoleStatus.UserNotFound);
+        _userManagerMock.Verify(m => m.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public async Task AddUserToRoleAsync_Success_ReturnsSuccessWithNames()
+    public async Task AddUserToRoleAsync_ShouldReturnFailed_WithErrors_WhenAddToRoleAsyncFails()
     {
-        var role = CreateRole();
-        var user = CreateUser("u1", "alice");
-        _mockRoleManager.Setup(m => m.FindByIdAsync("role-1")).ReturnsAsync(role);
-        _mockUserManager.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
-        _mockUserManager.Setup(m => m.AddToRoleAsync(user, "Editor"))
+        // Arrange
+        var role = new IdentityRole { Id = "r1", Name = "Admin" };
+        var user = new ApplicationUser { Id = "u1", UserName = "alice" };
+
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1")).ReturnsAsync(role);
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.AddToRoleAsync(user, "Admin"))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Already in role" }));
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.AddUserToRoleAsync("r1", "u1");
+
+        // Assert
+        result.Status.Should().Be(AddUserToRoleStatus.Failed);
+        result.Errors.Should().ContainSingle().Which.Should().Be("Already in role");
+    }
+
+    [Fact]
+    public async Task AddUserToRoleAsync_ShouldReturnSuccess_WithUserAndRoleNames_WhenOperationSucceeds()
+    {
+        // Arrange
+        var role = new IdentityRole { Id = "r1", Name = "Admin" };
+        var user = new ApplicationUser { Id = "u1", UserName = "alice" };
+
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1")).ReturnsAsync(role);
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.AddToRoleAsync(user, "Admin"))
             .ReturnsAsync(IdentityResult.Success);
 
-        var result = await _service.AddUserToRoleAsync("role-1", "u1");
+        var sut = CreateSut();
 
+        // Act
+        var result = await sut.AddUserToRoleAsync("r1", "u1");
+
+        // Assert
         result.Status.Should().Be(AddUserToRoleStatus.Success);
         result.UserName.Should().Be("alice");
-        result.RoleName.Should().Be("Editor");
+        result.RoleName.Should().Be("Admin");
+        _userManagerMock.Verify(m => m.AddToRoleAsync(user, "Admin"), Times.Once);
     }
 
-    [Fact]
-    public async Task AddUserToRoleAsync_IdentityFails_ReturnsFailedWithErrors()
-    {
-        var role = CreateRole();
-        var user = CreateUser("u1", "alice");
-        _mockRoleManager.Setup(m => m.FindByIdAsync("role-1")).ReturnsAsync(role);
-        _mockUserManager.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
-        _mockUserManager.Setup(m => m.AddToRoleAsync(user, "Editor"))
-            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "User already in role" }));
-
-        var result = await _service.AddUserToRoleAsync("role-1", "u1");
-
-        result.Status.Should().Be(AddUserToRoleStatus.Failed);
-        result.Errors.Should().ContainSingle("User already in role");
-    }
+    // -------------------------------------------------------------------------
+    // RemoveUserFromRoleAsync
+    // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task RemoveUserFromRoleAsync_RoleNotFound_ReturnsRoleNotFound()
+    public async Task RemoveUserFromRoleAsync_ShouldReturnRoleNotFound_WhenRoleDoesNotExist()
     {
-        _mockRoleManager.Setup(m => m.FindByIdAsync("bad")).ReturnsAsync((IdentityRole?)null);
+        // Arrange
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1"))
+            .ReturnsAsync((IdentityRole?)null);
 
-        var result = await _service.RemoveUserFromRoleAsync("bad", "u1");
+        var sut = CreateSut();
 
+        // Act
+        var result = await sut.RemoveUserFromRoleAsync("r1", "u1");
+
+        // Assert
         result.Status.Should().Be(RemoveUserFromRoleStatus.RoleNotFound);
+        _userManagerMock.Verify(m => m.RemoveFromRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public async Task RemoveUserFromRoleAsync_UserNotFound_ReturnsUserNotFound()
+    public async Task RemoveUserFromRoleAsync_ShouldReturnUserNotFound_WhenUserDoesNotExist()
     {
-        var role = CreateRole();
-        _mockRoleManager.Setup(m => m.FindByIdAsync("role-1")).ReturnsAsync(role);
-        _mockUserManager.Setup(m => m.FindByIdAsync("bad")).ReturnsAsync((ApplicationUser?)null);
+        // Arrange
+        var role = new IdentityRole { Id = "r1", Name = "Admin" };
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1")).ReturnsAsync(role);
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1"))
+            .ReturnsAsync((ApplicationUser?)null);
 
-        var result = await _service.RemoveUserFromRoleAsync("role-1", "bad");
+        var sut = CreateSut();
 
+        // Act
+        var result = await sut.RemoveUserFromRoleAsync("r1", "u1");
+
+        // Assert
         result.Status.Should().Be(RemoveUserFromRoleStatus.UserNotFound);
+        _userManagerMock.Verify(m => m.RemoveFromRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public async Task RemoveUserFromRoleAsync_Success_ReturnsSuccessWithNames()
+    public async Task RemoveUserFromRoleAsync_ShouldReturnFailed_WithErrors_WhenRemoveFromRoleAsyncFails()
     {
-        var role = CreateRole();
-        var user = CreateUser("u1", "alice");
-        _mockRoleManager.Setup(m => m.FindByIdAsync("role-1")).ReturnsAsync(role);
-        _mockUserManager.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
-        _mockUserManager.Setup(m => m.RemoveFromRoleAsync(user, "Editor"))
-            .ReturnsAsync(IdentityResult.Success);
+        // Arrange
+        var role = new IdentityRole { Id = "r1", Name = "Admin" };
+        var user = new ApplicationUser { Id = "u1", UserName = "alice" };
 
-        var result = await _service.RemoveUserFromRoleAsync("role-1", "u1");
-
-        result.Status.Should().Be(RemoveUserFromRoleStatus.Success);
-        result.UserName.Should().Be("alice");
-        result.RoleName.Should().Be("Editor");
-    }
-
-    [Fact]
-    public async Task RemoveUserFromRoleAsync_IdentityFails_ReturnsFailedWithErrors()
-    {
-        var role = CreateRole();
-        var user = CreateUser("u1", "alice");
-        _mockRoleManager.Setup(m => m.FindByIdAsync("role-1")).ReturnsAsync(role);
-        _mockUserManager.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
-        _mockUserManager.Setup(m => m.RemoveFromRoleAsync(user, "Editor"))
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1")).ReturnsAsync(role);
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.RemoveFromRoleAsync(user, "Admin"))
             .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Not in role" }));
 
-        var result = await _service.RemoveUserFromRoleAsync("role-1", "u1");
+        var sut = CreateSut();
 
+        // Act
+        var result = await sut.RemoveUserFromRoleAsync("r1", "u1");
+
+        // Assert
         result.Status.Should().Be(RemoveUserFromRoleStatus.Failed);
-        result.Errors.Should().ContainSingle("Not in role");
+        result.Errors.Should().ContainSingle().Which.Should().Be("Not in role");
+    }
+
+    [Fact]
+    public async Task RemoveUserFromRoleAsync_ShouldReturnSuccess_WithUserAndRoleNames_WhenOperationSucceeds()
+    {
+        // Arrange
+        var role = new IdentityRole { Id = "r1", Name = "Admin" };
+        var user = new ApplicationUser { Id = "u1", UserName = "alice" };
+
+        _roleManagerMock.Setup(m => m.FindByIdAsync("r1")).ReturnsAsync(role);
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.RemoveFromRoleAsync(user, "Admin"))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.RemoveUserFromRoleAsync("r1", "u1");
+
+        // Assert
+        result.Status.Should().Be(RemoveUserFromRoleStatus.Success);
+        result.UserName.Should().Be("alice");
+        result.RoleName.Should().Be("Admin");
+        _userManagerMock.Verify(m => m.RemoveFromRoleAsync(user, "Admin"), Times.Once);
     }
 }

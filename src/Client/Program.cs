@@ -37,7 +37,7 @@ Console.WriteLine(tokenResponse.AccessToken);
 
 // call api
 var apiClient = new HttpClient();
-apiClient.SetBearerToken(tokenResponse.AccessToken);
+apiClient.SetBearerToken(tokenResponse.AccessToken!);
 
 var response = await apiClient.GetAsync("https://localhost:6001/identity");
 if (!response.IsSuccessStatusCode)

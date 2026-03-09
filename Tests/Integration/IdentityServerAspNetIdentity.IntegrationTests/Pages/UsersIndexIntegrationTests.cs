@@ -1,5 +1,6 @@
-using IdentityServerAspNetIdentity.IntegrationTests.Infrastructure;
 using IdentityServerAspNetIdentity.Models;
+using IdentityServerAspNetIdentity.IntegrationTests.Infrastructure;
+using IdentityServerAspNetIdentity.TestSupport.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 
 namespace IdentityServerAspNetIdentity.IntegrationTests.Pages;

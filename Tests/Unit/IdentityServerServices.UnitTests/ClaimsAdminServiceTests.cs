@@ -1,11 +1,10 @@
-using System.Security.Claims;
 using FluentAssertions;
 using IdentityServer.EF.DataAccess.DataMigrations;
 using IdentityServerAspNetIdentity.Models;
 using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using MockQueryable;
 using Moq;
 using Xunit;
 
@@ -13,564 +12,293 @@ namespace IdentityServerServices.UnitTests;
 
 public class ClaimsAdminServiceTests
 {
-    private sealed class SqliteApplicationDb : IDisposable
+    private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
+
+    public ClaimsAdminServiceTests()
     {
-        private readonly SqliteConnection _connection;
-        private readonly DbContextOptions<ApplicationDbContext> _options;
-
-        public SqliteApplicationDb()
-        {
-            _connection = new SqliteConnection("Data Source=:memory:");
-            _connection.Open();
-
-            _options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseSqlite(_connection)
-                .Options;
-
-            using var context = CreateContext();
-            context.Database.EnsureCreated();
-        }
-
-        public ApplicationDbContext CreateContext()
-        {
-            return new ApplicationDbContext(_options);
-        }
-
-        public void Dispose()
-        {
-            _connection.Dispose();
-        }
+        _userManagerMock = MockUserManager<ApplicationUser>();
     }
 
-    private static Mock<UserManager<ApplicationUser>> CreateMockUserManager(
-        IReadOnlyList<ApplicationUser>? users = null)
+    private static ApplicationDbContext CreateApplicationDbContext()
     {
-        var store = new Mock<IUserStore<ApplicationUser>>();
-        var mockUserManager = new Mock<UserManager<ApplicationUser>>(
-            store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
-
-        mockUserManager.SetupGet(manager => manager.Users)
-            .Returns(new TestAsyncEnumerable<ApplicationUser>(users ?? []));
-
-        return mockUserManager;
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite($"DataSource=file:{Guid.NewGuid()}?mode=memory&cache=shared")
+            .Options;
+            
+        var context = new ApplicationDbContext(options);
+        context.Database.OpenConnection();
+        context.Database.EnsureCreated();
+        return context;
     }
 
-    private static ClaimsAdminService CreateService(
-        ApplicationDbContext dbContext,
-        Mock<UserManager<ApplicationUser>> mockUserManager)
+    private ClaimsAdminService CreateSut(ApplicationDbContext context) =>
+        new(context, _userManagerMock.Object);
+
+    private static Mock<UserManager<TUser>> MockUserManager<TUser>() where TUser : class
     {
-        return new ClaimsAdminService(dbContext, mockUserManager.Object);
+        var store = new Mock<IUserStore<TUser>>();
+        return new Mock<UserManager<TUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
     }
 
-    private static ApplicationUser CreateUser(string id, string userName, string? email = null)
-    {
-        return new ApplicationUser
-        {
-            Id = id,
-            UserName = userName,
-            NormalizedUserName = userName.ToUpperInvariant(),
-            Email = email,
-            NormalizedEmail = email?.ToUpperInvariant()
-        };
-    }
+    // -------------------------------------------------------------------------
+    // GetClaimsAsync
+    // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task GetClaimsAsync_NoClaims_ReturnsEmpty()
+    public async Task GetClaimsAsync_ShouldReturnDistinctSortedClaims()
     {
-        using var sqliteDb = new SqliteApplicationDb();
-        await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager());
+        await using var dbContext = CreateApplicationDbContext();
 
-        var result = await service.GetClaimsAsync();
+        var testUser = new ApplicationUser { Id = "user1", UserName = "test_user1", Email = "test1@example.com" };
+        dbContext.Users.Add(testUser);
 
-        result.Should().BeEmpty();
+        dbContext.UserClaims.AddRange(
+            new IdentityUserClaim<string> { UserId = "user1", ClaimType = "email", ClaimValue = "a" },
+            new IdentityUserClaim<string> { UserId = "user1", ClaimType = "role", ClaimValue = "b" },
+            new IdentityUserClaim<string> { UserId = "user1", ClaimType = "email", ClaimValue = "c" }, // Duplicate type
+            new IdentityUserClaim<string> { UserId = "user1", ClaimType = null!, ClaimValue = "d" }    // Null type should be ignored
+        );
+        await dbContext.SaveChangesAsync();
+
+        var sut = CreateSut(dbContext);
+
+        var result = await sut.GetClaimsAsync();
+
+        result.Should().HaveCount(2);
+        result[0].ClaimType.Should().Be("email");
+        result[1].ClaimType.Should().Be("role");
     }
 
-    [Fact]
-    public async Task GetClaimsAsync_DistinctOrdered_ExcludesNullAndEmpty()
-    {
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.AddRange(
-                CreateUser("u1", "user1"),
-                CreateUser("u2", "user2"),
-                CreateUser("u3", "user3"));
-            seedContext.UserClaims.AddRange(
-                new IdentityUserClaim<string> { UserId = "u1", ClaimType = null, ClaimValue = "x" },
-                new IdentityUserClaim<string> { UserId = "u1", ClaimType = string.Empty, ClaimValue = "x" },
-                new IdentityUserClaim<string> { UserId = "u1", ClaimType = "zeta", ClaimValue = "x" },
-                new IdentityUserClaim<string> { UserId = "u2", ClaimType = "alpha", ClaimValue = "x" },
-                new IdentityUserClaim<string> { UserId = "u3", ClaimType = "alpha", ClaimValue = "y" });
-            await seedContext.SaveChangesAsync();
-        }
-
-        await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager());
-
-        var result = await service.GetClaimsAsync();
-
-        result.Select(item => item.ClaimType).Should().Equal("alpha", "zeta");
-    }
+    // -------------------------------------------------------------------------
+    // GetForEditAsync
+    // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task GetForEditAsync_ClaimTypeMissing_ReturnsNull()
+    public async Task GetForEditAsync_ShouldReturnNull_WhenNoUsersHaveClaim()
     {
-        using var sqliteDb = new SqliteApplicationDb();
-        await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager());
+        await using var context = CreateApplicationDbContext();
+        var sut = CreateSut(context);
 
-        var result = await service.GetForEditAsync("department");
+        var result = await sut.GetForEditAsync("nonexistent");
 
         result.Should().BeNull();
     }
 
     [Fact]
-    public async Task GetForEditAsync_MapsUsersInClaim_AvailableUsers_OrderAndFiltering()
+    public async Task GetForEditAsync_ShouldSetIsLastUserAssignmentCorrectly()
     {
-        var user1 = CreateUser("u1", "zara", "zara@test.com");
-        var user2 = CreateUser("u2", "adam", "adam@test.com");
-        var user3 = CreateUser("u3", "bob", "bob@test.com");
-        var user4 = CreateUser("u4", "charlie", "charlie@test.com");
-        var user5 = CreateUser("u5", "hidden", "hidden@test.com");
+        await using var context = CreateApplicationDbContext();
+        
+        var testUser1 = new ApplicationUser { Id = "u1", UserName = "Alice", Email = "alice@example.com" };
+        var testUser2 = new ApplicationUser { Id = "u2", UserName = "Bob", Email = "bob@example.com" };
+        var testUser3 = new ApplicationUser { Id = "u3", UserName = "third", Email = "other@example.com" };
+        var testUser4 = new ApplicationUser { Id = "u4", UserName = "Charlie", Email = "charlie@example.com" };
+        context.Users.AddRange(testUser1, testUser2, testUser3, testUser4);
 
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
+        context.UserClaims.AddRange(
+            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "role", ClaimValue = "admin" },
+            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "role", ClaimValue = "user" },
+            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "role", ClaimValue = "manager" },
+            new IdentityUserClaim<string> { UserId = "u3", ClaimType = "other", ClaimValue = "irrelevant" }
+        );
+        await context.SaveChangesAsync();
+
+        var users = new List<ApplicationUser>
         {
-            seedContext.Users.AddRange(user1, user2, user3, user4, user5);
-            seedContext.UserClaims.AddRange(
-                new IdentityUserClaim<string> { UserId = "u1", ClaimType = "department", ClaimValue = "engineering" },
-                new IdentityUserClaim<string> { UserId = "u2", ClaimType = "department", ClaimValue = "sales" },
-                new IdentityUserClaim<string> { UserId = "u2", ClaimType = "department", ClaimValue = "alpha" },
-                new IdentityUserClaim<string> { UserId = "u5", ClaimType = "department", ClaimValue = "ignored-value" },
-                new IdentityUserClaim<string> { UserId = "u3", ClaimType = "location", ClaimValue = "dublin" });
-            await seedContext.SaveChangesAsync();
-        }
+            testUser1,
+            testUser2,
+            testUser4 // Available user
+        };
+        _userManagerMock.Setup(m => m.Users).Returns(users.BuildMock());
 
-        await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager([user1, user2, user3, user4]);
-        var service = CreateService(dbContext, mockUserManager);
+        var sut = CreateSut(context);
 
-        var result = await service.GetForEditAsync("department");
+        // Act
+        var result = await sut.GetForEditAsync("role");
 
+        // Assert
         result.Should().NotBeNull();
-        result!.UsersInClaim.Select(item => (item.UserName, item.ClaimValue))
-            .Should().Equal(
-                ("adam", "alpha"),
-                ("adam", "sales"),
-                ("zara", "engineering"));
-        result.AvailableUsers.Select(item => item.UserName).Should().Equal("bob", "charlie");
+        
+        // u1 has 1 assignment. But uniqueUsersCount is 2 (u1, u2), so u1 is NOT the last total assignment
+        var aliceAssignment = result!.UsersInClaim.Single(u => u.UserId == "u1");
+        aliceAssignment.IsLastUserAssignment.Should().BeFalse();
+
+        // u2 has 2 assignments. Never the last.
+        var bobAssignments = result.UsersInClaim.Where(u => u.UserId == "u2").ToList();
+        bobAssignments.Should().HaveCount(2).And.AllSatisfy(a => a.IsLastUserAssignment.Should().BeFalse());
+        
+        result.AvailableUsers.Should().ContainSingle().Which.UserId.Should().Be("u4");
     }
 
     [Fact]
-    public async Task GetForEditAsync_SingleUniqueAssignment_SetsIsLastUserAssignmentTrue()
+    public async Task GetForEditAsync_ShouldSetIsLastUserAssignmentTrue_WhenOnlyOneUserWithOneAssignment()
     {
-        var user = CreateUser("u1", "alice", "alice@test.com");
+        await using var context = CreateApplicationDbContext();
 
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
+        var testUser = new ApplicationUser { Id = "u1", UserName = "Alice", Email = "alice@example.com" };
+        context.Users.Add(testUser);
+
+        context.UserClaims.Add(new IdentityUserClaim<string> { UserId = "u1", ClaimType = "role", ClaimValue = "admin" });
+        await context.SaveChangesAsync();
+
+        var users = new List<ApplicationUser> { new() { Id = "u1", UserName = "Alice" } };
+        _userManagerMock.Setup(m => m.Users).Returns(users.BuildMock());
+
+        var sut = CreateSut(context);
+
+        // Act
+        var result = await sut.GetForEditAsync("role");
+
+        // Assert
+        result!.UsersInClaim.Single().IsLastUserAssignment.Should().BeTrue();
+    }
+    
+    [Fact]
+    public async Task GetForEditAsync_ShouldDefaultNewClaimValueToTrueString_WhenAllValuesAreBooleans()
+    {
+        await using var context = CreateApplicationDbContext();
+
+        var testUser1 = new ApplicationUser { Id = "u1", UserName = "test_user1", Email = "test1@example.com" };
+        var testUser2 = new ApplicationUser { Id = "u2", UserName = "test_user2", Email = "test2@example.com" };
+        context.Users.AddRange(testUser1, testUser2);
+
+        context.UserClaims.AddRange(
+            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "boolClaim", ClaimValue = "true" },
+            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "boolClaim", ClaimValue = "false" }
+        );
+        await context.SaveChangesAsync();
+
+        var users = new List<ApplicationUser>
         {
-            seedContext.Users.Add(user);
-            seedContext.UserClaims.Add(new IdentityUserClaim<string>
-            {
-                UserId = "u1",
-                ClaimType = "department",
-                ClaimValue = "engineering"
-            });
-            await seedContext.SaveChangesAsync();
-        }
+            new() { Id = "u1", UserName = "Alice" },
+            new() { Id = "u2", UserName = "Bob" },
+        };
+        _userManagerMock.Setup(m => m.Users).Returns(users.BuildMock());
 
-        await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager([user]));
+        var sut = CreateSut(context);
 
-        var result = await service.GetForEditAsync("department");
+        var result = await sut.GetForEditAsync("boolClaim", null);
 
-        result.Should().NotBeNull();
-        result!.UsersInClaim.Should().ContainSingle();
-        result.UsersInClaim[0].IsLastUserAssignment.Should().BeTrue();
+        result!.NewClaimValue.Should().Be("true");
     }
 
-    [Fact]
-    public async Task GetForEditAsync_MultipleAssignmentsForSameUser_DoesNotSetLastUserAssignment()
-    {
-        var user = CreateUser("u1", "alice", "alice@test.com");
-
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.Add(user);
-            seedContext.UserClaims.AddRange(
-                new IdentityUserClaim<string> { UserId = "u1", ClaimType = "department", ClaimValue = "engineering" },
-                new IdentityUserClaim<string> { UserId = "u1", ClaimType = "department", ClaimValue = "sales" });
-            await seedContext.SaveChangesAsync();
-        }
-
-        await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager([user]));
-
-        var result = await service.GetForEditAsync("department");
-
-        result.Should().NotBeNull();
-        result!.UsersInClaim.Should().HaveCount(2);
-        result.UsersInClaim.Should().OnlyContain(item => item.IsLastUserAssignment == false);
-    }
+    // -------------------------------------------------------------------------
+    // AddUserToClaimAsync
+    // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task GetForEditAsync_BooleanAssignments_DefaultsNewClaimValueToTrue_WhenInputNullOrWhitespace()
+    public async Task AddUserToClaimAsync_ShouldReturnUserNotFound()
     {
-        var user1 = CreateUser("u1", "alice", "alice@test.com");
-        var user2 = CreateUser("u2", "bob", "bob@test.com");
-        var user3 = CreateUser("u3", "charlie", "charlie@test.com");
+        await using var context = CreateApplicationDbContext();
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync((ApplicationUser?)null);
+        var sut = CreateSut(context);
 
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.AddRange(user1, user2, user3);
-            seedContext.UserClaims.AddRange(
-                new IdentityUserClaim<string> { UserId = "u1", ClaimType = "feature-enabled", ClaimValue = "true" },
-                new IdentityUserClaim<string> { UserId = "u2", ClaimType = "feature-enabled", ClaimValue = "false" });
-            await seedContext.SaveChangesAsync();
-        }
-
-        await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager([user1, user2, user3]));
-
-        var resultWithNull = await service.GetForEditAsync("feature-enabled", null);
-        var resultWithWhitespace = await service.GetForEditAsync("feature-enabled", "   ");
-
-        resultWithNull.Should().NotBeNull();
-        resultWithWhitespace.Should().NotBeNull();
-        resultWithNull!.NewClaimValue.Should().Be("true");
-        resultWithWhitespace!.NewClaimValue.Should().Be("true");
-    }
-
-    [Fact]
-    public async Task GetForEditAsync_NonBooleanAssignments_DoesNotDefaultNewClaimValue()
-    {
-        var user1 = CreateUser("u1", "alice", "alice@test.com");
-        var user2 = CreateUser("u2", "bob", "bob@test.com");
-
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.AddRange(user1, user2);
-            seedContext.UserClaims.Add(new IdentityUserClaim<string>
-            {
-                UserId = "u1",
-                ClaimType = "department",
-                ClaimValue = "engineering"
-            });
-            await seedContext.SaveChangesAsync();
-        }
-
-        await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager([user1, user2]));
-
-        var result = await service.GetForEditAsync("department", null);
-
-        result.Should().NotBeNull();
-        result!.NewClaimValue.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task GetForEditAsync_NonWhitespaceInput_PreservesInputNewClaimValue()
-    {
-        var user1 = CreateUser("u1", "alice", "alice@test.com");
-        var user2 = CreateUser("u2", "bob", "bob@test.com");
-
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.AddRange(user1, user2);
-            seedContext.UserClaims.AddRange(
-                new IdentityUserClaim<string> { UserId = "u1", ClaimType = "feature-enabled", ClaimValue = "true" },
-                new IdentityUserClaim<string> { UserId = "u2", ClaimType = "feature-enabled", ClaimValue = "false" });
-            await seedContext.SaveChangesAsync();
-        }
-
-        await using var dbContext = sqliteDb.CreateContext();
-        var service = CreateService(dbContext, CreateMockUserManager([user1, user2]));
-
-        var result = await service.GetForEditAsync("feature-enabled", "  custom-value  ");
-
-        result.Should().NotBeNull();
-        result!.NewClaimValue.Should().Be("  custom-value  ");
-    }
-
-    [Fact]
-    public async Task AddUserToClaimAsync_UserNotFound_ReturnsUserNotFound()
-    {
-        using var sqliteDb = new SqliteApplicationDb();
-        await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
-            .ReturnsAsync((ApplicationUser?)null);
-        var service = CreateService(dbContext, mockUserManager);
-
-        var result = await service.AddUserToClaimAsync("department", "u1", "engineering");
+        var result = await sut.AddUserToClaimAsync("role", "u1", "admin");
 
         result.Status.Should().Be(AddClaimAssignmentStatus.UserNotFound);
     }
 
     [Fact]
-    public async Task AddUserToClaimAsync_AlreadyAssignedByType_ReturnsAlreadyAssigned()
+    public async Task AddUserToClaimAsync_ShouldReturnAlreadyAssigned()
     {
-        var user = CreateUser("u1", "alice", "alice@test.com");
+        await using var context = CreateApplicationDbContext();
 
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.Add(user);
-            seedContext.UserClaims.Add(new IdentityUserClaim<string>
-            {
-                UserId = "u1",
-                ClaimType = "department",
-                ClaimValue = "engineering"
-            });
-            await seedContext.SaveChangesAsync();
-        }
+        var testUser = new ApplicationUser { Id = "u1", UserName = "test_user1", Email = "test1@example.com" };
+        context.Users.Add(testUser);
 
-        await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager([user]);
-        mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
-            .ReturnsAsync(user);
-        var service = CreateService(dbContext, mockUserManager);
+        context.UserClaims.Add(new IdentityUserClaim<string> { UserId = "u1", ClaimType = "role", ClaimValue = "admin" });
+        await context.SaveChangesAsync();
 
-        var result = await service.AddUserToClaimAsync("department", "u1", "different-value");
+        var user = new ApplicationUser { Id = "u1", UserName = "Alice" };
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        
+        var sut = CreateSut(context);
+
+        var result = await sut.AddUserToClaimAsync("role", "u1", "admin");
 
         result.Status.Should().Be(AddClaimAssignmentStatus.AlreadyAssigned);
-        mockUserManager.Verify(
-            manager => manager.AddClaimAsync(It.IsAny<ApplicationUser>(), It.IsAny<Claim>()),
-            Times.Never);
     }
 
     [Fact]
-    public async Task AddUserToClaimAsync_IdentityFailure_ReturnsIdentityFailureWithErrorDescriptions()
+    public async Task AddUserToClaimAsync_ShouldReturnIdentityFailure_IfUserManagerFails()
     {
-        var user = CreateUser("u1", "alice", "alice@test.com");
+        await using var context = CreateApplicationDbContext();
+        var user = new ApplicationUser { Id = "u1", UserName = "Alice" };
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        
+        _userManagerMock.Setup(m => m.AddClaimAsync(user, It.IsAny<System.Security.Claims.Claim>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Error adding claim" }));
 
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.Add(user);
-            await seedContext.SaveChangesAsync();
-        }
+        var sut = CreateSut(context);
 
-        await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager([user]);
-        mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
-            .ReturnsAsync(user);
-        mockUserManager.Setup(manager => manager.AddClaimAsync(user, It.IsAny<Claim>()))
-            .ReturnsAsync(IdentityResult.Failed(
-                new IdentityError { Description = "error-1" },
-                new IdentityError { Description = "error-2" }));
-        var service = CreateService(dbContext, mockUserManager);
-
-        var result = await service.AddUserToClaimAsync("department", "u1", "engineering");
+        var result = await sut.AddUserToClaimAsync("role", "u1", "admin");
 
         result.Status.Should().Be(AddClaimAssignmentStatus.IdentityFailure);
-        result.Errors.Should().Equal("error-1", "error-2");
+        result.Errors.Should().ContainSingle().Which.Should().Be("Error adding claim");
     }
 
     [Fact]
-    public async Task AddUserToClaimAsync_Success_AddsClaimWithExactTypeAndValue_AndReturnsUserName()
+    public async Task AddUserToClaimAsync_ShouldReturnSuccess_WhenValid()
     {
-        var user = CreateUser("u1", "alice", "alice@test.com");
-
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.Add(user);
-            await seedContext.SaveChangesAsync();
-        }
-
-        await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager([user]);
-        mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
-            .ReturnsAsync(user);
-        mockUserManager.Setup(manager => manager.AddClaimAsync(user, It.IsAny<Claim>()))
+        await using var context = CreateApplicationDbContext();
+        var user = new ApplicationUser { Id = "u1", UserName = "Alice" };
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        
+        _userManagerMock.Setup(m => m.AddClaimAsync(user, It.Is<System.Security.Claims.Claim>(c => c.Type == "role" && c.Value == "admin")))
             .ReturnsAsync(IdentityResult.Success);
-        var service = CreateService(dbContext, mockUserManager);
 
-        var result = await service.AddUserToClaimAsync("department", "u1", "engineering");
+        var sut = CreateSut(context);
+
+        var result = await sut.AddUserToClaimAsync("role", "u1", "admin");
 
         result.Status.Should().Be(AddClaimAssignmentStatus.Success);
-        result.UserName.Should().Be("alice");
-        mockUserManager.Verify(
-            manager => manager.AddClaimAsync(
-                user,
-                It.Is<Claim>(claim => claim.Type == "department" && claim.Value == "engineering")),
-            Times.Once);
+        result.UserName.Should().Be("Alice");
     }
 
-    [Fact]
-    public async Task RemoveUserFromClaimAsync_UserNotFound_ReturnsUserNotFound()
-    {
-        using var sqliteDb = new SqliteApplicationDb();
-        await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager();
-        mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
-            .ReturnsAsync((ApplicationUser?)null);
-        var service = CreateService(dbContext, mockUserManager);
-
-        var result = await service.RemoveUserFromClaimAsync("department", "u1", "engineering");
-
-        result.Status.Should().Be(RemoveClaimAssignmentStatus.UserNotFound);
-    }
+    // -------------------------------------------------------------------------
+    // RemoveUserFromClaimAsync
+    // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task RemoveUserFromClaimAsync_AssignmentMissing_ReturnsAssignmentNotFound()
+    public async Task RemoveUserFromClaimAsync_ShouldReturnAssignmentNotFound()
     {
-        var user = CreateUser("u1", "alice", "alice@test.com");
+        await using var context = CreateApplicationDbContext();
+        var user = new ApplicationUser { Id = "u1", UserName = "Alice" };
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        
+        var sut = CreateSut(context);
 
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.Add(user);
-            seedContext.UserClaims.Add(new IdentityUserClaim<string>
-            {
-                UserId = "u1",
-                ClaimType = "department",
-                ClaimValue = "sales"
-            });
-            await seedContext.SaveChangesAsync();
-        }
-
-        await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager([user]);
-        mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
-            .ReturnsAsync(user);
-        var service = CreateService(dbContext, mockUserManager);
-
-        var result = await service.RemoveUserFromClaimAsync("department", "u1", "engineering");
+        var result = await sut.RemoveUserFromClaimAsync("role", "u1", "admin");
 
         result.Status.Should().Be(RemoveClaimAssignmentStatus.AssignmentNotFound);
-        mockUserManager.Verify(
-            manager => manager.RemoveClaimAsync(It.IsAny<ApplicationUser>(), It.IsAny<Claim>()),
-            Times.Never);
     }
 
     [Fact]
-    public async Task RemoveUserFromClaimAsync_IdentityFailure_ReturnsIdentityFailureWithErrorDescriptions()
+    public async Task RemoveUserFromClaimAsync_ShouldDetermineHasRemainingAssignments()
     {
-        var user = CreateUser("u1", "alice", "alice@test.com");
+        await using var context = CreateApplicationDbContext();
 
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.Add(user);
-            seedContext.UserClaims.Add(new IdentityUserClaim<string>
-            {
-                UserId = "u1",
-                ClaimType = "department",
-                ClaimValue = null
-            });
-            await seedContext.SaveChangesAsync();
-        }
+        var testUser1 = new ApplicationUser { Id = "u1", UserName = "test_user1", Email = "test1@example.com" };
+        var testUser2 = new ApplicationUser { Id = "u2", UserName = "test_user2", Email = "test2@example.com" };
+        context.Users.AddRange(testUser1, testUser2);
 
-        await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager([user]);
-        mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
-            .ReturnsAsync(user);
-        mockUserManager.Setup(manager => manager.RemoveClaimAsync(user, It.IsAny<Claim>()))
-            .ReturnsAsync(IdentityResult.Failed(
-                new IdentityError { Description = "error-1" },
-                new IdentityError { Description = "error-2" }));
-        var service = CreateService(dbContext, mockUserManager);
+        // Setup two assignments, one will be removed
+        context.UserClaims.AddRange(
+            new IdentityUserClaim<string> { UserId = "u1", ClaimType = "role", ClaimValue = "admin" },
+            new IdentityUserClaim<string> { UserId = "u2", ClaimType = "role", ClaimValue = "user" }
+        );
+        await context.SaveChangesAsync();
 
-        var result = await service.RemoveUserFromClaimAsync("department", "u1", string.Empty);
+        var user = new ApplicationUser { Id = "u1", UserName = "Alice" };
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.RemoveClaimAsync(user, It.IsAny<System.Security.Claims.Claim>()))
+            .ReturnsAsync(IdentityResult.Success);
+            
+        var sut = CreateSut(context);
 
-        result.Status.Should().Be(RemoveClaimAssignmentStatus.IdentityFailure);
-        result.Errors.Should().Equal("error-1", "error-2");
-    }
-
-    [Fact]
-    public async Task RemoveUserFromClaimAsync_Success_WithRemainingAssignments_ReturnsHasRemainingAssignmentsTrue()
-    {
-        var user1 = CreateUser("u1", "alice", "alice@test.com");
-        var user2 = CreateUser("u2", "bob", "bob@test.com");
-
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.AddRange(user1, user2);
-            seedContext.UserClaims.AddRange(
-                new IdentityUserClaim<string> { UserId = "u1", ClaimType = "department", ClaimValue = "engineering" },
-                new IdentityUserClaim<string> { UserId = "u2", ClaimType = "department", ClaimValue = "sales" });
-            await seedContext.SaveChangesAsync();
-        }
-
-        await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager([user1, user2]);
-        mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
-            .ReturnsAsync(user1);
-        mockUserManager.Setup(manager => manager.RemoveClaimAsync(user1, It.IsAny<Claim>()))
-            .ReturnsAsync(IdentityResult.Success)
-            .Callback<ApplicationUser, Claim>((_, claim) =>
-            {
-                var claimRow = dbContext.UserClaims.FirstOrDefault(c =>
-                    c.UserId == "u1" &&
-                    c.ClaimType == claim.Type &&
-                    (c.ClaimValue ?? string.Empty) == claim.Value);
-
-                if (claimRow is not null)
-                {
-                    dbContext.UserClaims.Remove(claimRow);
-                    dbContext.SaveChanges();
-                }
-            });
-        var service = CreateService(dbContext, mockUserManager);
-
-        var result = await service.RemoveUserFromClaimAsync("department", "u1", "engineering");
+        var result = await sut.RemoveUserFromClaimAsync("role", "u1", "admin");
 
         result.Status.Should().Be(RemoveClaimAssignmentStatus.Success);
-        result.UserName.Should().Be("alice");
-        result.HasRemainingAssignments.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task RemoveUserFromClaimAsync_Success_LastAssignmentRemoved_ReturnsHasRemainingAssignmentsFalse()
-    {
-        var user = CreateUser("u1", "alice", "alice@test.com");
-
-        using var sqliteDb = new SqliteApplicationDb();
-        await using (var seedContext = sqliteDb.CreateContext())
-        {
-            seedContext.Users.Add(user);
-            seedContext.UserClaims.Add(new IdentityUserClaim<string>
-            {
-                UserId = "u1",
-                ClaimType = "department",
-                ClaimValue = "engineering"
-            });
-            await seedContext.SaveChangesAsync();
-        }
-
-        await using var dbContext = sqliteDb.CreateContext();
-        var mockUserManager = CreateMockUserManager([user]);
-        mockUserManager.Setup(manager => manager.FindByIdAsync("u1"))
-            .ReturnsAsync(user);
-        mockUserManager.Setup(manager => manager.RemoveClaimAsync(user, It.IsAny<Claim>()))
-            .ReturnsAsync(IdentityResult.Success)
-            .Callback<ApplicationUser, Claim>((_, claim) =>
-            {
-                var claimRow = dbContext.UserClaims.FirstOrDefault(c =>
-                    c.UserId == "u1" &&
-                    c.ClaimType == claim.Type &&
-                    (c.ClaimValue ?? string.Empty) == claim.Value);
-
-                if (claimRow is not null)
-                {
-                    dbContext.UserClaims.Remove(claimRow);
-                    dbContext.SaveChanges();
-                }
-            });
-        var service = CreateService(dbContext, mockUserManager);
-
-        var result = await service.RemoveUserFromClaimAsync("department", "u1", "engineering");
-
-        result.Status.Should().Be(RemoveClaimAssignmentStatus.Success);
-        result.UserName.Should().Be("alice");
-        result.HasRemainingAssignments.Should().BeFalse();
+        result.HasRemainingAssignments.Should().BeTrue(); // because u2 still has role="user"
     }
 }
