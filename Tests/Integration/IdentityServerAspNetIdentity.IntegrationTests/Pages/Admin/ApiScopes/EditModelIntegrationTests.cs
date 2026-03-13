@@ -25,6 +25,9 @@ public class EditModelIntegrationTests : IDisposable
         // Assert
         document.QuerySelector("h2")!.TextContent.Should().Contain("Create API Scope");
         document.QuerySelector("#edit-api-scope-form").Should().NotBeNull();
+        document.QuerySelector<IHtmlInputElement>("#Input_Name")!.Value.Should().BeEmpty();
+        document.QuerySelector<IHtmlInputElement>("#Input_DisplayName")!.Value.Should().BeEmpty();
+        document.QuerySelector<IHtmlTextAreaElement>("#Input_Description")!.Value.Should().BeEmpty();
         document.QuerySelector("#edit-api-scope-form button[type='submit']")!
             .TextContent.Should().Contain("Create");
         document.QuerySelector("#save-before-user-claims-message").Should().NotBeNull();
