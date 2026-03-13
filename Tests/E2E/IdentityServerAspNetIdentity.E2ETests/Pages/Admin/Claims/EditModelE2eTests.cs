@@ -83,6 +83,58 @@ public class EditModelE2eTests : IClassFixture<PlaywrightFixture>, IAsyncLifetim
         await Expect(userInTable.Locator("td").Nth(2)).ToHaveTextAsync(newClaimValue);
     }
 
+    [Fact]
+    public async Task EditClaim_ShouldShowValidationError_WhenNoUserSelected()
+    {
+        // Arrange
+        var claimType = $"val-nouser-{Guid.NewGuid():N}";
+
+        var existingUsername = $"existinguser-{Guid.NewGuid():N}";
+        var existingUserId = await TestDataHelper.CreateTestUserAsync(_fixture.Factory, existingUsername, $"{existingUsername}@test.local");
+        await TestDataHelper.AddUserClaimAsync(_fixture.Factory, existingUserId, claimType, "some-value");
+
+        // Need an available user so the add form renders
+        var availableUsername = $"availableuser-{Guid.NewGuid():N}";
+        await TestDataHelper.CreateTestUserAsync(_fixture.Factory, availableUsername, $"{availableUsername}@test.local");
+
+        // Act — submit without selecting a user
+        await _page.GotoAsync($"{_fixture.RootUrl}/Admin/Claims/Edit?claimType={claimType}");
+        await _page.Locator("#NewClaimValue").FillAsync("SomeValue");
+
+        await _page.GetByRole(AriaRole.Button, new() { NameString = "Add User" }).ClickAsync();
+
+        // Assert — validation error should be visible
+        var validationMessage = _page.Locator("[data-valmsg-for='SelectedUserId']");
+        await Expect(validationMessage).ToBeVisibleAsync();
+        await Expect(validationMessage).ToContainTextAsync("Please select a user");
+    }
+
+    [Fact]
+    public async Task EditClaim_ShouldShowValidationError_WhenClaimValueIsEmpty()
+    {
+        // Arrange
+        var claimType = $"val-novalue-{Guid.NewGuid():N}";
+
+        var existingUsername = $"existinguser2-{Guid.NewGuid():N}";
+        var existingUserId = await TestDataHelper.CreateTestUserAsync(_fixture.Factory, existingUsername, $"{existingUsername}@test.local");
+        await TestDataHelper.AddUserClaimAsync(_fixture.Factory, existingUserId, claimType, "some-value");
+
+        var availableUsername = $"availableuser2-{Guid.NewGuid():N}";
+        var availableUserId = await TestDataHelper.CreateTestUserAsync(_fixture.Factory, availableUsername, $"{availableUsername}@test.local");
+
+        // Act — select a user but leave claim value empty
+        await _page.GotoAsync($"{_fixture.RootUrl}/Admin/Claims/Edit?claimType={claimType}");
+        await _page.Locator("#SelectedUserId").SelectOptionAsync(new[] { availableUserId });
+        await _page.Locator("#NewClaimValue").FillAsync("");
+
+        await _page.GetByRole(AriaRole.Button, new() { NameString = "Add User" }).ClickAsync();
+
+        // Assert — validation error should be visible
+        var validationMessage = _page.Locator("[data-valmsg-for='NewClaimValue']");
+        await Expect(validationMessage).ToBeVisibleAsync();
+        await Expect(validationMessage).ToContainTextAsync("Claim value is required");
+    }
+
     public async Task InitializeAsync()
     {
         _context = await _fixture.Browser.NewContextAsync();

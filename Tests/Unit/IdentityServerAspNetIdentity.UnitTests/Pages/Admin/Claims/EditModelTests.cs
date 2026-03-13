@@ -21,21 +21,24 @@ public class EditModelTests
     {
         _mockClaimsAdminService = new Mock<IClaimsAdminService>();
 
+        var httpContext = new DefaultHttpContext();
         _sut = new EditModel(_mockClaimsAdminService.Object)
         {
             PageContext = new PageContext
             {
-                HttpContext = new DefaultHttpContext()
+                HttpContext = httpContext
             },
-            TempData = new Mock<ITempDataDictionary>().Object
+            TempData = new TempDataDictionary(httpContext, Mock.Of<ITempDataProvider>())
         };
     }
+
+    // --------- OnGetAsync ---------
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task OnGetAsync_ShouldReturnBadRequest_WhenClaimTypeIsWhitespace(string claimType)
+    public async Task OnGetAsync_ShouldReturnBadRequest_WhenClaimTypeIsWhitespace(string? claimType)
     {
         // Arrange
         _sut.ClaimType = claimType;
@@ -64,112 +67,39 @@ public class EditModelTests
     }
 
     [Fact]
-    public async Task OnPostAddUserAsync_ShouldReturnPageWithErrors_WhenSelectedUserIdIsMissing()
+    public async Task OnGetAsync_ShouldPopulatePageData_WhenServiceReturnsData()
     {
         // Arrange
         _sut.ClaimType = "Role";
-        _sut.SelectedUserId = string.Empty; // Missing user
-        _sut.NewClaimValue = "Admin";
-        
+
         var pageData = new ClaimEditPageDataDto
         {
-            UsersInClaim = new List<ClaimUserAssignmentItemDto>(),
-            AvailableUsers = new List<AvailableClaimUserItemDto> { new AvailableClaimUserItemDto { UserId = "1", UserName = "TestUser" } }
+            UsersInClaim = [new ClaimUserAssignmentItemDto { UserId = "1", UserName = "alice", Email = "a@test.com", ClaimValue = "admin" }],
+            AvailableUsers = [new AvailableClaimUserItemDto { UserId = "2", UserName = "bob", Email = "b@test.com" }],
+            NewClaimValue = "admin"
         };
-        
+
         _mockClaimsAdminService
-            .Setup(x => x.GetForEditAsync("Role", "Admin", It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetForEditAsync("Role", null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pageData);
 
         // Act
-        var result = await _sut.OnPostAddUserAsync();
+        var result = await _sut.OnGetAsync();
 
         // Assert
         result.Should().BeOfType<PageResult>();
-        _sut.ModelState.ErrorCount.Should().Be(1);
-        _sut.ModelState.ContainsKey(nameof(_sut.SelectedUserId)).Should().BeTrue();
-        
-        // Verify page data was re-applied
-        _sut.AvailableUsers.Should().HaveCount(1);
+        _sut.UsersInClaim.Should().BeEquivalentTo(pageData.UsersInClaim);
+        _sut.AvailableUsers.Should().BeEquivalentTo(pageData.AvailableUsers);
+        _sut.NewClaimValue.Should().Be("admin");
     }
 
-    [Fact]
-    public async Task OnPostAddUserAsync_ShouldRedirectToPage_OnSuccess()
-    {
-        // Arrange
-        _sut.ClaimType = "Role";
-        _sut.SelectedUserId = "user-123";
-        _sut.NewClaimValue = "Admin";
-
-        var pageData = new ClaimEditPageDataDto();
-        _mockClaimsAdminService
-            .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(pageData);
-
-        var successResult = new AddClaimAssignmentResult 
-        { 
-            Status = AddClaimAssignmentStatus.Success, 
-            UserName = "testuser" 
-        };
-
-        _mockClaimsAdminService
-            .Setup(x => x.AddUserToClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(successResult);
-
-        // Act
-        var result = await _sut.OnPostAddUserAsync();
-
-        // Assert
-        var redirectResult = result.Should().BeOfType<RedirectToPageResult>().Subject;
-        redirectResult.PageName.Should().Be("/Admin/Claims/Edit");
-        redirectResult.RouteValues.Should().ContainKey("claimType").WhoseValue.Should().Be("Role");
-        
-        // In the test setup, we just check that ITempDataDictionary is accessed (it's mocked, but we could spy on it. Here we trust the assignment doesn't throw)
-    }
-
-    [Fact]
-    public async Task OnPostRemoveUserAsync_ShouldRedirectToIndexWithWarning_WhenLastUserRemoved()
-    {
-        // Arrange
-        _sut.ClaimType = "Role";
-        _sut.RemoveUserId = "user-123";
-        _sut.RemoveClaimValue = "Admin";
-
-        var pageData = new ClaimEditPageDataDto();
-        _mockClaimsAdminService
-            .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(pageData);
-
-        var removeResult = new RemoveClaimAssignmentResult 
-        { 
-            Status = RemoveClaimAssignmentStatus.Success, 
-            HasRemainingAssignments = false, // Critical bit: Last user removed
-            UserName = "testuser" 
-        };
-
-        _mockClaimsAdminService
-            .Setup(x => x.RemoveUserFromClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(removeResult);
-
-        var tempDataMock = new Mock<ITempDataDictionary>();
-        _sut.TempData = tempDataMock.Object;
-
-        // Act
-        var result = await _sut.OnPostRemoveUserAsync();
-
-        // Assert
-        var redirectResult = result.Should().BeOfType<RedirectToPageResult>().Subject;
-        redirectResult.PageName.Should().Be("/Admin/Claims/Index");
-        
-        // Verify TempData warning was set
-        tempDataMock.VerifySet(t => t["Warning"] = It.IsAny<string>(), Times.Once);
-    }
+    // --------- OnPostAddUserAsync ---------
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task OnPostAddUserAsync_ShouldReturnBadRequest_WhenClaimTypeIsWhitespace(string claimType)
+    public async Task OnPostAddUserAsync_ShouldReturnBadRequest_WhenClaimTypeIsWhitespace(string? claimType)
     {
         // Arrange
         _sut.ClaimType = claimType;
@@ -198,13 +128,42 @@ public class EditModelTests
     }
 
     [Fact]
-    public async Task OnPostAddUserAsync_ShouldReturnPageWithErrors_WhenNewClaimValueIsWhitespace()
+    public async Task OnPostAddUserAsync_ShouldReturnPageWithModelError_WhenSelectedUserIdIsEmpty()
+    {
+        // Arrange
+        _sut.ClaimType = "Role";
+        _sut.SelectedUserId = string.Empty;
+        _sut.NewClaimValue = "Admin";
+
+        var pageData = new ClaimEditPageDataDto
+        {
+            UsersInClaim = [],
+            AvailableUsers = [new AvailableClaimUserItemDto { UserId = "1", UserName = "TestUser" }]
+        };
+
+        _mockClaimsAdminService
+            .Setup(x => x.GetForEditAsync("Role", "Admin", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pageData);
+
+        // Act
+        var result = await _sut.OnPostAddUserAsync();
+
+        // Assert
+        result.Should().BeOfType<PageResult>();
+        _sut.ModelState[nameof(_sut.SelectedUserId)]!.Errors
+            .Should().ContainSingle()
+            .Which.ErrorMessage.Should().Be("Please select a user");
+        _sut.AvailableUsers.Should().BeEquivalentTo(pageData.AvailableUsers);
+    }
+
+    [Fact]
+    public async Task OnPostAddUserAsync_ShouldReturnPageWithModelError_WhenNewClaimValueIsWhitespace()
     {
         // Arrange
         _sut.ClaimType = "Role";
         _sut.SelectedUserId = "user-123";
         _sut.NewClaimValue = " ";
-        
+
         var pageData = new ClaimEditPageDataDto();
         _mockClaimsAdminService
             .Setup(x => x.GetForEditAsync("Role", " ", It.IsAny<CancellationToken>()))
@@ -215,8 +174,9 @@ public class EditModelTests
 
         // Assert
         result.Should().BeOfType<PageResult>();
-        _sut.ModelState.ErrorCount.Should().Be(1);
-        _sut.ModelState.ContainsKey(nameof(_sut.NewClaimValue)).Should().BeTrue();
+        _sut.ModelState[nameof(_sut.NewClaimValue)]!.Errors
+            .Should().ContainSingle()
+            .Which.ErrorMessage.Should().Be("Claim value is required");
     }
 
     [Fact]
@@ -232,10 +192,9 @@ public class EditModelTests
             .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pageData);
 
-        var serviceResult = new AddClaimAssignmentResult { Status = AddClaimAssignmentStatus.UserNotFound };
         _mockClaimsAdminService
             .Setup(x => x.AddUserToClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(serviceResult);
+            .ReturnsAsync(new AddClaimAssignmentResult { Status = AddClaimAssignmentStatus.UserNotFound });
 
         // Act
         var result = await _sut.OnPostAddUserAsync();
@@ -245,7 +204,7 @@ public class EditModelTests
     }
 
     [Fact]
-    public async Task OnPostAddUserAsync_ShouldReturnPageWithErrors_WhenStatusIsAlreadyAssigned()
+    public async Task OnPostAddUserAsync_ShouldReturnPageWithModelError_WhenStatusIsAlreadyAssigned()
     {
         // Arrange
         _sut.ClaimType = "Role";
@@ -257,22 +216,26 @@ public class EditModelTests
             .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pageData);
 
-        var serviceResult = new AddClaimAssignmentResult { Status = AddClaimAssignmentStatus.AlreadyAssigned };
         _mockClaimsAdminService
             .Setup(x => x.AddUserToClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(serviceResult);
+            .ReturnsAsync(new AddClaimAssignmentResult
+            {
+                Status = AddClaimAssignmentStatus.AlreadyAssigned,
+                UserName = "alice"
+            });
 
         // Act
         var result = await _sut.OnPostAddUserAsync();
 
         // Assert
         result.Should().BeOfType<PageResult>();
-        _sut.ModelState.ErrorCount.Should().Be(1);
-        _sut.ModelState.Values.SelectMany(v => v.Errors).Any(e => e.ErrorMessage == "Selected user already has this claim type").Should().BeTrue();
+        _sut.ModelState[string.Empty]!.Errors
+            .Should().ContainSingle()
+            .Which.ErrorMessage.Should().Be("Selected user already has this claim type");
     }
 
     [Fact]
-    public async Task OnPostAddUserAsync_ShouldReturnPageWithErrors_WhenStatusIsIdentityFailure()
+    public async Task OnPostAddUserAsync_ShouldReturnPageWithAllErrors_WhenStatusIsIdentityFailure()
     {
         // Arrange
         _sut.ClaimType = "Role";
@@ -284,31 +247,63 @@ public class EditModelTests
             .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pageData);
 
-        var serviceResult = new AddClaimAssignmentResult 
-        { 
-            Status = AddClaimAssignmentStatus.IdentityFailure,
-            Errors = new[] { "Identity error 1", "Identity error 2" }
-        };
-        
         _mockClaimsAdminService
             .Setup(x => x.AddUserToClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(serviceResult);
+            .ReturnsAsync(new AddClaimAssignmentResult
+            {
+                Status = AddClaimAssignmentStatus.IdentityFailure,
+                Errors = ["Identity error 1", "Identity error 2"]
+            });
 
         // Act
         var result = await _sut.OnPostAddUserAsync();
 
         // Assert
         result.Should().BeOfType<PageResult>();
-        _sut.ModelState.ErrorCount.Should().Be(2);
-        _sut.ModelState.Values.SelectMany(v => v.Errors).Any(e => e.ErrorMessage == "Identity error 1").Should().BeTrue();
-        _sut.ModelState.Values.SelectMany(v => v.Errors).Any(e => e.ErrorMessage == "Identity error 2").Should().BeTrue();
+        var errors = _sut.ModelState[string.Empty]!.Errors;
+        errors.Should().HaveCount(2);
+        errors.Select(e => e.ErrorMessage).Should().Contain("Identity error 1");
+        errors.Select(e => e.ErrorMessage).Should().Contain("Identity error 2");
     }
+
+    [Fact]
+    public async Task OnPostAddUserAsync_ShouldSetTempDataAndRedirect_OnSuccess()
+    {
+        // Arrange
+        _sut.ClaimType = "Role";
+        _sut.SelectedUserId = "user-123";
+        _sut.NewClaimValue = "Admin";
+
+        var pageData = new ClaimEditPageDataDto();
+        _mockClaimsAdminService
+            .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pageData);
+
+        _mockClaimsAdminService
+            .Setup(x => x.AddUserToClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AddClaimAssignmentResult
+            {
+                Status = AddClaimAssignmentStatus.Success,
+                UserName = "alice"
+            });
+
+        // Act
+        var result = await _sut.OnPostAddUserAsync();
+
+        // Assert
+        var redirect = result.Should().BeOfType<RedirectToPageResult>().Subject;
+        redirect.PageName.Should().Be("/Admin/Claims/Edit");
+        redirect.RouteValues!["claimType"].Should().Be("Role");
+        _sut.TempData["Success"].Should().Be("Claim 'Role' assigned to user 'alice'.");
+    }
+
+    // --------- OnPostRemoveUserAsync ---------
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task OnPostRemoveUserAsync_ShouldReturnBadRequest_WhenClaimTypeIsWhitespace(string claimType)
+    public async Task OnPostRemoveUserAsync_ShouldReturnBadRequest_WhenClaimTypeIsWhitespace(string? claimType)
     {
         // Arrange
         _sut.ClaimType = claimType;
@@ -337,13 +332,13 @@ public class EditModelTests
     }
 
     [Fact]
-    public async Task OnPostRemoveUserAsync_ShouldReturnPageWithErrors_WhenRemoveUserIdIsWhitespace()
+    public async Task OnPostRemoveUserAsync_ShouldReturnPageWithModelError_WhenRemoveUserIdIsWhitespace()
     {
         // Arrange
         _sut.ClaimType = "Role";
         _sut.RemoveUserId = " ";
         _sut.RemoveClaimValue = "Admin";
-        
+
         var pageData = new ClaimEditPageDataDto();
         _mockClaimsAdminService
             .Setup(x => x.GetForEditAsync("Role", null, It.IsAny<CancellationToken>()))
@@ -354,18 +349,19 @@ public class EditModelTests
 
         // Assert
         result.Should().BeOfType<PageResult>();
-        _sut.ModelState.ErrorCount.Should().Be(1);
-        _sut.ModelState.Values.SelectMany(v => v.Errors).Any(e => e.ErrorMessage == "Claim assignment details are required").Should().BeTrue();
+        _sut.ModelState[string.Empty]!.Errors
+            .Should().ContainSingle()
+            .Which.ErrorMessage.Should().Be("Claim assignment details are required");
     }
 
     [Fact]
-    public async Task OnPostRemoveUserAsync_ShouldReturnPageWithErrors_WhenRemoveClaimValueIsNull()
+    public async Task OnPostRemoveUserAsync_ShouldReturnPageWithModelError_WhenRemoveClaimValueIsNull()
     {
         // Arrange
         _sut.ClaimType = "Role";
         _sut.RemoveUserId = "user-123";
         _sut.RemoveClaimValue = null;
-        
+
         var pageData = new ClaimEditPageDataDto();
         _mockClaimsAdminService
             .Setup(x => x.GetForEditAsync("Role", null, It.IsAny<CancellationToken>()))
@@ -376,8 +372,9 @@ public class EditModelTests
 
         // Assert
         result.Should().BeOfType<PageResult>();
-        _sut.ModelState.ErrorCount.Should().Be(1);
-        _sut.ModelState.Values.SelectMany(v => v.Errors).Any(e => e.ErrorMessage == "Claim assignment details are required").Should().BeTrue();
+        _sut.ModelState[string.Empty]!.Errors
+            .Should().ContainSingle()
+            .Which.ErrorMessage.Should().Be("Claim assignment details are required");
     }
 
     [Fact]
@@ -393,10 +390,9 @@ public class EditModelTests
             .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pageData);
 
-        var serviceResult = new RemoveClaimAssignmentResult { Status = RemoveClaimAssignmentStatus.UserNotFound };
         _mockClaimsAdminService
             .Setup(x => x.RemoveUserFromClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(serviceResult);
+            .ReturnsAsync(new RemoveClaimAssignmentResult { Status = RemoveClaimAssignmentStatus.UserNotFound });
 
         // Act
         var result = await _sut.OnPostRemoveUserAsync();
@@ -406,7 +402,7 @@ public class EditModelTests
     }
 
     [Fact]
-    public async Task OnPostRemoveUserAsync_ShouldReturnPageWithErrors_WhenStatusIsAssignmentNotFound()
+    public async Task OnPostRemoveUserAsync_ShouldReturnPageWithModelError_WhenStatusIsAssignmentNotFound()
     {
         // Arrange
         _sut.ClaimType = "Role";
@@ -418,22 +414,22 @@ public class EditModelTests
             .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pageData);
 
-        var serviceResult = new RemoveClaimAssignmentResult { Status = RemoveClaimAssignmentStatus.AssignmentNotFound };
         _mockClaimsAdminService
             .Setup(x => x.RemoveUserFromClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(serviceResult);
+            .ReturnsAsync(new RemoveClaimAssignmentResult { Status = RemoveClaimAssignmentStatus.AssignmentNotFound });
 
         // Act
         var result = await _sut.OnPostRemoveUserAsync();
 
         // Assert
         result.Should().BeOfType<PageResult>();
-        _sut.ModelState.ErrorCount.Should().Be(1);
-        _sut.ModelState.Values.SelectMany(v => v.Errors).Any(e => e.ErrorMessage == "The selected claim assignment does not exist").Should().BeTrue();
+        _sut.ModelState[string.Empty]!.Errors
+            .Should().ContainSingle()
+            .Which.ErrorMessage.Should().Be("The selected claim assignment does not exist");
     }
 
     [Fact]
-    public async Task OnPostRemoveUserAsync_ShouldReturnPageWithErrors_WhenStatusIsIdentityFailure()
+    public async Task OnPostRemoveUserAsync_ShouldReturnPageWithAllErrors_WhenStatusIsIdentityFailure()
     {
         // Arrange
         _sut.ClaimType = "Role";
@@ -445,26 +441,26 @@ public class EditModelTests
             .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pageData);
 
-        var serviceResult = new RemoveClaimAssignmentResult 
-        { 
-            Status = RemoveClaimAssignmentStatus.IdentityFailure,
-            Errors = new[] { "Remove error 1" }
-        };
         _mockClaimsAdminService
             .Setup(x => x.RemoveUserFromClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(serviceResult);
+            .ReturnsAsync(new RemoveClaimAssignmentResult
+            {
+                Status = RemoveClaimAssignmentStatus.IdentityFailure,
+                Errors = ["Remove error 1"]
+            });
 
         // Act
         var result = await _sut.OnPostRemoveUserAsync();
 
         // Assert
         result.Should().BeOfType<PageResult>();
-        _sut.ModelState.ErrorCount.Should().Be(1);
-        _sut.ModelState.Values.SelectMany(v => v.Errors).Any(e => e.ErrorMessage == "Remove error 1").Should().BeTrue();
+        _sut.ModelState[string.Empty]!.Errors
+            .Should().ContainSingle()
+            .Which.ErrorMessage.Should().Be("Remove error 1");
     }
 
     [Fact]
-    public async Task OnPostRemoveUserAsync_ShouldRedirectToPage_OnSuccess()
+    public async Task OnPostRemoveUserAsync_ShouldRedirectToIndexWithWarning_WhenNoRemainingAssignments()
     {
         // Arrange
         _sut.ClaimType = "Role";
@@ -476,29 +472,54 @@ public class EditModelTests
             .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pageData);
 
-        var removeResult = new RemoveClaimAssignmentResult 
-        { 
-            Status = RemoveClaimAssignmentStatus.Success, 
-            HasRemainingAssignments = true, // Critical bit: We still have remaining users
-            UserName = "testuser" 
-        };
-
         _mockClaimsAdminService
             .Setup(x => x.RemoveUserFromClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(removeResult);
-
-        var tempDataMock = new Mock<ITempDataDictionary>();
-        _sut.TempData = tempDataMock.Object;
+            .ReturnsAsync(new RemoveClaimAssignmentResult
+            {
+                Status = RemoveClaimAssignmentStatus.Success,
+                HasRemainingAssignments = false,
+                UserName = "alice"
+            });
 
         // Act
         var result = await _sut.OnPostRemoveUserAsync();
 
         // Assert
-        var redirectResult = result.Should().BeOfType<RedirectToPageResult>().Subject;
-        redirectResult.PageName.Should().Be("/Admin/Claims/Edit");
-        redirectResult.RouteValues.Should().ContainKey("claimType").WhoseValue.Should().Be("Role");
-        
-        // Verify TempData success was set
-        tempDataMock.VerifySet(t => t["Success"] = $"Claim 'Role' removed from user 'testuser'.", Times.Once);
+        var redirect = result.Should().BeOfType<RedirectToPageResult>().Subject;
+        redirect.PageName.Should().Be("/Admin/Claims/Index");
+        _sut.TempData["Warning"].Should().NotBeNull();
+        _sut.TempData["Warning"]!.ToString().Should().Contain("Role");
+    }
+
+    [Fact]
+    public async Task OnPostRemoveUserAsync_ShouldRedirectToEditWithSuccess_WhenRemainingAssignmentsExist()
+    {
+        // Arrange
+        _sut.ClaimType = "Role";
+        _sut.RemoveUserId = "user-123";
+        _sut.RemoveClaimValue = "Admin";
+
+        var pageData = new ClaimEditPageDataDto();
+        _mockClaimsAdminService
+            .Setup(x => x.GetForEditAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pageData);
+
+        _mockClaimsAdminService
+            .Setup(x => x.RemoveUserFromClaimAsync("Role", "user-123", "Admin", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RemoveClaimAssignmentResult
+            {
+                Status = RemoveClaimAssignmentStatus.Success,
+                HasRemainingAssignments = true,
+                UserName = "alice"
+            });
+
+        // Act
+        var result = await _sut.OnPostRemoveUserAsync();
+
+        // Assert
+        var redirect = result.Should().BeOfType<RedirectToPageResult>().Subject;
+        redirect.PageName.Should().Be("/Admin/Claims/Edit");
+        redirect.RouteValues!["claimType"].Should().Be("Role");
+        _sut.TempData["Success"].Should().Be("Claim 'Role' removed from user 'alice'.");
     }
 }
