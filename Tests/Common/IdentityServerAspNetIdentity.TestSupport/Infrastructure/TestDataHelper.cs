@@ -96,6 +96,40 @@ public static class TestDataHelper
         return apiScope.Id;
     }
 
+    public static async Task<int> SeedIdentityResourceAsync(
+        CustomWebApplicationFactory factory,
+        string name,
+        string? displayName = null,
+        string? description = null,
+        bool enabled = true,
+        IReadOnlyList<string>? userClaims = null)
+    {
+        using var scope = factory.Services.CreateScope();
+        var configurationDbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+
+        var identityResource = new IdentityResource
+        {
+            Name = name,
+            DisplayName = displayName,
+            Description = description,
+            Enabled = enabled,
+            ShowInDiscoveryDocument = true,
+            Required = false,
+            Emphasize = false,
+            NonEditable = false,
+            Created = DateTime.UtcNow,
+            Updated = DateTime.UtcNow,
+            UserClaims = userClaims?.Select(claimType => new IdentityResourceClaim
+            {
+                Type = claimType
+            }).ToList() ?? []
+        };
+
+        configurationDbContext.IdentityResources.Add(identityResource);
+        await configurationDbContext.SaveChangesAsync();
+        return identityResource.Id;
+    }
+
     public static async Task<string> SeedRoleAsync(CustomWebApplicationFactory factory, string roleName)
     {
         using var scope = factory.Services.CreateScope();

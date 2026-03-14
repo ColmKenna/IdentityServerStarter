@@ -21,6 +21,7 @@
                                 <ck-responsive-col-head align="left">Display Name</ck-responsive-col-head>
                                 <ck-responsive-col-head align="left">Description</ck-responsive-col-head>
                                 <ck-responsive-col-head align="center" mobile-align="center">Enabled</ck-responsive-col-head>
+                                <ck-responsive-col-head align="center" mobile-align="center" mobile-no-label="true">Actions</ck-responsive-col-head>
                             </ck-responsive-thead>
                             <ck-responsive-tbody>
                                 @foreach (var resource in Model.IdentityResources)
@@ -42,6 +43,11 @@
                                             {
                                                 <span class="badge bg-danger">Disabled</span>
                                             }
+                                        </ck-responsive-col>
+                                        <ck-responsive-col class="align-center mobile-align-center" mobile-direction="row" mobile-justify="center">
+                                            <a asp-page="/Admin/IdentityResources/Edit" asp-route-id="@resource.Id" class="button button-sm button-primary">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
                                         </ck-responsive-col>
                                     </ck-responsive-row>
                                 }
