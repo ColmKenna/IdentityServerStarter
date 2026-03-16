@@ -372,6 +372,70 @@ public class UsersEditModelTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task OnPostClaimsAddAsync_ShouldReturnPageWithErrors_WhenAddClaimFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        sut.NewClaimType = "role";
+        sut.NewClaimValue = "admin";
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.AddClaimAsync(It.IsAny<ApplicationUser>(), It.IsAny<Claim>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Claim add failed" }));
+
+        var result = await sut.OnPostClaimsAddAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Claim add failed");
+        sut.TempData["Success"].Should().BeNull();
+    }
+
+    [Fact]
+    public async Task OnPostClaimsRemoveAsync_ShouldReturnPageWithErrors_WhenRemoveClaimsFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        sut.SelectedClaims = new List<string> { "role:admin" };
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.RemoveClaimsAsync(It.IsAny<ApplicationUser>(), It.IsAny<IEnumerable<Claim>>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Claims remove failed" }));
+
+        var result = await sut.OnPostClaimsRemoveAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Claims remove failed");
+        sut.TempData["Success"].Should().BeNull();
+    }
+
+    [Fact]
+    public async Task OnPostClaimsReplaceAsync_ShouldReturnPageWithErrors_WhenReplaceClaimFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        sut.OldClaimType = "oldType";
+        sut.OldClaimValue = "oldValue";
+        sut.ReplacementClaimType = "newType";
+        sut.ReplacementClaimValue = "newValue";
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.ReplaceClaimAsync(It.IsAny<ApplicationUser>(), It.IsAny<Claim>(), It.IsAny<Claim>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Replace failed" }));
+
+        var result = await sut.OnPostClaimsReplaceAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Replace failed");
+        sut.TempData["Success"].Should().BeNull();
+    }
+
     #endregion
 
     #region Roles Tab
@@ -410,6 +474,46 @@ public class UsersEditModelTests
         _mockUserManager.Verify(x => x.RemoveFromRolesAsync(It.IsAny<ApplicationUser>(), sut.SelectedRolesToRemove), Times.Once);
     }
 
+    [Fact]
+    public async Task OnPostRolesAddAsync_ShouldReturnPageWithErrors_WhenAddToRolesFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        sut.SelectedRolesToAdd = new List<string> { "Admin" };
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.AddToRolesAsync(It.IsAny<ApplicationUser>(), It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Role add failed" }));
+
+        var result = await sut.OnPostRolesAddAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Role add failed");
+        sut.TempData["Success"].Should().BeNull();
+    }
+
+    [Fact]
+    public async Task OnPostRolesRemoveAsync_ShouldReturnPageWithErrors_WhenRemoveFromRolesFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        sut.SelectedRolesToRemove = new List<string> { "Guest" };
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.RemoveFromRolesAsync(It.IsAny<ApplicationUser>(), It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Role remove failed" }));
+
+        var result = await sut.OnPostRolesRemoveAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Role remove failed");
+        sut.TempData["Success"].Should().BeNull();
+    }
+
     #endregion
 
     #region Security Tab
@@ -431,6 +535,44 @@ public class UsersEditModelTests
     }
 
     [Fact]
+    public async Task OnPostSecurityDisableAccountAsync_ShouldReturnPageWithErrors_WhenSetLockoutFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.SetLockoutEndDateAsync(It.IsAny<ApplicationUser>(), DateTimeOffset.MaxValue))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Lockout not supported" }));
+
+        var result = await sut.OnPostSecurityDisableAccountAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Lockout not supported");
+        sut.TempData["Success"].Should().BeNull();
+    }
+
+    [Fact]
+    public async Task OnPostSecurityEnableAccountAsync_ShouldReturnPageWithErrors_WhenSetLockoutFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.SetLockoutEndDateAsync(It.IsAny<ApplicationUser>(), null))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Enable failed" }));
+
+        var result = await sut.OnPostSecurityEnableAccountAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Enable failed");
+        sut.TempData["Success"].Should().BeNull();
+    }
+
+    [Fact]
     public async Task OnPostSecurityClearLockoutAsync_ShouldClearLockoutAndResetCount_OnSuccess()
     {
         var sut = CreateSut();
@@ -447,6 +589,108 @@ public class UsersEditModelTests
         result.Should().BeOfType<RedirectToPageResult>();
         _mockUserManager.Verify(x => x.SetLockoutEndDateAsync(It.IsAny<ApplicationUser>(), null), Times.Once);
         _mockUserManager.Verify(x => x.ResetAccessFailedCountAsync(It.IsAny<ApplicationUser>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task OnPostSecurityClearLockoutAsync_ShouldReturnPageWithErrors_WhenSetLockoutFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.SetLockoutEndDateAsync(It.IsAny<ApplicationUser>(), null))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Lockout clear failed" }));
+
+        var result = await sut.OnPostSecurityClearLockoutAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Lockout clear failed");
+        _mockUserManager.Verify(x => x.ResetAccessFailedCountAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        sut.TempData["Success"].Should().BeNull();
+    }
+
+    // TODO: This test documents a partial-update risk — lockout is cleared (first call succeeds)
+    // but failed access count remains elevated (second call fails), leaving the user in an
+    // inconsistent state. See the corresponding TODO in Edit.cshtml.cs OnPostSecurityClearLockoutAsync.
+    [Fact]
+    public async Task OnPostSecurityClearLockoutAsync_ShouldReturnPageWithErrors_WhenResetFailedCountFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.SetLockoutEndDateAsync(It.IsAny<ApplicationUser>(), null))
+            .ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(x => x.ResetAccessFailedCountAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Reset count failed" }));
+
+        var result = await sut.OnPostSecurityClearLockoutAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Reset count failed");
+        _mockUserManager.Verify(x => x.SetLockoutEndDateAsync(It.IsAny<ApplicationUser>(), null), Times.Once);
+        sut.TempData["Success"].Should().BeNull();
+    }
+
+    [Fact]
+    public async Task OnPostSecurityResetFailedCountAsync_ShouldReturnPageWithErrors_WhenResetFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.ResetAccessFailedCountAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Reset failed" }));
+
+        var result = await sut.OnPostSecurityResetFailedCountAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Reset failed");
+        sut.TempData["Success"].Should().BeNull();
+    }
+
+    [Fact]
+    public async Task OnPostSecurityResetAuthenticatorAsync_ShouldReturnPageWithErrors_WhenResetFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.ResetAuthenticatorKeyAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Authenticator reset failed" }));
+
+        var result = await sut.OnPostSecurityResetAuthenticatorAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Authenticator reset failed");
+        sut.TempData["Success"].Should().BeNull();
+    }
+
+    [Fact]
+    public async Task OnPostSecurityForceSignOutAsync_ShouldReturnPageWithErrors_WhenUpdateStampFails()
+    {
+        var sut = CreateSut();
+        SetupUserFound("123");
+        sut.UserId = "123";
+        SetupPopulatePageData();
+
+        _mockUserManager.Setup(x => x.UpdateSecurityStampAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Stamp update failed" }));
+
+        var result = await sut.OnPostSecurityForceSignOutAsync();
+
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().ContainSingle(e => e.ErrorMessage == "Stamp update failed");
+        sut.TempData["Success"].Should().BeNull();
     }
 
     [Theory]
