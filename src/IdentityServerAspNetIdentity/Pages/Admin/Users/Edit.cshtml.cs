@@ -410,6 +410,9 @@ public class EditModel : UserDetailPageModel
         if (!await LoadUserAsync(UserId))
             return NotFound();
 
+        // TODO: If SetLockoutEndDateAsync succeeds but ResetAccessFailedCountAsync fails below,
+        // the user is left in an inconsistent state (lockout cleared, but failed count still elevated).
+        // Consider wrapping both operations in a transaction or rolling back the lockout on failure.
         var lockoutResult = await UserManager.SetLockoutEndDateAsync(TargetUser!, null);
         if (!lockoutResult.Succeeded)
         {
