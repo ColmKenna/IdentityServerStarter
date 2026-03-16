@@ -206,4 +206,157 @@ public class IdentityResourcesAdminServiceTests
         result.Status.Should().Be(RemoveIdentityResourceClaimStatus.NotApplied);
         result.ClaimType.Should().Be("role");
     }
+
+    // -------------------------------------------------------------------------
+    // GetIdentityResourcesAsync
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetIdentityResourcesAsync_ShouldReturnMappedDtos_SortedByName()
+    {
+        await using var configDb = CreateConfigurationDbContext();
+        await using var appDb = CreateApplicationDbContext();
+
+        configDb.IdentityResources.AddRange(
+            new IdentityResource { Name = "profile", DisplayName = "Profile", Description = "User profile", Enabled = true },
+            new IdentityResource { Name = "email", DisplayName = "Email", Description = null, Enabled = false },
+            new IdentityResource { Name = "openid", DisplayName = null, Description = null, Enabled = true }
+        );
+        await configDb.SaveChangesAsync();
+
+        var sut = CreateSut(configDb, appDb);
+
+        // Act
+        var result = await sut.GetIdentityResourcesAsync();
+
+        // Assert
+        result.Should().HaveCount(3);
+        result.Select(r => r.Name).Should().BeInAscendingOrder();
+        result[0].Name.Should().Be("email");
+        result[0].Enabled.Should().BeFalse();
+        result[1].Name.Should().Be("openid");
+        result[1].DisplayName.Should().BeEmpty(); // null coalesced to empty string
+        result[2].Name.Should().Be("profile");
+    }
+
+    [Fact]
+    public async Task GetIdentityResourcesAsync_ShouldReturnEmptyList_WhenNoResourcesExist()
+    {
+        await using var configDb = CreateConfigurationDbContext();
+        await using var appDb = CreateApplicationDbContext();
+
+        var sut = CreateSut(configDb, appDb);
+
+        var result = await sut.GetIdentityResourcesAsync();
+
+        result.Should().BeEmpty();
+    }
+
+    // -------------------------------------------------------------------------
+    // UpdateAsync — Success path
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task UpdateAsync_ShouldUpdateAllFields_WhenResourceExists()
+    {
+        await using var configDb = CreateConfigurationDbContext();
+        await using var appDb = CreateApplicationDbContext();
+
+        var resource = new IdentityResource { Name = "original", DisplayName = "Original", Description = "Desc", Enabled = false };
+        configDb.IdentityResources.Add(resource);
+        await configDb.SaveChangesAsync();
+
+        var sut = CreateSut(configDb, appDb);
+
+        // Act
+        var request = new UpdateIdentityResourceRequest
+        {
+            Name = " updated ",
+            DisplayName = " Updated Name ",
+            Description = " Updated desc ",
+            Enabled = true
+        };
+        var result = await sut.UpdateAsync(resource.Id, request);
+
+        // Assert
+        result.Status.Should().Be(UpdateIdentityResourceStatus.Success);
+
+        var updated = await configDb.IdentityResources.FindAsync(resource.Id);
+        updated!.Name.Should().Be("updated");       // trimmed
+        updated.DisplayName.Should().Be("Updated Name"); // trimmed
+        updated.Description.Should().Be("Updated desc"); // trimmed
+        updated.Enabled.Should().BeTrue();
+    }
+
+    // -------------------------------------------------------------------------
+    // AddClaimAsync — Success path
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task AddClaimAsync_ShouldAddClaimAndPersist_WhenClaimIsNew()
+    {
+        await using var configDb = CreateConfigurationDbContext();
+        await using var appDb = CreateApplicationDbContext();
+
+        var resource = new IdentityResource
+        {
+            Name = "profile",
+            UserClaims = [new IdentityResourceClaim { Type = "email" }]
+        };
+        configDb.IdentityResources.Add(resource);
+        await configDb.SaveChangesAsync();
+
+        var sut = CreateSut(configDb, appDb);
+
+        // Act: add 'role' with trailing space to test trim
+        var result = await sut.AddClaimAsync(resource.Id, " role ");
+
+        // Assert
+        result.Status.Should().Be(AddIdentityResourceClaimStatus.Success);
+        result.ClaimType.Should().Be("role");
+
+        var reloaded = await configDb.IdentityResources
+            .Include(r => r.UserClaims)
+            .FirstAsync(r => r.Id == resource.Id);
+        reloaded.UserClaims.Should().HaveCount(2);
+        reloaded.UserClaims.Select(c => c.Type).Should().Contain("role");
+    }
+
+    // -------------------------------------------------------------------------
+    // RemoveClaimAsync — Success path
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task RemoveClaimAsync_ShouldRemoveClaimAndPersist_WhenClaimExists()
+    {
+        await using var configDb = CreateConfigurationDbContext();
+        await using var appDb = CreateApplicationDbContext();
+
+        var resource = new IdentityResource
+        {
+            Name = "profile",
+            UserClaims =
+            [
+                new IdentityResourceClaim { Type = "email" },
+                new IdentityResourceClaim { Type = "name" }
+            ]
+        };
+        configDb.IdentityResources.Add(resource);
+        await configDb.SaveChangesAsync();
+
+        var sut = CreateSut(configDb, appDb);
+
+        // Act: remove 'email' with trailing space to test trim
+        var result = await sut.RemoveClaimAsync(resource.Id, " email ");
+
+        // Assert
+        result.Status.Should().Be(RemoveIdentityResourceClaimStatus.Success);
+        result.ClaimType.Should().Be("email");
+
+        var reloaded = await configDb.IdentityResources
+            .Include(r => r.UserClaims)
+            .FirstAsync(r => r.Id == resource.Id);
+        reloaded.UserClaims.Should().ContainSingle()
+            .Which.Type.Should().Be("name");
+    }
 }
