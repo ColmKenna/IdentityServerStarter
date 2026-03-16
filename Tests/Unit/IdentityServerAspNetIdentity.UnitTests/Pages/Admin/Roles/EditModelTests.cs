@@ -207,4 +207,52 @@ public class EditModelTests
         var redirectResult = result.Should().BeOfType<RedirectToPageResult>().Subject;
         _sut.TempData["Success"].Should().Be("User 'Alice' removed from role 'Admin'");
     }
+
+    [Fact]
+    public async Task OnPostRemoveUserAsync_ShouldReturnNotFound_WhenServiceReportsNotFound()
+    {
+        // Arrange
+        _sut.RoleId = "role-1";
+        _sut.SelectedUserId = "user-1";
+
+        _mockRolesAdminService
+            .Setup(x => x.RemoveUserFromRoleAsync(_sut.RoleId, _sut.SelectedUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RemoveUserFromRoleResult { Status = RemoveUserFromRoleStatus.RoleNotFound });
+
+        // Act
+        var result = await _sut.OnPostRemoveUserAsync();
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task OnPostRemoveUserAsync_ShouldReturnPageWithErrors_WhenServiceReportsFailure()
+    {
+        // Arrange
+        _sut.RoleId = "role-1";
+        _sut.SelectedUserId = "user-1";
+        var errors = new List<string> { "Error 1", "Error 2" };
+
+        _mockRolesAdminService
+            .Setup(x => x.RemoveUserFromRoleAsync(_sut.RoleId, _sut.SelectedUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RemoveUserFromRoleResult
+            {
+                Status = RemoveUserFromRoleStatus.Failed,
+                Errors = errors
+            });
+
+        // Mocking ReloadPageData dependencies
+        _mockRolesAdminService
+            .Setup(x => x.GetRoleForEditAsync(_sut.RoleId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RoleEditPageDataDto { RoleName = "Admin" });
+
+        // Act
+        var result = await _sut.OnPostRemoveUserAsync();
+
+        // Assert
+        result.Should().BeOfType<PageResult>();
+        _sut.ModelState.ErrorCount.Should().Be(2);
+        _sut.RoleName.Should().Be("Admin"); // Proves ReloadPageData was called
+    }
 }
