@@ -1248,4 +1248,133 @@ public class UsersEditModelTests
     }
 
     #endregion
+
+    #region Missing Forbid Tests — Security Handlers
+
+    [Fact]
+    public async Task OnPostSecurityDisableAccountAsync_ShouldReturnForbid_WhenNotAuthorized()
+    {
+        var sut = CreateSut();
+        SetupAuthorizationFails(UserPolicyConstants.UsersWrite);
+
+        var result = await sut.OnPostSecurityDisableAccountAsync();
+
+        result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task OnPostSecurityClearLockoutAsync_ShouldReturnForbid_WhenNotAuthorized()
+    {
+        var sut = CreateSut();
+        SetupAuthorizationFails(UserPolicyConstants.UsersWrite);
+
+        var result = await sut.OnPostSecurityClearLockoutAsync();
+
+        result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task OnPostSecurityToggleLockoutEnabledAsync_ShouldReturnForbid_WhenNotAuthorized()
+    {
+        var sut = CreateSut();
+        SetupAuthorizationFails(UserPolicyConstants.UsersWrite);
+
+        var result = await sut.OnPostSecurityToggleLockoutEnabledAsync();
+
+        result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task OnPostSecurityForceSignOutAsync_ShouldReturnForbid_WhenNotAuthorized()
+    {
+        var sut = CreateSut();
+        SetupAuthorizationFails(UserPolicyConstants.UsersWrite);
+
+        var result = await sut.OnPostSecurityForceSignOutAsync();
+
+        result.Should().BeOfType<ForbidResult>();
+    }
+
+    #endregion
+
+    #region Missing Failure Path Tests — Security Handlers
+
+    [Fact]
+    public async Task OnPostSecurityToggleLockoutEnabledAsync_ShouldReturnPageWithErrors_WhenUpdateFails()
+    {
+        // Arrange
+        var sut = CreateSut();
+        sut.UserId = "123";
+        sut.LockoutEnabledInput = true;
+        SetupUserFound("123");
+        SetupFormContent(sut, (nameof(EditModel.LockoutEnabledInput), "true"));
+
+        _mockUserEditor.Setup(x => x.UpdateUserFromEditPostAsync(It.IsAny<UserEditPostUpdateRequest>()))
+            .ReturnsAsync(new UserProfileUpdateResult
+            {
+                UserFound = true,
+                Result = IdentityResult.Failed(new IdentityError { Code = "LockoutError", Description = "Could not set lockout" })
+            });
+        SetupPopulatePageData();
+
+        // Act
+        var result = await sut.OnPostSecurityToggleLockoutEnabledAsync();
+
+        // Assert
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.ErrorCount.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task OnPostSecurityToggleTwoFactorAsync_ShouldReturnPageWithErrors_WhenUpdateFails()
+    {
+        // Arrange
+        var sut = CreateSut();
+        sut.UserId = "123";
+        sut.TwoFactorEnabledInput = true;
+        SetupUserFound("123");
+        SetupFormContent(sut, (nameof(EditModel.TwoFactorEnabledInput), "true"));
+
+        _mockUserEditor.Setup(x => x.UpdateUserFromEditPostAsync(It.IsAny<UserEditPostUpdateRequest>()))
+            .ReturnsAsync(new UserProfileUpdateResult
+            {
+                UserFound = true,
+                Result = IdentityResult.Failed(new IdentityError { Code = "2FAError", Description = "Could not set 2FA" })
+            });
+        SetupPopulatePageData();
+
+        // Act
+        var result = await sut.OnPostSecurityToggleTwoFactorAsync();
+
+        // Assert
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.ErrorCount.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task OnPostSecurityResetPasswordAsync_ShouldReturnPageWithErrors_WhenUpdateFails()
+    {
+        // Arrange
+        var sut = CreateSut();
+        sut.UserId = "123";
+        sut.NewPassword = "NewP@ssword1";
+        SetupUserFound("123");
+
+        _mockUserEditor.Setup(x => x.UpdateUserFromEditPostAsync(It.IsAny<UserEditPostUpdateRequest>()))
+            .ReturnsAsync(new UserProfileUpdateResult
+            {
+                UserFound = true,
+                Result = IdentityResult.Failed(new IdentityError { Code = "PasswordTooWeak", Description = "Password does not meet requirements" })
+            });
+        SetupPopulatePageData();
+
+        // Act
+        var result = await sut.OnPostSecurityResetPasswordAsync();
+
+        // Assert
+        result.Should().BeOfType<PageResult>();
+        sut.ModelState.ErrorCount.Should().BeGreaterThan(0);
+    }
+
+    #endregion
 }
