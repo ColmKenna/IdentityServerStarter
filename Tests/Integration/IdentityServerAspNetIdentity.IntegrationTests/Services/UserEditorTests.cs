@@ -384,4 +384,48 @@ public class UserEditorTests : IClassFixture<CustomWebApplicationFactory>, IAsyn
     }
 
     #endregion
+
+    #region UpdateUserFromEditPostAsync — Partial Update Risks
+
+    // Documents that profile changes persist even when a subsequent password change fails.
+    // The method has no wrapping transaction, so a failure partway through leaves partial updates committed.
+    [Fact]
+    public async Task UpdateUserFromEditPostAsync_ShouldLeaveProfileUpdated_WhenPasswordChangeFails()
+    {
+        // Arrange
+        var user = new ApplicationUser { UserName = "original", Email = "original@test.com" };
+        await _userManager.CreateAsync(user, "Pass123$");
+
+        var request = new UserEditPostUpdateRequest
+        {
+            UserId = user.Id,
+            Profile = new UserProfileEditViewModel
+            {
+                UserId = user.Id,
+                Username = "updated",
+                Email = "updated@test.com",
+                EmailConfirmed = true
+            },
+            NewPassword = "weak" // Too weak — will fail password validation
+        };
+
+        // Act
+        var result = await _sut.UpdateUserFromEditPostAsync(request);
+
+        // Assert — the method reports failure
+        result.UserFound.Should().BeTrue();
+        result.Result.Succeeded.Should().BeFalse();
+
+        // But the profile change has already been persisted
+        var reloadedUser = await _userManager.FindByIdAsync(user.Id);
+        reloadedUser!.UserName.Should().Be("updated", "profile update was committed before password change was attempted");
+        reloadedUser.Email.Should().Be("updated@test.com");
+
+        // BUG: The old password was removed before the new one was validated.
+        // RemovePasswordAsync succeeded, then AddPasswordAsync failed, leaving the user passwordless.
+        var hasPassword = await _userManager.HasPasswordAsync(reloadedUser);
+        hasPassword.Should().BeFalse("RemovePasswordAsync succeeded but AddPasswordAsync failed — user is left with no password");
+    }
+
+    #endregion
 }

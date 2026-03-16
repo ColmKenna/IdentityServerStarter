@@ -1,3 +1,4 @@
+using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
 using FluentAssertions;
 using IdentityServer.EF.DataAccess.DataMigrations;
@@ -5,7 +6,9 @@ using IdentityServerAspNetIdentity.Models;
 using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using MockQueryable;
 using Moq;
+using System.Security.Claims;
 using Xunit;
 
 namespace IdentityServerServices.UnitTests;
@@ -175,7 +178,10 @@ public class UserEditorTests
         var request = new UserEditPostUpdateRequest
         {
             UserId = "123",
-            Profile = new UserProfileEditViewModel { Username = "test" }
+            Profile = new UserProfileEditViewModel { Username = "test" },
+            LockoutEnabled = true,
+            TwoFactorEnabled = false,
+            NewPassword = "NewPass1!"
         };
 
         var result = await _sut.UpdateUserFromEditPostAsync(request);
@@ -183,6 +189,9 @@ public class UserEditorTests
         result.UserFound.Should().BeTrue();
         result.Result.Succeeded.Should().BeFalse();
         result.Result.Errors.Should().ContainSingle(e => e.Code == "UpdateFailed");
+        _mockUserManager.Verify(x => x.SetLockoutEnabledAsync(It.IsAny<ApplicationUser>(), It.IsAny<bool>()), Times.Never);
+        _mockUserManager.Verify(x => x.SetTwoFactorEnabledAsync(It.IsAny<ApplicationUser>(), It.IsAny<bool>()), Times.Never);
+        _mockUserManager.Verify(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     #endregion
@@ -320,6 +329,52 @@ public class UserEditorTests
         _mockUserManager.Verify(x => x.SetTwoFactorEnabledAsync(It.IsAny<ApplicationUser>(), true), Times.Once);
     }
 
+    [Fact]
+    public async Task UpdateUserFromEditPostAsync_ShouldReturnFailure_WhenSetLockoutEnabledFails()
+    {
+        SetupUserFound("123");
+        _mockUserManager.Setup(x => x.SetLockoutEnabledAsync(It.IsAny<ApplicationUser>(), true))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Code = "LockoutFailed", Description = "Lockout failed" }));
+
+        var request = new UserEditPostUpdateRequest
+        {
+            UserId = "123",
+            LockoutEnabled = true,
+            TwoFactorEnabled = false,
+            NewPassword = "NewPass1!"
+        };
+
+        var result = await _sut.UpdateUserFromEditPostAsync(request);
+
+        result.UserFound.Should().BeTrue();
+        result.Result.Succeeded.Should().BeFalse();
+        result.Result.Errors.Should().ContainSingle(e => e.Code == "LockoutFailed");
+        _mockUserManager.Verify(x => x.SetTwoFactorEnabledAsync(It.IsAny<ApplicationUser>(), It.IsAny<bool>()), Times.Never);
+        _mockUserManager.Verify(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateUserFromEditPostAsync_ShouldReturnFailure_WhenSetTwoFactorEnabledFails()
+    {
+        SetupUserFound("123");
+        _mockUserManager.Setup(x => x.SetTwoFactorEnabledAsync(It.IsAny<ApplicationUser>(), true))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Code = "TwoFactorFailed", Description = "2FA failed" }));
+
+        var request = new UserEditPostUpdateRequest
+        {
+            UserId = "123",
+            TwoFactorEnabled = true,
+            NewPassword = "NewPass1!"
+        };
+
+        var result = await _sut.UpdateUserFromEditPostAsync(request);
+
+        result.UserFound.Should().BeTrue();
+        result.Result.Succeeded.Should().BeFalse();
+        result.Result.Errors.Should().ContainSingle(e => e.Code == "TwoFactorFailed");
+        _mockUserManager.Verify(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
     #endregion
 
     #region UpdateUserFromEditPostAsync — Full Success
@@ -432,6 +487,20 @@ public class UserEditorTests
     #region GetUserEditPageDataAsync — Conditional Flags
 
     [Fact]
+    public async Task GetUserEditPageDataAsync_ShouldFetchClaims_WhenIncludeClaimsIsTrue()
+    {
+        SetupUserFound("123");
+        _mockUserManager.Setup(x => x.GetClaimsAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(new List<Claim>());
+
+        var request = new UserEditPageDataRequest { UserId = "123", IncludeClaims = true };
+
+        await _sut.GetUserEditPageDataAsync(request);
+
+        _mockUserManager.Verify(x => x.GetClaimsAsync(It.IsAny<ApplicationUser>()), Times.Once);
+    }
+
+    [Fact]
     public async Task GetUserEditPageDataAsync_ShouldSkipClaimsFetch_WhenIncludeClaimsIsFalse()
     {
         SetupUserFound("123");
@@ -446,6 +515,22 @@ public class UserEditorTests
     }
 
     [Fact]
+    public async Task GetUserEditPageDataAsync_ShouldFetchRoles_WhenIncludeRolesIsTrue()
+    {
+        SetupUserFound("123");
+        _mockUserManager.Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(new List<string>());
+        _mockRoleManager.Setup(x => x.Roles)
+            .Returns(new List<IdentityRole>().BuildMock());
+
+        var request = new UserEditPageDataRequest { UserId = "123", IncludeRoles = true };
+
+        await _sut.GetUserEditPageDataAsync(request);
+
+        _mockUserManager.Verify(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()), Times.Once);
+    }
+
+    [Fact]
     public async Task GetUserEditPageDataAsync_ShouldSkipRolesFetch_WhenIncludeRolesIsFalse()
     {
         SetupUserFound("123");
@@ -457,6 +542,100 @@ public class UserEditorTests
         result!.Roles.Should().BeEmpty();
         result.AvailableRoles.Should().BeEmpty();
         _mockUserManager.Verify(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetUserEditPageDataAsync_ShouldFetchUserTabData_WhenIncludeUserTabDataIsTrue()
+    {
+        SetupUserFound("123");
+        _mockUserManager.Setup(x => x.GetLoginsAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(new List<UserLoginInfo>());
+        _mockUserManager.Setup(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(true);
+        _mockUserManager.Setup(x => x.GetTwoFactorEnabledAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(false);
+        _mockUserManager.Setup(x => x.GetValidTwoFactorProvidersAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(new List<string>());
+
+        var request = new UserEditPageDataRequest { UserId = "123", IncludeUserTabData = true };
+
+        await _sut.GetUserEditPageDataAsync(request);
+
+        _mockUserManager.Verify(x => x.GetLoginsAsync(It.IsAny<ApplicationUser>()), Times.Once);
+        _mockUserManager.Verify(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>()), Times.Once);
+        _mockUserManager.Verify(x => x.GetTwoFactorEnabledAsync(It.IsAny<ApplicationUser>()), Times.Once);
+        _mockUserManager.Verify(x => x.GetValidTwoFactorProvidersAsync(It.IsAny<ApplicationUser>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserEditPageDataAsync_ShouldSkipUserTabDataFetch_WhenIncludeUserTabDataIsFalse()
+    {
+        SetupUserFound("123");
+        var request = new UserEditPageDataRequest { UserId = "123", IncludeUserTabData = false };
+
+        var result = await _sut.GetUserEditPageDataAsync(request);
+
+        result.Should().NotBeNull();
+        result!.HasPassword.Should().BeFalse();
+        result.AccountStatus.Should().Be("Active");
+        _mockUserManager.Verify(x => x.GetLoginsAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockUserManager.Verify(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockUserManager.Verify(x => x.GetTwoFactorEnabledAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockUserManager.Verify(x => x.GetValidTwoFactorProvidersAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetUserEditPageDataAsync_ShouldFetchGrants_WhenIncludeGrantsIsTrue()
+    {
+        SetupUserFound("123");
+        _mockGrantStore.Setup(x => x.GetAllAsync(It.IsAny<PersistedGrantFilter>()))
+            .ReturnsAsync(new List<PersistedGrant>());
+
+        var request = new UserEditPageDataRequest { UserId = "123", IncludeGrants = true };
+
+        await _sut.GetUserEditPageDataAsync(request);
+
+        _mockGrantStore.Verify(x => x.GetAllAsync(It.Is<PersistedGrantFilter>(f => f.SubjectId == "123")), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserEditPageDataAsync_ShouldSkipGrantsFetch_WhenIncludeGrantsIsFalse()
+    {
+        SetupUserFound("123");
+        var request = new UserEditPageDataRequest { UserId = "123", IncludeGrants = false };
+
+        var result = await _sut.GetUserEditPageDataAsync(request);
+
+        result.Should().NotBeNull();
+        result!.Grants.Should().BeEmpty();
+        _mockGrantStore.Verify(x => x.GetAllAsync(It.IsAny<PersistedGrantFilter>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetUserEditPageDataAsync_ShouldFetchSessions_WhenIncludeSessionsIsTrue()
+    {
+        SetupUserFound("123");
+        _mockSessionStore.Setup(x => x.GetSessionsAsync(It.IsAny<SessionFilter>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ServerSideSession>());
+
+        var request = new UserEditPageDataRequest { UserId = "123", IncludeSessions = true };
+
+        await _sut.GetUserEditPageDataAsync(request);
+
+        _mockSessionStore.Verify(x => x.GetSessionsAsync(It.Is<SessionFilter>(f => f.SubjectId == "123"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserEditPageDataAsync_ShouldSkipSessionsFetch_WhenIncludeSessionsIsFalse()
+    {
+        SetupUserFound("123");
+        var request = new UserEditPageDataRequest { UserId = "123", IncludeSessions = false };
+
+        var result = await _sut.GetUserEditPageDataAsync(request);
+
+        result.Should().NotBeNull();
+        result!.Sessions.Should().BeEmpty();
+        _mockSessionStore.Verify(x => x.GetSessionsAsync(It.IsAny<SessionFilter>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     #endregion
