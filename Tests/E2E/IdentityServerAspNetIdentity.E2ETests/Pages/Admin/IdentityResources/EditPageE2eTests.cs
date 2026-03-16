@@ -110,6 +110,31 @@ public class EditPageE2eTests : IClassFixture<PlaywrightFixture>, IAsyncLifetime
         await Expect(_page.Locator(".alert-success")).ToContainTextAsync("removed successfully");
     }
 
+    [Fact]
+    public async Task EditPage_ShouldShowValidationError_WhenNameIsCleared()
+    {
+        var resourceId = await TestDataHelper.SeedIdentityResourceAsync(
+            _fixture.Factory, $"e2e-validation-{Guid.NewGuid():N}");
+
+        await _page.GotoAsync($"{_fixture.RootUrl}/Admin/IdentityResources/{resourceId}/Edit");
+
+        // Clear the required Name field
+        await _page.FillAsync("#Input_Name", "");
+        
+        // Attempt to submit
+        await _page.Locator("#edit-identity-resource-form button[type='submit']").ClickAsync();
+
+        // Target the specific validation span to avoid strict mode violations (Testing Guide Pitfall #14)
+        var validationSpan = _page.Locator("span[data-valmsg-for='Input.Name'].field-validation-error");
+        await Expect(validationSpan).ToBeVisibleAsync();
+        
+        // Wait for it to have text (usually "The Name field is required." from DataAnnotations)
+        await Expect(validationSpan).Not.ToBeEmptyAsync();
+        
+        // Ensure we are still on the edit page (no navigation occurred)
+        await Expect(_page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex($"/Admin/IdentityResources/{resourceId}/Edit"));
+    }
+
     private ILocatorAssertions Expect(ILocator locator)
     {
         return Microsoft.Playwright.Assertions.Expect(locator);
