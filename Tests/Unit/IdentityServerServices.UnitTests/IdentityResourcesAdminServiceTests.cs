@@ -3,6 +3,7 @@ using Duende.IdentityServer.EntityFramework.Entities;
 using Duende.IdentityServer.EntityFramework.Options;
 using FluentAssertions;
 using IdentityServer.EF.DataAccess.DataMigrations;
+using IdentityServerAspNetIdentity.Models;
 using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -66,11 +67,13 @@ public class IdentityResourcesAdminServiceTests
         await configDb.SaveChangesAsync();
 
         // Arrange ApplicationDbContext
+        var userId = Guid.NewGuid().ToString();
+        appDb.Users.Add(new ApplicationUser { Id = userId, UserName = "testuser", SecurityStamp = Guid.NewGuid().ToString() });
         appDb.UserClaims.AddRange(
-            new IdentityUserClaim<string> { ClaimType = "email", ClaimValue = "test@test.com" }, // Applied
-            new IdentityUserClaim<string> { ClaimType = "name", ClaimValue = "Alice" },          // Applied
-            new IdentityUserClaim<string> { ClaimType = "role", ClaimValue = "admin" },          // Available
-            new IdentityUserClaim<string> { ClaimType = "department", ClaimValue = "sales" }     // Available
+            new IdentityUserClaim<string> { UserId = userId, ClaimType = "email", ClaimValue = "test@test.com" }, // Applied
+            new IdentityUserClaim<string> { UserId = userId, ClaimType = "name", ClaimValue = "Alice" },          // Applied
+            new IdentityUserClaim<string> { UserId = userId, ClaimType = "role", ClaimValue = "admin" },          // Available
+            new IdentityUserClaim<string> { UserId = userId, ClaimType = "department", ClaimValue = "sales" }     // Available
         );
         await appDb.SaveChangesAsync();
 
