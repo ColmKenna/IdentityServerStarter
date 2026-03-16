@@ -163,8 +163,8 @@ public class ClientAdminService(ConfigurationDbContext context) : IClientAdminSe
     {
         var desired = newValues
             .Where(v => !string.IsNullOrWhiteSpace(v))
-            .Select(v => v.Trim())
-            .ToHashSet(StringComparer.Ordinal);
+            .Select(v => v.Trim().ToLowerInvariant())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var toRemove = existing
             .Where(e => !desired.Contains(getValue(e)))

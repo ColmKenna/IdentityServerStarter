@@ -153,4 +153,37 @@ public class ClientAdminServiceTests
         
         secret.Value.Should().Be("MySuperSecretValue123".Sha256());
     }
+
+    [Fact]
+    public async Task UpdateClientAsync_ShouldSanitizeInput_AndHandleDuplicatesCaseInsensitively()
+    {
+        await using var context = CreateDbContext();
+        var client = new Client
+        {
+            ClientId = "test-client",
+            AllowedScopes = []
+        };
+        context.Clients.Add(client);
+        await context.SaveChangesAsync();
+        
+        var sut = new ClientAdminService(context);
+        
+        var updateModel = new ClientEditViewModel
+        {
+            ClientId = "test-client",
+            // "openid" and "  OPENID  " should be treated as the same
+            AllowedScopes = ["openid", "  OPENID  ", "", "  "] 
+        };
+
+        await sut.UpdateClientAsync(client.Id, updateModel);
+
+        var updatedClient = await context.Clients
+            .Include(c => c.AllowedScopes)
+            .SingleAsync(c => c.Id == client.Id);
+            
+        // This is expected to FAIL currently because StringComparer.Ordinal is used
+        // and there is no .ToLowerInvariant() call
+        updatedClient.AllowedScopes.Should().ContainSingle()
+            .Which.Scope.Should().Be("openid");
+    }
 }

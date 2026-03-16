@@ -70,10 +70,99 @@ public class ClientAdminServiceTests : IClassFixture<CustomWebApplicationFactory
         updatedClient.Should().NotBeNull();
         updatedClient!.ClientSecrets.Should().ContainSingle();
         var secret = updatedClient.ClientSecrets.First();
-        
+
         // Value should be hashed, not raw
         secret.Value.Should().NotBe("MySecret123!");
         secret.Description.Should().Be("Test Secret");
+    }
+
+    [Fact]
+    public async Task UpdateClientAsync_ShouldUpdateAllScalarPropertiesAndSyncCollections()
+    {
+        // Arrange
+        var client = new Client 
+        { 
+            ClientId = "original_id", 
+            ClientName = "Original Name",
+            Enabled = false,
+            RequirePkce = false,
+            AccessTokenLifetime = 3600,
+            AllowedScopes = [new ClientScope { Scope = "openid" }]
+        };
+        _configDbContext.Clients.Add(client);
+        await _configDbContext.SaveChangesAsync();
+
+        var viewModel = new ClientEditViewModel
+        {
+            ClientId = "updated_id",
+            ClientName = "Updated Name",
+            Description = "Updated Description",
+            Enabled = true,
+            ClientUri = "https://client.com",
+            LogoUri = "https://client.com/logo.png",
+            RequirePkce = true,
+            RequireClientSecret = true,
+            RequireConsent = true,
+            AllowOfflineAccess = true,
+            FrontChannelLogoutUri = "https://client.com/front",
+            BackChannelLogoutUri = "https://client.com/back",
+            AccessTokenLifetime = 7200,
+            IdentityTokenLifetime = 600,
+            SlidingRefreshTokenLifetime = 1200,
+            RefreshTokenExpiration = 1, // Absolute
+            RefreshTokenUsage = 1, // ReUse
+            AlwaysIncludeUserClaimsInIdToken = true,
+            AllowedGrantTypes = ["authorization_code", "client_credentials"],
+            RedirectUris = ["https://client.com/callback"],
+            PostLogoutRedirectUris = ["https://client.com/signout"],
+            AllowedScopes = ["openid", "profile", "api1"],
+            NewSecret = "NewSecret123",
+            NewSecretDescription = "Admin Added"
+        };
+
+        // Act
+        var result = await _sut.UpdateClientAsync(client.Id, viewModel);
+
+        // Assert
+        result.Should().BeTrue();
+
+        // Clear tracker to ensure we fetch fresh from DB
+        _configDbContext.ChangeTracker.Clear();
+
+        var updatedClient = await _configDbContext.Clients
+            .AsNoTracking()
+            .Include(c => c.AllowedGrantTypes)
+            .Include(c => c.RedirectUris)
+            .Include(c => c.PostLogoutRedirectUris)
+            .Include(c => c.AllowedScopes)
+            .Include(c => c.ClientSecrets)
+            .SingleAsync(c => c.Id == client.Id);
+
+        updatedClient.ClientId.Should().Be(viewModel.ClientId);
+        updatedClient.ClientName.Should().Be(viewModel.ClientName);
+        updatedClient.Description.Should().Be(viewModel.Description);
+        updatedClient.Enabled.Should().Be(viewModel.Enabled);
+        updatedClient.ClientUri.Should().Be(viewModel.ClientUri);
+        updatedClient.LogoUri.Should().Be(viewModel.LogoUri);
+        updatedClient.RequirePkce.Should().Be(viewModel.RequirePkce);
+        updatedClient.RequireClientSecret.Should().Be(viewModel.RequireClientSecret);
+        updatedClient.RequireConsent.Should().Be(viewModel.RequireConsent);
+        updatedClient.AllowOfflineAccess.Should().Be(viewModel.AllowOfflineAccess);
+        updatedClient.FrontChannelLogoutUri.Should().Be(viewModel.FrontChannelLogoutUri);
+        updatedClient.BackChannelLogoutUri.Should().Be(viewModel.BackChannelLogoutUri);
+        updatedClient.AccessTokenLifetime.Should().Be(viewModel.AccessTokenLifetime);
+        updatedClient.IdentityTokenLifetime.Should().Be(viewModel.IdentityTokenLifetime);
+        updatedClient.SlidingRefreshTokenLifetime.Should().Be(viewModel.SlidingRefreshTokenLifetime);
+        updatedClient.RefreshTokenExpiration.Should().Be(viewModel.RefreshTokenExpiration);
+        updatedClient.RefreshTokenUsage.Should().Be(viewModel.RefreshTokenUsage);
+        updatedClient.AlwaysIncludeUserClaimsInIdToken.Should().Be(viewModel.AlwaysIncludeUserClaimsInIdToken);
+
+        updatedClient.AllowedGrantTypes.Select(x => x.GrantType).Should().BeEquivalentTo(viewModel.AllowedGrantTypes);
+        updatedClient.RedirectUris.Select(x => x.RedirectUri).Should().BeEquivalentTo(viewModel.RedirectUris);
+        updatedClient.PostLogoutRedirectUris.Select(x => x.PostLogoutRedirectUri).Should().BeEquivalentTo(viewModel.PostLogoutRedirectUris);
+        updatedClient.AllowedScopes.Select(x => x.Scope).Should().BeEquivalentTo(viewModel.AllowedScopes);
+
+        updatedClient.ClientSecrets.Should().ContainSingle(s => s.Description == "Admin Added");
     }
 
     [Fact]
