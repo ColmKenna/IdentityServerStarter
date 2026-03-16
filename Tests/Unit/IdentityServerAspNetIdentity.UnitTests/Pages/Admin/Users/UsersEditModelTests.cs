@@ -611,18 +611,20 @@ public class UsersEditModelTests
         sut.TempData["Success"].Should().BeNull();
     }
 
-    // TODO: This test documents a partial-update risk — lockout is cleared (first call succeeds)
-    // but failed access count remains elevated (second call fails), leaving the user in an
-    // inconsistent state. See the corresponding TODO in Edit.cshtml.cs OnPostSecurityClearLockoutAsync.
     [Fact]
-    public async Task OnPostSecurityClearLockoutAsync_ShouldReturnPageWithErrors_WhenResetFailedCountFails()
+    public async Task OnPostSecurityClearLockoutAsync_ShouldRollbackLockoutAndReturnErrors_WhenResetFailedCountFails()
     {
         var sut = CreateSut();
         SetupUserFound("123");
         sut.UserId = "123";
         SetupPopulatePageData();
 
+        var originalLockoutEnd = DateTimeOffset.MaxValue;
+        _mockUserManager.Setup(x => x.GetLockoutEndDateAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(originalLockoutEnd);
         _mockUserManager.Setup(x => x.SetLockoutEndDateAsync(It.IsAny<ApplicationUser>(), null))
+            .ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(x => x.SetLockoutEndDateAsync(It.IsAny<ApplicationUser>(), originalLockoutEnd))
             .ReturnsAsync(IdentityResult.Success);
         _mockUserManager.Setup(x => x.ResetAccessFailedCountAsync(It.IsAny<ApplicationUser>()))
             .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Reset count failed" }));
@@ -632,7 +634,8 @@ public class UsersEditModelTests
         result.Should().BeOfType<PageResult>();
         sut.ModelState.Values.SelectMany(v => v.Errors)
             .Should().ContainSingle(e => e.ErrorMessage == "Reset count failed");
-        _mockUserManager.Verify(x => x.SetLockoutEndDateAsync(It.IsAny<ApplicationUser>(), null), Times.Once);
+        // Verify rollback: lockout was restored to the original value
+        _mockUserManager.Verify(x => x.SetLockoutEndDateAsync(It.IsAny<ApplicationUser>(), originalLockoutEnd), Times.Once);
         sut.TempData["Success"].Should().BeNull();
     }
 
