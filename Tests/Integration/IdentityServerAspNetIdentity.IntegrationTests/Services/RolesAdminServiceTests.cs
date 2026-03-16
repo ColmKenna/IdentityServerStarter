@@ -89,4 +89,42 @@ public class RolesAdminServiceTests : IClassFixture<CustomWebApplicationFactory>
         result.AvailableUsers.Should().HaveCount(2);
         result.AvailableUsers.Select(u => u.UserName).Should().BeEquivalentTo("avail_user_1", "avail_user_2");
     }
+
+    [Fact]
+    public async Task GetRolesAsync_ShouldReturnRoles_SortedByName()
+    {
+        // Arrange
+        await _roleManager.CreateAsync(new IdentityRole { Name = "ZebraRole" });
+        await _roleManager.CreateAsync(new IdentityRole { Name = "AppleRole" });
+        await _roleManager.CreateAsync(new IdentityRole { Name = "MangoRole" });
+
+        // Act
+        var result = await _sut.GetRolesAsync();
+
+        // Assert
+        result.Should().HaveCount(3);
+        result.Select(r => r.Name).Should().ContainInOrder("AppleRole", "MangoRole", "ZebraRole");
+    }
+
+    [Fact]
+    public async Task RemoveUserFromRoleAsync_ShouldReturnSuccess_WhenBothExistAndUserIsInRole()
+    {
+        // Arrange
+        var user = new ApplicationUser { UserName = "roleuser_remove", Email = "remove@test.com" };
+        await _userManager.CreateAsync(user, "Pass123$");
+
+        var role = new IdentityRole { Name = "TestRoleToRemove" };
+        await _roleManager.CreateAsync(role);
+
+        await _userManager.AddToRoleAsync(user, "TestRoleToRemove");
+
+        // Act
+        var result = await _sut.RemoveUserFromRoleAsync(role.Id, user.Id);
+
+        // Assert
+        result.Status.Should().Be(RemoveUserFromRoleStatus.Success);
+        
+        var isInRole = await _userManager.IsInRoleAsync(user, "TestRoleToRemove");
+        isInRole.Should().BeFalse();
+    }
 }
