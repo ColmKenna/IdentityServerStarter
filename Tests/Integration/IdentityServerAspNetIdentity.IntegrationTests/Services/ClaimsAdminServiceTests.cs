@@ -59,6 +59,29 @@ public class ClaimsAdminServiceTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
+    public async Task RemoveUserFromClaimAsync_ShouldRemoveClaimAndReportRemainingAssignments()
+    {
+        // Arrange — two users with the same claim type
+        var user1 = new ApplicationUser { UserName = "claimuser_rm1", Email = "rm1@test.com" };
+        var user2 = new ApplicationUser { UserName = "claimuser_rm2", Email = "rm2@test.com" };
+        await _userManager.CreateAsync(user1, "Pass123$");
+        await _userManager.CreateAsync(user2, "Pass123$");
+        await _userManager.AddClaimAsync(user1, new Claim("SharedClaim", "val1"));
+        await _userManager.AddClaimAsync(user2, new Claim("SharedClaim", "val2"));
+
+        // Act — remove user1's assignment
+        var result = await _sut.RemoveUserFromClaimAsync("SharedClaim", user1.Id, "val1");
+
+        // Assert
+        result.Status.Should().Be(RemoveClaimAssignmentStatus.Success);
+        result.UserName.Should().Be("claimuser_rm1");
+        result.HasRemainingAssignments.Should().BeTrue();
+
+        var user1Claims = await _userManager.GetClaimsAsync(user1);
+        user1Claims.Should().NotContain(c => c.Type == "SharedClaim");
+    }
+
+    [Fact]
     public async Task GetForEditAsync_ShouldFlagLastAssignment_WhenOnlyOneUserHasClaim()
     {
         // Arrange

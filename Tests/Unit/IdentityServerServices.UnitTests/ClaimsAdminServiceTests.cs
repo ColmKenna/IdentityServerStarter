@@ -182,6 +182,46 @@ public class ClaimsAdminServiceTests
         result!.NewClaimValue.Should().Be("true");
     }
 
+    [Fact]
+    public async Task GetForEditAsync_ShouldPassThroughNewClaimValue_WhenExplicitlyProvided()
+    {
+        await using var context = CreateApplicationDbContext();
+
+        var testUser = new ApplicationUser { Id = "u1", UserName = "test_user1", Email = "test1@example.com" };
+        context.Users.Add(testUser);
+        context.UserClaims.Add(new IdentityUserClaim<string> { UserId = "u1", ClaimType = "role", ClaimValue = "admin" });
+        await context.SaveChangesAsync();
+
+        var users = new List<ApplicationUser> { new() { Id = "u1", UserName = "Alice" } };
+        _userManagerMock.Setup(m => m.Users).Returns(users.BuildMock());
+
+        var sut = CreateSut(context);
+
+        var result = await sut.GetForEditAsync("role", "custom_value");
+
+        result!.NewClaimValue.Should().Be("custom_value");
+    }
+
+    [Fact]
+    public async Task GetForEditAsync_ShouldNotDefaultNewClaimValue_WhenValuesAreNotAllBooleans()
+    {
+        await using var context = CreateApplicationDbContext();
+
+        var testUser = new ApplicationUser { Id = "u1", UserName = "test_user1", Email = "test1@example.com" };
+        context.Users.Add(testUser);
+        context.UserClaims.Add(new IdentityUserClaim<string> { UserId = "u1", ClaimType = "role", ClaimValue = "admin" });
+        await context.SaveChangesAsync();
+
+        var users = new List<ApplicationUser> { new() { Id = "u1", UserName = "Alice" } };
+        _userManagerMock.Setup(m => m.Users).Returns(users.BuildMock());
+
+        var sut = CreateSut(context);
+
+        var result = await sut.GetForEditAsync("role", null);
+
+        result!.NewClaimValue.Should().BeNull();
+    }
+
     // -------------------------------------------------------------------------
     // AddUserToClaimAsync
     // -------------------------------------------------------------------------
@@ -271,6 +311,71 @@ public class ClaimsAdminServiceTests
         var result = await sut.RemoveUserFromClaimAsync("role", "u1", "admin");
 
         result.Status.Should().Be(RemoveClaimAssignmentStatus.AssignmentNotFound);
+    }
+
+    [Fact]
+    public async Task RemoveUserFromClaimAsync_ShouldReturnUserNotFound()
+    {
+        await using var context = CreateApplicationDbContext();
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync((ApplicationUser?)null);
+        var sut = CreateSut(context);
+
+        var result = await sut.RemoveUserFromClaimAsync("role", "u1", "admin");
+
+        result.Status.Should().Be(RemoveClaimAssignmentStatus.UserNotFound);
+    }
+
+    [Fact]
+    public async Task RemoveUserFromClaimAsync_ShouldReturnIdentityFailure_IfUserManagerFails()
+    {
+        await using var context = CreateApplicationDbContext();
+
+        var testUser = new ApplicationUser { Id = "u1", UserName = "test_user1", Email = "test1@example.com" };
+        context.Users.Add(testUser);
+        context.UserClaims.Add(new IdentityUserClaim<string> { UserId = "u1", ClaimType = "role", ClaimValue = "admin" });
+        await context.SaveChangesAsync();
+
+        var user = new ApplicationUser { Id = "u1", UserName = "Alice" };
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.RemoveClaimAsync(user, It.IsAny<System.Security.Claims.Claim>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Error removing claim" }));
+
+        var sut = CreateSut(context);
+
+        var result = await sut.RemoveUserFromClaimAsync("role", "u1", "admin");
+
+        result.Status.Should().Be(RemoveClaimAssignmentStatus.IdentityFailure);
+        result.Errors.Should().ContainSingle().Which.Should().Be("Error removing claim");
+    }
+
+    [Fact]
+    public async Task RemoveUserFromClaimAsync_ShouldReturnHasRemainingAssignmentsFalse_WhenLastAssignmentRemoved()
+    {
+        await using var context = CreateApplicationDbContext();
+
+        var testUser = new ApplicationUser { Id = "u1", UserName = "test_user1", Email = "test1@example.com" };
+        context.Users.Add(testUser);
+        context.UserClaims.Add(new IdentityUserClaim<string> { UserId = "u1", ClaimType = "role", ClaimValue = "admin" });
+        await context.SaveChangesAsync();
+
+        var user = new ApplicationUser { Id = "u1", UserName = "Alice" };
+        _userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.RemoveClaimAsync(user, It.IsAny<System.Security.Claims.Claim>()))
+            .Callback(() =>
+            {
+                var claim = context.UserClaims.First(c => c.UserId == "u1" && c.ClaimType == "role");
+                context.UserClaims.Remove(claim);
+                context.SaveChanges();
+            })
+            .ReturnsAsync(IdentityResult.Success);
+
+        var sut = CreateSut(context);
+
+        var result = await sut.RemoveUserFromClaimAsync("role", "u1", "admin");
+
+        result.Status.Should().Be(RemoveClaimAssignmentStatus.Success);
+        result.UserName.Should().Be("Alice");
+        result.HasRemainingAssignments.Should().BeFalse();
     }
 
     [Fact]
