@@ -209,6 +209,8 @@ public class UserEditorTests
         result.Result.Succeeded.Should().BeTrue();
         _mockUserManager.Verify(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
         _mockUserManager.Verify(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockUserManager.Verify(x => x.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockUserManager.Verify(x => x.ResetPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         _mockUserManager.Verify(x => x.AddPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
     }
 
@@ -228,20 +230,22 @@ public class UserEditorTests
     }
 
     [Fact]
-    public async Task UpdateUserFromEditPostAsync_ShouldRemoveAndAddPassword_WhenUserHasExistingPassword()
+    public async Task UpdateUserFromEditPostAsync_ShouldResetPassword_WhenUserHasExistingPassword()
     {
         SetupUserFound("123");
         _mockUserManager.Setup(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(true);
-        _mockUserManager.Setup(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(IdentityResult.Success);
-        _mockUserManager.Setup(x => x.AddPasswordAsync(It.IsAny<ApplicationUser>(), "NewPass1!")).ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(x => x.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>())).ReturnsAsync("reset-token");
+        _mockUserManager.Setup(x => x.ResetPasswordAsync(It.IsAny<ApplicationUser>(), "reset-token", "NewPass1!")).ReturnsAsync(IdentityResult.Success);
 
         var request = new UserEditPostUpdateRequest { UserId = "123", NewPassword = "NewPass1!" };
 
         var result = await _sut.UpdateUserFromEditPostAsync(request);
 
         result.Result.Succeeded.Should().BeTrue();
-        _mockUserManager.Verify(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>()), Times.Once);
-        _mockUserManager.Verify(x => x.AddPasswordAsync(It.IsAny<ApplicationUser>(), "NewPass1!"), Times.Once);
+        _mockUserManager.Verify(x => x.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>()), Times.Once);
+        _mockUserManager.Verify(x => x.ResetPasswordAsync(It.IsAny<ApplicationUser>(), "reset-token", "NewPass1!"), Times.Once);
+        _mockUserManager.Verify(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockUserManager.Verify(x => x.AddPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -257,33 +261,36 @@ public class UserEditorTests
 
         result.Result.Succeeded.Should().BeTrue();
         _mockUserManager.Verify(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockUserManager.Verify(x => x.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockUserManager.Verify(x => x.ResetPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         _mockUserManager.Verify(x => x.AddPasswordAsync(It.IsAny<ApplicationUser>(), "NewPass1!"), Times.Once);
     }
 
     [Fact]
-    public async Task UpdateUserFromEditPostAsync_ShouldReturnFailure_WhenRemovePasswordFails()
+    public async Task UpdateUserFromEditPostAsync_ShouldReturnFailure_WhenResetPasswordFails()
     {
         SetupUserFound("123");
         _mockUserManager.Setup(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(true);
-        _mockUserManager.Setup(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>()))
-            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Remove failed" }));
+        _mockUserManager.Setup(x => x.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>())).ReturnsAsync("reset-token");
+        _mockUserManager.Setup(x => x.ResetPasswordAsync(It.IsAny<ApplicationUser>(), "reset-token", "NewPass1!"))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Reset failed" }));
 
         var request = new UserEditPostUpdateRequest { UserId = "123", NewPassword = "NewPass1!" };
 
         var result = await _sut.UpdateUserFromEditPostAsync(request);
 
         result.Result.Succeeded.Should().BeFalse();
+        _mockUserManager.Verify(x => x.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>()), Times.Once);
+        _mockUserManager.Verify(x => x.ResetPasswordAsync(It.IsAny<ApplicationUser>(), "reset-token", "NewPass1!"), Times.Once);
         _mockUserManager.Verify(x => x.AddPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+        _mockUserManager.Verify(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
-    // TODO: This test documents a partial-update risk — if RemovePasswordAsync succeeds but
-    // AddPasswordAsync fails, the user is left without any password. See UserEditor.cs lines 199-202.
     [Fact]
-    public async Task UpdateUserFromEditPostAsync_ShouldReturnFailure_WhenAddPasswordFails()
+    public async Task UpdateUserFromEditPostAsync_ShouldReturnFailure_WhenAddPasswordFails_ForPasswordlessUser()
     {
         SetupUserFound("123");
-        _mockUserManager.Setup(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(true);
-        _mockUserManager.Setup(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(false);
         _mockUserManager.Setup(x => x.AddPasswordAsync(It.IsAny<ApplicationUser>(), "NewPass1!"))
             .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Password too weak" }));
 
@@ -292,7 +299,9 @@ public class UserEditorTests
         var result = await _sut.UpdateUserFromEditPostAsync(request);
 
         result.Result.Succeeded.Should().BeFalse();
-        _mockUserManager.Verify(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>()), Times.Once);
+        _mockUserManager.Verify(x => x.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockUserManager.Verify(x => x.ResetPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _mockUserManager.Verify(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     #endregion
@@ -387,8 +396,8 @@ public class UserEditorTests
         _mockUserManager.Setup(x => x.SetLockoutEnabledAsync(It.IsAny<ApplicationUser>(), true)).ReturnsAsync(IdentityResult.Success);
         _mockUserManager.Setup(x => x.SetTwoFactorEnabledAsync(It.IsAny<ApplicationUser>(), false)).ReturnsAsync(IdentityResult.Success);
         _mockUserManager.Setup(x => x.HasPasswordAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(true);
-        _mockUserManager.Setup(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(IdentityResult.Success);
-        _mockUserManager.Setup(x => x.AddPasswordAsync(It.IsAny<ApplicationUser>(), "NewPass1!")).ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(x => x.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>())).ReturnsAsync("reset-token");
+        _mockUserManager.Setup(x => x.ResetPasswordAsync(It.IsAny<ApplicationUser>(), "reset-token", "NewPass1!")).ReturnsAsync(IdentityResult.Success);
 
         var request = new UserEditPostUpdateRequest
         {

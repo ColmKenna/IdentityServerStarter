@@ -387,10 +387,8 @@ public class UserEditorTests : IClassFixture<CustomWebApplicationFactory>, IAsyn
 
     #region UpdateUserFromEditPostAsync — Partial Update Risks
 
-    // Documents that profile changes persist even when a subsequent password change fails.
-    // The method has no wrapping transaction, so a failure partway through leaves partial updates committed.
     [Fact]
-    public async Task UpdateUserFromEditPostAsync_ShouldLeaveProfileUpdated_WhenPasswordChangeFails()
+    public async Task UpdateUserFromEditPostAsync_ShouldRollbackProfileChanges_WhenPasswordChangeFails()
     {
         // Arrange
         var user = new ApplicationUser { UserName = "original", Email = "original@test.com" };
@@ -416,15 +414,17 @@ public class UserEditorTests : IClassFixture<CustomWebApplicationFactory>, IAsyn
         result.UserFound.Should().BeTrue();
         result.Result.Succeeded.Should().BeFalse();
 
-        // But the profile change has already been persisted
+        // The profile update should be rolled back because the password change failed.
         var reloadedUser = await _userManager.FindByIdAsync(user.Id);
-        reloadedUser!.UserName.Should().Be("updated", "profile update was committed before password change was attempted");
-        reloadedUser.Email.Should().Be("updated@test.com");
+        reloadedUser!.UserName.Should().Be("original");
+        reloadedUser.Email.Should().Be("original@test.com");
+        reloadedUser.EmailConfirmed.Should().BeFalse();
 
-        // BUG: The old password was removed before the new one was validated.
-        // RemovePasswordAsync succeeded, then AddPasswordAsync failed, leaving the user passwordless.
         var hasPassword = await _userManager.HasPasswordAsync(reloadedUser);
-        hasPassword.Should().BeFalse("RemovePasswordAsync succeeded but AddPasswordAsync failed — user is left with no password");
+        hasPassword.Should().BeTrue();
+
+        var pwdCheckOld = await _userManager.CheckPasswordAsync(reloadedUser, "Pass123$");
+        pwdCheckOld.Should().BeTrue();
     }
 
     #endregion

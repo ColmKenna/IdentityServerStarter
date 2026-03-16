@@ -4,6 +4,7 @@ using IdentityServerAspNetIdentity.Models;
 using IdentityServerServices.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using System.Security.Claims;
 using IdentityServer.EF.DataAccess.DataMigrations;
 
@@ -167,6 +168,17 @@ public class UserEditor(
         if (user is null)
             return UserMissingResult("UserNotFound", "User not found.");
 
+        if (request.NewPassword is not null && string.IsNullOrWhiteSpace(request.NewPassword))
+            return new UserProfileUpdateResult
+            {
+                UserFound = true,
+                Result = IdentityResult.Failed(new IdentityError { Code = "PasswordMissing", Description = "New password is required." })
+            };
+
+        await using var transaction = await TryBeginTransactionAsync();
+        var originalState = CaptureUserState(user);
+        var userStateChanged = false;
+
         if (request.Profile is not null)
         {
             user.UserName = request.Profile.Username;
@@ -178,29 +190,36 @@ public class UserEditor(
             if (!string.IsNullOrWhiteSpace(request.Profile.ConcurrencyStamp))
                 user.ConcurrencyStamp = request.Profile.ConcurrencyStamp;
 
-            if (FailIfFailed(await _userManager.UpdateAsync(user)) is { } updateFailure) return updateFailure;
+            if (FailIfFailed(await _userManager.UpdateAsync(user)) is { } updateFailure)
+                return await RollbackAndReturnFailureAsync(transaction, user, originalState, userStateChanged, updateFailure);
+
+            userStateChanged = true;
         }
 
         if (request.LockoutEnabled.HasValue)
-            if (FailIfFailed(await _userManager.SetLockoutEnabledAsync(user, request.LockoutEnabled.Value)) is { } lockoutFailure) return lockoutFailure;
+        {
+            if (FailIfFailed(await _userManager.SetLockoutEnabledAsync(user, request.LockoutEnabled.Value)) is { } lockoutFailure)
+                return await RollbackAndReturnFailureAsync(transaction, user, originalState, userStateChanged, lockoutFailure);
+
+            userStateChanged = true;
+        }
 
         if (request.TwoFactorEnabled.HasValue)
-            if (FailIfFailed(await _userManager.SetTwoFactorEnabledAsync(user, request.TwoFactorEnabled.Value)) is { } twoFactorFailure) return twoFactorFailure;
+        {
+            if (FailIfFailed(await _userManager.SetTwoFactorEnabledAsync(user, request.TwoFactorEnabled.Value)) is { } twoFactorFailure)
+                return await RollbackAndReturnFailureAsync(transaction, user, originalState, userStateChanged, twoFactorFailure);
+
+            userStateChanged = true;
+        }
 
         if (request.NewPassword is not null)
         {
-            if (string.IsNullOrWhiteSpace(request.NewPassword))
-                return new UserProfileUpdateResult
-                {
-                    UserFound = true,
-                    Result = IdentityResult.Failed(new IdentityError { Code = "PasswordMissing", Description = "New password is required." })
-                };
-
-            if (await _userManager.HasPasswordAsync(user))
-                if (FailIfFailed(await _userManager.RemovePasswordAsync(user)) is { } removeFailure) return removeFailure;
-
-            if (FailIfFailed(await _userManager.AddPasswordAsync(user, request.NewPassword)) is { } addFailure) return addFailure;
+            if (await UpdatePasswordAsync(user, request.NewPassword) is { } passwordFailure)
+                return await RollbackAndReturnFailureAsync(transaction, user, originalState, userStateChanged, passwordFailure);
         }
+
+        if (transaction is not null)
+            await transaction.CommitAsync();
 
         return new UserProfileUpdateResult { UserFound = true, Result = IdentityResult.Success };
     }
@@ -244,8 +263,86 @@ public class UserEditor(
         return "Active";
     }
 
+    private async Task<UserProfileUpdateResult?> UpdatePasswordAsync(ApplicationUser user, string newPassword)
+    {
+        if (await _userManager.HasPasswordAsync(user))
+        {
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+            return FailIfFailed(await _userManager.ResetPasswordAsync(user, resetToken, newPassword));
+        }
+
+        return FailIfFailed(await _userManager.AddPasswordAsync(user, newPassword));
+    }
+
+    private async Task<UserProfileUpdateResult> RollbackAndReturnFailureAsync(
+        IDbContextTransaction? transaction,
+        ApplicationUser user,
+        UserStateSnapshot originalState,
+        bool userStateChanged,
+        UserProfileUpdateResult failure)
+    {
+        if (transaction is not null)
+        {
+            await transaction.RollbackAsync();
+            return failure;
+        }
+
+        if (userStateChanged)
+            await RestoreUserStateAsync(user, originalState);
+
+        return failure;
+    }
+
+    private static UserStateSnapshot CaptureUserState(ApplicationUser user)
+    {
+        return new UserStateSnapshot(
+            user.UserName,
+            user.Email,
+            user.EmailConfirmed,
+            user.PhoneNumber,
+            user.PhoneNumberConfirmed,
+            user.ConcurrencyStamp,
+            user.LockoutEnabled,
+            user.TwoFactorEnabled);
+    }
+
+    private async Task RestoreUserStateAsync(ApplicationUser user, UserStateSnapshot state)
+    {
+        user.UserName = state.UserName;
+        user.Email = state.Email;
+        user.EmailConfirmed = state.EmailConfirmed;
+        user.PhoneNumber = state.PhoneNumber;
+        user.PhoneNumberConfirmed = state.PhoneNumberConfirmed;
+        user.ConcurrencyStamp = state.ConcurrencyStamp;
+        user.LockoutEnabled = state.LockoutEnabled;
+        user.TwoFactorEnabled = state.TwoFactorEnabled;
+
+        await _userManager.UpdateAsync(user);
+    }
+
+    private async Task<IDbContextTransaction?> TryBeginTransactionAsync()
+    {
+        if (_dbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+            return null;
+
+        if (_dbContext.Database.CurrentTransaction is not null)
+            return null;
+
+        return await _dbContext.Database.BeginTransactionAsync();
+    }
+
     private static UserProfileUpdateResult? FailIfFailed(IdentityResult result)
         => result.Succeeded ? null : new UserProfileUpdateResult { UserFound = true, Result = result };
+
+    private sealed record UserStateSnapshot(
+        string? UserName,
+        string? Email,
+        bool EmailConfirmed,
+        string? PhoneNumber,
+        bool PhoneNumberConfirmed,
+        string? ConcurrencyStamp,
+        bool LockoutEnabled,
+        bool TwoFactorEnabled);
 
     private static UserProfileUpdateResult UserMissingResult(string code, string description)
     {
