@@ -195,8 +195,8 @@ public class UsersAdminE2eTests : IClassFixture<PlaywrightFixture>, IAsyncLifeti
         // Act — navigate to the Roles tab
         await _page.GotoAsync($"{_fixture.RootUrl}/Admin/Users/{userId}?tab=roles");
 
-        // Check the available role checkbox and click Add
-        await _page.Locator($"input#role-{roleName}").CheckAsync();
+        // Check the available role checkbox and click Add (force click to avoid label intercepts)
+        await _page.Locator($"input#role-{roleName}").CheckAsync(new() { Force = true });
         await _page.Locator("#add-roles-btn").ClickAsync();
 
         // Assert — success message and role appears in Current Roles section
@@ -222,7 +222,7 @@ public class UsersAdminE2eTests : IClassFixture<PlaywrightFixture>, IAsyncLifeti
         await Expect(_page.Locator("#assigned-roles-list")).ToContainTextAsync(roleName);
 
         // Select the role checkbox and click Remove Selected — triggers confirmation dialog
-        await _page.Locator($".role-checkbox[data-role-name='{roleName}']").CheckAsync();
+        await _page.Locator($".role-checkbox[data-role-name='{roleName}']").CheckAsync(new() { Force = true });
         await ClickAndConfirmAsync("#remove-roles-btn");
 
         // Assert — success message and role no longer in Current Roles
