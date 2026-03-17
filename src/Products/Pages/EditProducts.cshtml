@@ -1,0 +1,26 @@
+@page
+@model Products.Pages.EditProductsModel
+@{
+    ViewData["Title"] = "Edit Products";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<p>The current user has the <strong>canAmendProduct</strong> claim and can amend products.</p>
+
+<form method="post" class="mt-4">
+    <div class="mb-3">
+        <label class="form-label" asp-for="ProductName"></label>
+        <input class="form-control" asp-for="ProductName" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label" asp-for="Price"></label>
+        <input class="form-control" asp-for="Price" />
+    </div>
+    <button type="submit" class="btn btn-warning">Save draft</button>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success mt-3" role="alert">@Model.StatusMessage</div>
+}

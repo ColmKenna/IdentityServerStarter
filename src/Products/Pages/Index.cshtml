@@ -1,0 +1,35 @@
+﻿@page
+@model IndexModel
+
+@using Microsoft.AspNetCore.Authentication
+
+<div class="mb-4">
+    <h1 class="display-5">Products</h1>
+    <p>Authenticated Razor Pages client for the products scope.</p>
+</div>
+
+<p>
+    <a class="btn btn-primary me-2" asp-page="/ViewProducts">View products</a>
+    <a class="btn btn-warning me-2" asp-page="/EditProducts">Edit products</a>
+    <a class="btn btn-outline-secondary" asp-page="/Logout">Sign out</a>
+</p>
+
+<h2>Claims</h2>
+
+<dl>
+    @foreach (var claim in User.Claims.OrderBy(claim => claim.Type))
+    {
+        <dt>@claim.Type</dt>
+        <dd>@claim.Value</dd>
+    }
+</dl>
+
+<h2>Properties</h2>
+
+<dl>
+    @foreach (var prop in (await HttpContext.AuthenticateAsync()).Properties?.Items ?? new Dictionary<string, string?>())
+    {
+        <dt>@prop.Key</dt>
+        <dd>@prop.Value</dd>
+    }
+</dl>
