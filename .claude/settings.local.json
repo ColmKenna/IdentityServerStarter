@@ -20,7 +20,13 @@
       "Bash(dotnet test Tests/E2E/IdentityServerAspNetIdentity.E2ETests/IdentityServerAspNetIdentity.E2ETests.csproj --filter \"FullyQualifiedName~EditPageE2eTests\" --no-build --verbosity normal)",
       "Bash(dotnet build:*)",
       "Bash(dotnet test:*)",
-      "Bash(grep -h \"^\\\\s*\\\\[Fact\\\\]\\\\|^\\\\s*\\\\[Theory\\\\]\" \"d:/repos/IdentityServerStarter copy/IdentityServerStarter copy/Tests/Unit/IdentityServerServices.UnitTests/\"*.cs)"
+      "Bash(grep -h \"^\\\\s*\\\\[Fact\\\\]\\\\|^\\\\s*\\\\[Theory\\\\]\" \"d:/repos/IdentityServerStarter copy/IdentityServerStarter copy/Tests/Unit/IdentityServerServices.UnitTests/\"*.cs)",
+      "Bash(ls -d d:/repos/\"IdentityServerStarter copy\"/\"IdentityServerStarter copy\"/src/*/)",
+      "Bash(mv src/Api src/Clients/)",
+      "Bash(mv src/Client src/Clients/)",
+      "Bash(mv src/WebClient src/Clients/)",
+      "Bash(mv src/Products src/Clients/)",
+      "Bash(mv src/DataTransferModels src/Clients/)"
     ]
   }
 }
