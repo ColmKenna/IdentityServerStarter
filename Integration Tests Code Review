@@ -1,0 +1,227 @@
+# Integration Tests Code Review
+
+**Project:** `IdentityServerAspNetIdentity.IntegrationTests`
+**Scope:** 7 infrastructure files, 14 test files, project config
+
+---
+
+## Overall Assessment
+
+The integration test suite is **solid and well-structured**. It covers the major admin pages with genuine HTTP-through-the-pipeline tests using `WebApplicationFactory`, AngleSharp DOM assertions, and both GET and POST verification. The infrastructure layer (`CustomWebApplicationFactory`, helpers, extensions) is thoughtfully designed.
+
+That said, there are several issues ranging from inconsistent patterns to test-quality gaps that should be addressed.
+
+---
+
+## Critical Issues
+
+### C1. `UsersIndexIntegrationTests` — Weak/Placeholder Assertions
+
+> [!CAUTION]
+> **Severity: High** — 4 of 6 tests in this file assert only `response.Should().NotBeNull()`, which will **never fail**. These tests give false confidence.
+
+| Test | Problem |
+|------|---------|
+| `should_return_success_when_get_users_page_authenticated` | Asserts `NotBeNull` instead of `200 OK` |
+| `should_contain_table_element_when_get_users_page` | Asserts `NotBeNull` instead of parsing HTML |
+| `should_display_user_data_when_users_exist` | Seeds data but never checks the response body |
+| `should_handle_empty_user_list` | Asserts `NotBeNull` — no useful assertion |
+
+These appear to be leftover scaffolding. They should either be **completed with real assertions** or **removed**.
+
+**File:** [UsersIndexIntegrationTests.cs](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Pages/UsersIndexIntegrationTests.cs)
+
+---
+
+### C2. `RolesIndexIntegrationTests.Get_RolesExist_TableDisplaysRoleNames` — Debug Code Left In
+
+> [!WARNING]
+> **Severity: High** — Lines 110–117 contain inline debug assertions using `throw new Exception(...)` instead of xUnit/FluentAssertions. This bypasses the test framework's error reporting and makes failures harder to diagnose.
+
+```csharp
+// Lines 110-117 — should be removed or replaced with proper assertions
+using (var scope = _factory.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var roleCount = db.Roles.Count();
+    if (roleCount != 2) throw new Exception("Database roles count is " + roleCount + " ...");
+    var roleNamesInDb = string.Join(", ", db.Roles.Select(r => r.Name));
+    if (!roleNamesInDb.Contains("Admin")) throw new Exception("Admin not in DB directly! " + roleNamesInDb);
+}
+```
+
+**File:** [RolesIndexIntegrationTests.cs](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Pages/RolesIndexIntegrationTests.cs#L110-L117)
+
+---
+
+### C3. Inconsistent Lifecycle Management: `IClassFixture` vs `IDisposable`
+
+> [!IMPORTANT]
+> **Severity: High** — Two test classes use `IClassFixture<CustomWebApplicationFactory>` (shared factory across all tests in the class), while 12 use `IDisposable` (new factory per test). This creates **data leakage** risk in the fixture classes.
+
+| Pattern | Classes |
+|---------|---------|
+| `IClassFixture` (shared) | `ErrorIndexIntegrationTests`, `UsersIndexIntegrationTests` |
+| `IDisposable` (isolated) | All other 12 classes |
+
+The shared-factory tests (`UsersIndexIntegrationTests`) share the same InMemory database across all tests in that class. The `should_display_user_data_when_users_exist` test seeds "testuser123" but this data **leaks into every other test** in the class. Since `AllowAutoRedirect = false` is set at the class level in `UsersIndexIntegrationTests`, the first test checks for a redirect — this will pass. But if test execution order changes, results could become non-deterministic.
+
+**Recommendation:** Standardise on `IDisposable` with per-test factories for full isolation, matching the majority pattern.
+
+---
+
+## Moderate Issues
+
+### M1. Duplicated Seed/Helper Methods Across Test Classes
+
+The following helper methods are **copy-pasted** across 3+ files with nearly identical implementations:
+
+| Method | Appears in |
+|--------|-----------|
+| `SeedUserAsync(usernamePrefix)` | `ClaimsEditIntegrationTests`, `ClaimsIndexIntegrationTests`, `UsersEditIntegrationTests` |
+| `AddUserClaimAsync(userId, type, value)` | `ClaimsEditIntegrationTests`, `ClaimsIndexIntegrationTests`, `UsersEditIntegrationTests` |
+
+These should be extracted to `TestDataHelper` (which already exists but only covers basic user CRUD). This would reduce ~120 lines of duplication.
+
+---
+
+### M2. `TestAuthHandler` Generates New `NameIdentifier` Per Request
+
+[TestAuthHandler.cs:24](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Infrastructure/TestAuthHandler.cs#L24): `Guid.NewGuid().ToString()` is called in `HandleAuthenticateAsync`, so every request gets a **different user ID**. This means:
+- You can never look up the "authenticated user" in the database
+- Any page that uses `User.FindFirst(ClaimTypes.NameIdentifier)` sees a different user each time
+
+If current tests don't depend on user-ID consistency, this works. But it becomes a trap if future tests need it. Consider using a **stable** test user ID.
+
+---
+
+### M3. `AntiforgeryTokenHelper` Has Unnecessary `await Task.CompletedTask`
+
+[AntiforgeryTokenHelper.cs:39](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Infrastructure/AntiforgeryTokenHelper.cs#L39) — The method is `async` but the only async operation is the `await Task.CompletedTask` at the end, which is a no-op. Either make the method synchronous and return a `Task.FromResult`, or remove the `await Task.CompletedTask`.
+
+---
+
+### M4. `AntiforgeryTokenHelper.CreateTestPrincipal()` Duplicates `TestAuthHandler` Claims
+
+Both [TestAuthHandler.cs:21–33](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Infrastructure/TestAuthHandler.cs#L21-L33) and [AntiforgeryTokenHelper.cs:45–56](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Infrastructure/AntiforgeryTokenHelper.cs#L45-L56) define the same claims list. If the test identity ever changes, you'd need to update both. Extract a shared `TestIdentity` constant or method.
+
+---
+
+### M5. `RolesEditIntegrationTests` Uses `GetAwaiter().GetResult()` Instead of `async`/`await`
+
+The [SeedRole](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Pages/RolesEditIntegrationTests.cs#L28-L40), [SeedUser](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Pages/RolesEditIntegrationTests.cs#L42-L62), and [AddUserToRole](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Pages/RolesEditIntegrationTests.cs#L64-L70) helpers use `.GetAwaiter().GetResult()` — a synchronous blocking pattern. Every other test class uses proper `async`/`await` for seed methods. This is inconsistent and risks deadlocks in some environments.
+
+---
+
+### M6. `HttpClientExtensions.cs` — File/Class Name Mismatch
+
+The file is named `HttpClientExtensions.cs` but contains `class AngleSharpHelpers`. This is confusing. Either rename the file to `AngleSharpHelpers.cs` or rename the class.
+
+**File:** [HttpClientExtensions.cs](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Infrastructure/HttpClientExtensions.cs)
+
+---
+
+### M7. `SendFormAsync` Sets Values Twice
+
+In [HttpClientExtensions.cs](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Infrastructure/HttpClientExtensions.cs#L29-L44), `formValues` are applied to the DOM elements (lines 29–44) **and** later added as form-encoded content (lines 103–108). The DOM manipulation on lines 29–44 is effectively dead code for POST requests since the form data is rebuilt from scratch on line 66. This could lead to confusion about which path applies.
+
+---
+
+### M8. `InMemoryServerSideSessionStore` Should Be in Its Own File
+
+The [InMemoryServerSideSessionStore](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Infrastructure/CustomWebApplicationFactory.cs#L137-L199) class (~60 lines) is embedded at the bottom of `CustomWebApplicationFactory.cs`. For discoverability and SRP, move it to its own file.
+
+---
+
+## Minor Issues / Suggestions
+
+### S1. Naming Convention Inconsistencies
+
+| Style | Examples |
+|-------|---------|
+| `PascalCase_Underscores` (majority) | `Get_AdminIndex_Returns200`, `PostEdit_ValidInput_Returns302` |
+| `snake_case` | `should_return_success_status_when_get_error_page`, `should_redirect_to_login_when...` |
+
+The `ErrorIndexIntegrationTests` and `UsersIndexIntegrationTests` use `should_*` snake_case, while all others use PascalCase with underscores. Pick one convention.
+
+---
+
+### S2. Redundant `using` Directives
+
+Several test files import namespaces that are already in `GlobalUsings.cs`:
+- `using System.Net;` — in [AdminIndexIntegrationTests.cs:1](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Pages/AdminIndexIntegrationTests.cs#L1), [ApiScopesCreateIntegrationTests.cs:1](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Pages/ApiScopesCreateIntegrationTests.cs#L1), and most others
+- `using FluentAssertions;` — in [ClientsEditIntegrationTests.cs:4](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Pages/ClientsEditIntegrationTests.cs#L4)
+- `using Microsoft.Extensions.DependencyInjection;` — in several files
+
+Not harmful but adds noise. Can be cleaned up.
+
+---
+
+### S3. `TestDatabaseHelper` is Unused
+
+[TestDatabaseHelper.cs](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Infrastructure/TestDatabaseHelper.cs) provides `SeedAdminUser`, `SeedTestUsers`, and `SeedTestClients` — but no test file appears to call any of these methods. Each test class defines its own seed helpers instead. This file is likely dead code.
+
+---
+
+### S4. Empty `<Folder>` Entry in `.csproj`
+
+```xml
+<ItemGroup>
+    <Folder Include="Pages\" />
+</ItemGroup>
+```
+
+This is a Visual Studio artifact with no effect. Can be removed.
+
+---
+
+### S5. No Test Collection Parallelisation
+
+`xunit.runner.json` disables **all** parallelism. Given that each test creates its own `CustomWebApplicationFactory` with a unique InMemory database name (`Guid.NewGuid()`), most tests **could** run in parallel safely. Consider enabling `parallelizeTestCollections: true` for faster CI runs — but first fix the `IClassFixture` tests (C3) which could interfere.
+
+---
+
+### S6. Missing `GC.SuppressFinalize` in `Dispose`
+
+The 12 classes implementing `IDisposable` don't call `GC.SuppressFinalize(this)`. While this is a minor code-analysis warning for test classes (no finalizer exists), adding it would suppress CA1816 if you enable analyzers.
+
+---
+
+### S7. Antiforgery Globally Disabled But `AntiforgeryTokenHelper` Exists
+
+[CustomWebApplicationFactory.cs:99–102](file:///Users/colmkenna/Source/IdentityServerStarter/Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/Infrastructure/CustomWebApplicationFactory.cs#L99-L102) adds `IgnoreAntiforgeryTokenAttribute` globally, so antiforgery is never validated. Yet `AntiforgeryTokenHelper` exists with full token generation logic. This helper is **unused** — either it's premature infrastructure or was left from a removed feature.
+
+---
+
+## Summary Table
+
+| ID | Severity | Issue | Files |
+|----|----------|-------|-------|
+| C1 | 🔴 High | Placeholder assertions (`.NotBeNull()` only) | `UsersIndexIntegrationTests` |
+| C2 | 🔴 High | Debug `throw new Exception` left in test | `RolesIndexIntegrationTests` |
+| C3 | 🔴 High | Mixed `IClassFixture`/`IDisposable` lifecycle | `ErrorIndex..`, `UsersIndex..` |
+| M1 | 🟡 Medium | Duplicated seed helpers across 3+ files | Claims/Users test files |
+| M2 | 🟡 Medium | Non-deterministic user ID in `TestAuthHandler` | `TestAuthHandler` |
+| M3 | 🟡 Medium | Unnecessary `await Task.CompletedTask` | `AntiforgeryTokenHelper` |
+| M4 | 🟡 Medium | Duplicated claims definition | `TestAuthHandler` + `AntiforgeryTokenHelper` |
+| M5 | 🟡 Medium | `GetAwaiter().GetResult()` instead of `async` | `RolesEditIntegrationTests` |
+| M6 | 🟡 Medium | File name doesn't match class name | `HttpClientExtensions.cs` |
+| M7 | 🟡 Medium | Form values applied twice in `SendFormAsync` | `HttpClientExtensions.cs` |
+| M8 | 🟡 Medium | `InMemoryServerSideSessionStore` not in own file | `CustomWebApplicationFactory.cs` |
+| S1 | 🔵 Low | Mixed naming conventions | `ErrorIndex..`, `UsersIndex..` |
+| S2 | 🔵 Low | Redundant `using` directives | Multiple files |
+| S3 | 🔵 Low | `TestDatabaseHelper` appears unused | `TestDatabaseHelper.cs` |
+| S4 | 🔵 Low | Empty `<Folder>` entry in csproj | `.csproj` |
+| S5 | 🔵 Low | All parallelism disabled | `xunit.runner.json` |
+| S6 | 🔵 Low | Missing `GC.SuppressFinalize` | 12 `IDisposable` classes |
+| S7 | 🔵 Low | `AntiforgeryTokenHelper` unused | `AntiforgeryTokenHelper.cs` |
+
+---
+
+## Strengths Worth Noting
+
+- ✅ **Genuine integration testing** — tests exercise the full HTTP pipeline including middleware (CSP headers, route aliases)
+- ✅ **Good edge-case coverage** — 404s, empty states, duplicates, validation messages all tested
+- ✅ **POST + persistence verification** — tests verify database state after form submissions, not just HTTP status
+- ✅ **Clean infrastructure** — `AngleSharpExtensions` and `AngleSharpHelpers` make tests readable and concise
+- ✅ **Per-test isolation** — unique DB names via `Guid.NewGuid()` prevent cross-test contamination (in the `IDisposable` classes)

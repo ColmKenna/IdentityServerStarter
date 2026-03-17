@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet test Tests/Integration/IdentityServerAspNetIdentity.IntegrationTests/IdentityServerAspNetIdentity.IntegrationTests.csproj --filter \"FullyQualifiedName~ClientsEditIntegrationTests\" --verbosity normal)",
+      "Bash(dotnet test Tests/Unit/IdentityServerAspNetIdentity.UnitTests/IdentityServerAspNetIdentity.UnitTests.csproj --filter \"FullyQualifiedName~ClientsEditModelTests\" --verbosity normal)",
+      "Read(//dev/**)",
+      "Bash(xargs ls -lt)",
+      "Bash(sass wwwroot/css/site.scss wwwroot/css/site.css)",
+      "Bash(dotnet build --no-restore)",
+      "Bash(dotnet restore)",
+      "Bash(dotnet build src/IdentityServerServices/IdentityServerServices.csproj src/PrimativeExtensions/PrimativeExtensions.csproj src/PrimativeExtensionMethods/PrimativeExtensionMethods.csproj --no-restore)",
+      "Bash(dotnet build src/IdentityServerServices/IdentityServerServices.csproj --no-restore)",
+      "Bash(dotnet build src/PrimativeExtensions/PrimativeExtensions.csproj --no-restore)",
+      "Bash(dotnet build src/PrimativeExtensionMethods/PrimativeExtensionMethods.csproj --no-restore)",
+      "Bash(dotnet restore src/PrimativeExtensionMethods/PrimativeExtensionMethods.csproj)",
+      "Bash(dotnet test Tests/Unit/IdentityServerServices.UnitTests/IdentityServerServices.UnitTests.csproj --no-restore)",
+      "Bash(dotnet test Tests/Unit/IdentityServerServices.UnitTests/ --no-restore)",
+      "Bash(dotnet build src/IdentityServerAspNetIdentity/ --no-restore)",
+      "Bash(dotnet build src/IdentityServerAspNetIdentity/IdentityServerAspNetIdentity.csproj -p:SkipNpm=true --no-restore -q)"
+    ]
+  }
+}

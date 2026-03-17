@@ -86,6 +86,31 @@ public static class Config
                     "products"
                 },
                 AlwaysIncludeUserClaimsInIdToken = true
+            },
+
+            // Products Razor Pages App
+            new Client
+            {
+                ClientId = "products",
+                ClientName = "Products App",
+                ClientSecrets = { new Secret("productsrazor".Sha256()) },
+
+                AllowedGrantTypes = GrantTypes.Code,
+                RequirePkce = true,
+
+                RedirectUris = { "https://localhost:5003/signin-oidc" },
+                PostLogoutRedirectUris = { "https://localhost:5003/signout-callback-oidc" },
+
+                AllowOfflineAccess = true,
+
+                AllowedScopes = new List<string>
+                {
+                    IdentityServerConstants.StandardScopes.OpenId,
+                    IdentityServerConstants.StandardScopes.Profile,
+                    "api1",
+                    "products"
+                },
+                AlwaysIncludeUserClaimsInIdToken = true
             }
         };
 

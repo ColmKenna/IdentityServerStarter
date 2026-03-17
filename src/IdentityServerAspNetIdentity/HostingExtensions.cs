@@ -57,6 +57,8 @@ internal static class HostingExtensions
                 new Claim(JwtClaimTypes.GivenName, "Alice"),
                 new Claim(JwtClaimTypes.FamilyName, "Smith"),
                 new Claim(JwtClaimTypes.WebSite, "http://alice.com"),
+                new Claim("canViewProducts", "true"),
+                new Claim("canAmendProduct", "true"),
             });
             if (!result.Succeeded)
             {
@@ -91,7 +93,9 @@ internal static class HostingExtensions
                 new Claim(JwtClaimTypes.GivenName, "Bob"),
                 new Claim(JwtClaimTypes.FamilyName, "Smith"),
                 new Claim(JwtClaimTypes.WebSite, "http://bob.com"),
-                new Claim("location", "somewhere")
+                new Claim("location", "somewhere"),
+                new Claim("canViewProducts", "true"),
+                new Claim("canAmendProduct", "true"),
             });
             if (!result.Succeeded)
             {
@@ -103,6 +107,40 @@ internal static class HostingExtensions
         else
         {
             Log.Debug("bob already exists");
+        }
+
+        var charlie = await userMgr.FindByNameAsync("charlie");
+        if (charlie == null)
+        {
+            charlie = new ApplicationUser
+            {
+                UserName = "charlie",
+                Email = "CharlieDay@email.com",
+                EmailConfirmed = true
+            };
+            var result = await userMgr.CreateAsync(charlie, "Pass123$");
+            if (!result.Succeeded)
+            {
+                throw new Exception(result.Errors.First().Description);
+            }
+
+            result = await userMgr.AddClaimsAsync(charlie, new Claim[]
+            {
+                new Claim(JwtClaimTypes.Name, "Charlie Day"),
+                new Claim(JwtClaimTypes.GivenName, "Charlie"),
+                new Claim(JwtClaimTypes.FamilyName, "Day"),
+                new Claim("canViewProducts", "true"),
+            });
+            if (!result.Succeeded)
+            {
+                throw new Exception(result.Errors.First().Description);
+            }
+
+            Log.Debug("charlie created");
+        }
+        else
+        {
+            Log.Debug("charlie already exists");
         }
 
         if (!await configurationDbContext.Clients.AnyAsync())

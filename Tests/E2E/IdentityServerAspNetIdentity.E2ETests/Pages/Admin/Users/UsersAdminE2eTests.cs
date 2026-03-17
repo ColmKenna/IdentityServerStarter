@@ -20,6 +20,10 @@ public class UsersAdminE2eTests : IClassFixture<PlaywrightFixture>, IAsyncLifeti
     public async Task InitializeAsync()
     {
         _context = await _fixture.Browser.NewContextAsync();
+        // Increase default timeouts for actionability/wait operations to avoid
+        // transient 30s Playwright timeouts in CI/local runs.
+        _context.SetDefaultTimeout(60000);
+        _context.SetDefaultNavigationTimeout(60000);
         _page = await _context.NewPageAsync();
     }
 

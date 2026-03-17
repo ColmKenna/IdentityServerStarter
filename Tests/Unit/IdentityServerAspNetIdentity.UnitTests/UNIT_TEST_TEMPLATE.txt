@@ -1,0 +1,234 @@
+// This file serves as a template for creating new unit tests.
+// Copy this to Unit/Pages/{PageName}ModelTests.cs and modify accordingly.
+
+/*
+using IdentityServerServices;
+using IdentityServerAspNetIdentity.Pages.{Namespace};
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Moq;
+
+namespace IdentityServerAspNetIdentity.Tests.Unit.Pages;
+
+/// <summary>
+/// Unit tests for {PageName}Model (Pages/{PageRoute}/{PageName}.cshtml.cs)
+/// 
+/// Test organization follows progressive order:
+/// 1. Page loads and renders
+/// 2. Data display  
+/// 3. Form interaction and validation
+/// 4. Business logic and edge cases
+/// 5. DOM assertions (via integration tests)
+/// </summary>
+public class {PageName}ModelTests
+{
+    private readonly Mock<I{PrimaryServiceInterface}> _{primaryServiceFieldName};
+    private readonly {PageName}Model _pageModel;
+
+    public {PageName}ModelTests()
+    {
+        _{primaryServiceFieldName} = new Mock<I{PrimaryServiceInterface}>();
+        
+        _pageModel = new {PageName}Model(_{primaryServiceFieldName}.Object)
+        {
+            PageContext = new PageContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Phase 1: Page loads and renders
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task should_return_page_when_get_valid()
+    {
+        // Arrange
+        // TODO: Set up any required test data
+        _{primaryServiceFieldName}.Setup(x => x.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new {ModelType} { Id = 1 });
+
+        // Act
+        var result = await _pageModel.OnGetAsync();
+
+        // Assert
+        result.Should().BeOfType<PageResult>();
+    }
+
+    [Fact]
+    public async Task should_return_not_found_when_get_with_invalid_id()
+    {
+        // Arrange
+        _{primaryServiceFieldName}.Setup(x => x.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((object)null);
+
+        // Act
+        var result = await _pageModel.OnGetAsync();
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Phase 2: Data display
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task should_populate_properties_when_get()
+    {
+        // Arrange
+        var expectedData = new {ModelType} { Id = 1, Name = "Test" };
+        _{primaryServiceFieldName}.Setup(x => x.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedData);
+
+        // Act
+        await _pageModel.OnGetAsync();
+
+        // Assert
+        _pageModel.{PropertyName}.Should().Be(expectedData.{PropertyName});
+    }
+
+    [Fact]
+    public async Task should_handle_null_data_gracefully()
+    {
+        // Arrange
+        _{primaryServiceFieldName}.Setup(x => x.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((object)null);
+
+        // Act
+        var result = await _pageModel.OnGetAsync();
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Phase 3: Form interaction and validation
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task should_return_page_when_post_with_invalid_model_state()
+    {
+        // Arrange
+        _pageModel.ModelState.AddModelError("{PropertyName}", "Required");
+
+        // Act
+        var result = await _pageModel.OnPostAsync();
+
+        // Assert
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task should_show_validation_error_when_post_with_empty_field()
+    {
+        // Arrange
+        _pageModel.{BindProperty} = "";
+        _pageModel.ModelState.AddModelError("{PropertyName}", "This field is required");
+
+        // Act
+        var result = await _pageModel.OnPostAsync();
+
+        // Assert
+        result.Should().BeOfType<PageResult>();
+        _pageModel.ModelState.Keys.Should().Contain("{PropertyName}");
+    }
+
+    [Fact]
+    public async Task should_redirect_when_post_with_valid_data()
+    {
+        // Arrange
+        _pageModel.{BindProperty} = "valid-value";
+        _{primaryServiceFieldName}.Setup(x => x.SaveAsync(It.IsAny<{ModelType}>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _pageModel.OnPostAsync();
+
+        // Assert
+        result.Should().BeOfType<RedirectToPageResult>();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Phase 4: Business logic and edge cases
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task should_call_service_with_correct_parameters()
+    {
+        // Arrange
+        _pageModel.{BindProperty} = "test-value";
+        _{primaryServiceFieldName}.Setup(x => x.SaveAsync(It.IsAny<{ModelType}>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _pageModel.OnPostAsync();
+
+        // Assert
+        _{primaryServiceFieldName}.Verify(
+            x => x.SaveAsync(It.Is<{ModelType}>(m => m.{PropertyName} == "test-value"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task should_handle_service_error()
+    {
+        // Arrange
+        _{primaryServiceFieldName}.Setup(x => x.SaveAsync(It.IsAny<{ModelType}>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Service error"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await _pageModel.OnPostAsync());
+    }
+
+    [Fact]
+    public async Task should_handle_cancellation_token()
+    {
+        // Arrange
+        var cts = new CancellationTokenSource();
+        _pageModel.PageContext.HttpContext.RequestAborted = cts.Token;
+
+        // Act
+        var result = await _pageModel.OnGetAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        _{primaryServiceFieldName}.Verify(
+            x => x.GetAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Instructions for using this template:
+// ─────────────────────────────────────────────────────────────────────
+//
+// 1. Copy this file: cp UNIT_TEST_TEMPLATE.txt Unit/Pages/{PageName}ModelTests.cs
+//
+// 2. Replace ALL of:
+//    - {PageName}         → The PageModel class name (e.g., "Create", "Edit", "Index")
+//    - {Namespace}        → The namespace path (e.g., "Admin.Users", "Account.Login")
+//    - {PageRoute}        → The route path (e.g., "Admin/Users/Create")
+//    - {PrimaryServiceInterface} → The main injected service (e.g., "IUserService")
+//    - {primaryServiceFieldName} → The field name (e.g., "_userService")
+//    - {ModelType}        → The DTO/Model type (e.g., "UserDto")
+//    - {PropertyName}     → The PageModel property name
+//    - {BindProperty}     → The [BindProperty] property
+//
+// 3. Add or remove test methods based on the page's handlers:
+//    - Remove unused phases if they don't apply
+//    - Add multiple POST handlers if needed (OnPostAdd, OnPostDelete, etc.)
+//    - Add named handlers like OnPostEditAsync, OnPostDeleteAsync, etc.
+//
+// 4. For multiple services, add additional Mock<> fields:
+//    private readonly Mock<ISecondaryService> _secondaryService;
+//    
+//    And initialize in the constructor.
+//
+// 5. Verify the test runs:
+//    dotnet test --filter "ClassName={PageName}ModelTests"
+*/

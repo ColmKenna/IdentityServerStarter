@@ -1,0 +1,397 @@
+// This file serves as a template for creating new integration tests.
+// Copy this to Integration/Pages/{PageName}IntegrationTests.cs and modify accordingly.
+
+/*
+using System.Net;
+using IdentityServerAspNetIdentity.Tests.Infrastructure;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using IdentityServerAspNetIdentity.Models;
+
+namespace IdentityServerAspNetIdentity.Tests.Integration.Pages;
+
+/// <summary>
+/// Integration tests for {PageName} page (Pages/{PageRoute}/{PageName}.cshtml)
+/// 
+/// Tests the full HTTP pipeline: routing, model binding, validation, and view rendering.
+/// Uses WebApplicationFactory with in-memory database.
+///
+/// Test organization follows progressive order:
+/// 1. Page loads and renders
+/// 2. Data display
+/// 3. Form interaction and validation
+/// 4. Business logic and edge cases
+/// 5. DOM assertions with AngleSharp
+/// </summary>
+public class {PageName}IntegrationTests : IClassFixture<CustomWebApplicationFactory>
+{
+    private readonly HttpClient _client;
+    private readonly CustomWebApplicationFactory _factory;
+
+    public {PageName}IntegrationTests(CustomWebApplicationFactory factory)
+    {
+        _factory = factory;
+        _client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false  // Important: test redirects explicitly
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Phase 1: Page loads and renders
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task should_return_success_status_when_get_{page_name}()
+    {
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task should_render_html_with_correct_content_type()
+    {
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+
+        // Assert
+        response.Content.Headers.ContentType.Should().NotBeNull();
+        response.Content.Headers.ContentType.MediaType.Should().Be("text/html");
+    }
+
+    [Fact]
+    public async Task should_contain_form_element_when_get_page()
+    {
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        // Assert
+        var form = document.QuerySelector("form");
+        form.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task should_display_page_title_or_heading()
+    {
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        // Assert
+        var heading = document.QuerySelector("h1, h2");
+        heading.Should().NotBeNull();
+        heading.TextContent.Should().NotBeNullOrEmpty();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Phase 2: Data display
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task should_display_data_when_records_exist()
+    {
+        // Arrange - seed test data
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            // TODO: Add your entity to database
+            // db.YourEntity.Add(new YourEntity { /* ... */ });
+            // await db.SaveChangesAsync();
+        }
+
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task should_display_empty_state_when_no_records()
+    {
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Check for empty state message or empty table
+        var content = document.TextContent;
+        content.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task should_display_formatted_data_correctly()
+    {
+        // Arrange - seed test data with specific values
+        using (var scope = _factory.Services.CreateScope())
+        {
+            // TODO: Add test data with known values
+        }
+
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        // Assert
+        // TODO: Verify formatted data (dates, currency, etc.)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Phase 3: Form interaction and validation (if applicable)
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task should_display_validation_error_when_post_with_empty_field()
+    {
+        // Arrange
+        var getResponse = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(getResponse);
+        var form = document.QuerySelector("form") as AngleSharp.Html.Dom.IHtmlFormElement;
+
+        // Act
+        var postResponse = await AngleSharpHelpers.SendFormAsync(
+            _client,
+            form,
+            (AngleSharp.Html.Dom.IHtmlElement)document.QuerySelector("button[type='submit']"),
+            new Dictionary<string, string>
+            {
+                ["{requiredFieldName}"] = ""  // Empty required field
+            });
+
+        // Assert
+        postResponse.StatusCode.Should().Be(HttpStatusCode.OK);  // Re-renders with errors
+        var errorDocument = await AngleSharpHelpers.GetDocumentAsync(postResponse);
+        var errorMessages = errorDocument.QuerySelectorAll(".validation-summary, .field-validation-error");
+        errorMessages.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task should_redirect_after_successful_form_submission()
+    {
+        // Arrange
+        var getResponse = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(getResponse);
+        var form = document.QuerySelector("form") as AngleSharp.Html.Dom.IHtmlFormElement;
+
+        // Act
+        var postResponse = await AngleSharpHelpers.SendFormAsync(
+            _client,
+            form,
+            (AngleSharp.Html.Dom.IHtmlElement)document.QuerySelector("button[type='submit']"),
+            new Dictionary<string, string>
+            {
+                ["{fieldName}"] = "valid-value"
+            });
+
+        // Assert
+        postResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        postResponse.Headers.Location.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task should_display_specific_validation_error_for_field()
+    {
+        // Arrange
+        var getResponse = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(getResponse);
+        var form = document.QuerySelector("form") as AngleSharp.Html.Dom.IHtmlFormElement;
+
+        // Act
+        var postResponse = await AngleSharpHelpers.SendFormAsync(
+            _client,
+            form,
+            null,
+            new Dictionary<string, string>
+            {
+                ["{fieldName}"] = "invalid-value"
+            });
+
+        // Assert
+        var errorDocument = await AngleSharpHelpers.GetDocumentAsync(postResponse);
+        var fieldError = errorDocument.QuerySelector("[data-valmsg-for='{fieldName}']");
+        fieldError?.TextContent.Should().NotBeNullOrEmpty();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Phase 4: Business logic and edge cases
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task should_return_not_found_for_invalid_id()
+    {
+        // Act
+        var response = await _client.GetAsync("/{page_route}?id=non-existent");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task should_preserve_user_input_after_validation_error()
+    {
+        // Arrange
+        var getResponse = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(getResponse);
+        var form = document.QuerySelector("form") as AngleSharp.Html.Dom.IHtmlFormElement;
+        var inputValue = "test-input-value";
+
+        // Act
+        var postResponse = await AngleSharpHelpers.SendFormAsync(
+            _client,
+            form,
+            null,
+            new Dictionary<string, string>
+            {
+                ["{fieldName}"] = inputValue,
+                ["{requiredFieldName}"] = ""  // Invalid: empty
+            });
+
+        // Assert
+        var errorDocument = await AngleSharpHelpers.GetDocumentAsync(postResponse);
+        var inputField = errorDocument.QuerySelector($"input[name='{fieldName}']") as AngleSharp.Html.Dom.IHtmlInputElement;
+        inputField?.Value.Should().Be(inputValue);
+    }
+
+    [Fact]
+    public async Task should_handle_concurrent_requests()
+    {
+        // Act - send multiple concurrent requests
+        var tasks = new List<Task<HttpResponseMessage>>();
+        for (int i = 0; i < 5; i++)
+        {
+            tasks.Add(_client.GetAsync("/{page_route}"));
+        }
+        var responses = await Task.WhenAll(tasks);
+
+        // Assert
+        responses.Should().HaveCount(5);
+        responses.Should().AllSatisfy(r => r.StatusCode.Should().Be(HttpStatusCode.OK));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Phase 5: DOM assertions
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task should_have_input_fields_with_correct_attributes()
+    {
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        // Assert
+        var input = document.QuerySelector("input[name='{fieldName}']") as AngleSharp.Html.Dom.IHtmlInputElement;
+        input.Should().NotBeNull();
+        input.Type.Should().Be("text");  // or other type
+        input.GetAttribute("required").Should().NotBeNull();  // if required
+    }
+
+    [Fact]
+    public async Task should_have_submit_button_with_proper_text()
+    {
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        // Assert
+        var submitButton = document.QuerySelector("button[type='submit']") as AngleSharp.Html.Dom.IHtmlElement;
+        submitButton?.TextContent.Should().Contain("Save");  // or other button text
+    }
+
+    [Fact]
+    public async Task should_have_navigation_links()
+    {
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        // Assert
+        var links = document.QuerySelectorAll("a");
+        links.Should().NotBeEmpty();
+        // Verify links point to valid URLs
+        links.Cast<AngleSharp.Html.Dom.IHtmlAnchorElement>()
+            .Should().AllSatisfy(a => a.Href.Should().NotBeNullOrEmpty());
+    }
+
+    [Fact]
+    public async Task should_render_form_with_valid_html()
+    {
+        // Act
+        var response = await _client.GetAsync("/{page_route}");
+        var document = await AngleSharpHelpers.GetDocumentAsync(response);
+
+        // Assert
+        document.DocumentElement.Should().NotBeNull();
+        document.QuerySelector("form").Should().NotBeNull();
+        // Verify HTML structure is well-formed
+        document.QuerySelector("body").Should().NotBeNull();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Helper methods for test data seeding
+    // ─────────────────────────────────────────────────────────────────────
+
+    private async Task SeedTestData()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        // TODO: Add test data to the database
+        // Example:
+        // db.Users.Add(new ApplicationUser 
+        // { 
+        //     UserName = "testuser", 
+        //     Email = "testuser@example.com" 
+        // });
+        // await db.SaveChangesAsync();
+    }
+
+    private async Task<string> CreateTestEntity()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        // TODO: Create and return a test entity ID
+        // var entity = new YourEntity { /* ... */ };
+        // db.YourEntity.Add(entity);
+        // await db.SaveChangesAsync();
+        // return entity.Id;
+        
+        return "test-id";
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Instructions for using this template:
+// ─────────────────────────────────────────────────────────────────────
+//
+// 1. Copy this file: cp INTEGRATION_TEST_TEMPLATE.txt Integration/Pages/{PageName}IntegrationTests.cs
+//
+// 2. Replace ALL of:
+//    - {PageName}              → The page name (e.g., "Create", "Edit", "Index")
+//    - {page_route}            → The URL route (e.g., "/Admin/Users/Create")
+//    - {page_name}             → Lowercase with underscores (e.g., "create", "edit_role")
+//    - {fieldName}             → The form field name
+//    - {requiredFieldName}     → A required field name for validation tests
+//
+// 3. Remove test methods that don't apply to the page:
+//    - Form tests if page is GET-only
+//    - Authentication tests for public pages
+//    - Multiple handler tests for single-handler pages
+//
+// 4. Update helper methods (SeedTestData, CreateTestEntity) based on your entities
+//
+// 5. Verify tests run:
+//    dotnet test --filter "ClassName={PageName}IntegrationTests"
+//
+// 6. Important notes:
+//    - Set AllowAutoRedirect = false to test redirects explicitly
+//    - Use AngleSharpHelpers for form submission to auto-include CSRF tokens
+//    - Test data is isolated per test (in-memory DB)
+//    - Default users: alice, bob, manager (see TestDatabaseHelper)
+*/

@@ -1,0 +1,77 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+  EfCoreExtensions -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\EfCoreExtensions\bin\Debug\net10.0\EfCoreExtensions.dll
+  PrimativeExtensions -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\PrimativeExtensions\bin\Debug\net10.0\PrimativeExtensions.dll
+  IdentityServer.EF.DataAccess -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\IdentityServer.EF.DataAccess\bin\Debug\net10.0\IdentityServer.EF.DataAccess.dll
+  PrimativeExtensions -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\PrimativeExtensions\bin\Debug\net10.0\PrimativeExtensions.dll
+  IdentityServer.EF.DataAccess -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\IdentityServer.EF.DataAccess\bin\Debug\net10.0\IdentityServer.EF.DataAccess.dll
+  EfCoreExtensions -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\EfCoreExtensions\bin\Debug\net10.0\EfCoreExtensions.dll
+  IdentityServerServices -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\IdentityServerServices\bin\Debug\net10.0\IdentityServerServices.dll
+  IdentityServerServices -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\IdentityServerServices\bin\Debug\net10.0\IdentityServerServices.dll
+  IdentityServerServices.UnitTests -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\Unit\IdentityServerServices.UnitTests\bin\Debug\net10.0\IdentityServerServices.UnitTests.dll
+Test run for D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\Unit\IdentityServerServices.UnitTests\bin\Debug\net10.0\IdentityServerServices.UnitTests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  IdentityServerAspNetIdentity -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\IdentityServerAspNetIdentity\bin\Debug\net10.0\IdentityServerAspNetIdentity.dll
+  IdentityServerAspNetIdentity.UnitTests -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\Unit\IdentityServerAspNetIdentity.UnitTests\bin\Debug\net10.0\IdentityServerAspNetIdentity.UnitTests.dll
+  IdentityServerAspNetIdentity.TestSupport -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\Common\IdentityServerAspNetIdentity.TestSupport\bin\Debug\net10.0\IdentityServerAspNetIdentity.TestSupport.dll
+Test run for D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\Unit\IdentityServerAspNetIdentity.UnitTests\bin\Debug\net10.0\IdentityServerAspNetIdentity.UnitTests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  DataTransferModels -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\DataTransferModels\bin\Debug\net10.0\DataTransferModels.dll
+  IdentityServerAspNetIdentity.E2ETests -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\E2E\IdentityServerAspNetIdentity.E2ETests\bin\Debug\net10.0\IdentityServerAspNetIdentity.E2ETests.dll
+Test run for D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\E2E\IdentityServerAspNetIdentity.E2ETests\bin\Debug\net10.0\IdentityServerAspNetIdentity.E2ETests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.1 (x64)
+
+
+Passed!  - Failed:     0, Passed:    58, Skipped:     0, Total:    58, Duration: 1 s - IdentityServerServices.UnitTests.dll (net10.0)
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  IdentityServerAspNetIdentity.IntegrationTests -> D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\Integration\IdentityServerAspNetIdentity.IntegrationTests\bin\Debug\net10.0\IdentityServerAspNetIdentity.IntegrationTests.dll
+Test run for D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\Integration\IdentityServerAspNetIdentity.IntegrationTests\bin\Debug\net10.0\IdentityServerAspNetIdentity.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.1 (x64)
+
+  Failed IdentityServerAspNetIdentity.UnitTests.Pages.Admin.ApiScopes.EditModelTests.OnPostAsync_ShouldReturnPageWithoutCallingCreate_WhenCreateModelStateInvalid [< 1 ms]
+  Error Message:
+   System.NullReferenceException : Object reference not set to an instance of an object.
+Starting test execution, please wait...
+  Stack Trace:
+     at IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApplyPageData(ApiScopeEditPageDataDto pageData, Boolean mapInput) in D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\IdentityServerAspNetIdentity\Pages\Admin\ApiScopes\Edit.cshtml.cs:line 205
+   at IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.OnPostAsync() in D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\IdentityServerAspNetIdentity\Pages\Admin\ApiScopes\Edit.cshtml.cs:line 66
+   at IdentityServerAspNetIdentity.UnitTests.Pages.Admin.ApiScopes.EditModelTests.OnPostAsync_ShouldReturnPageWithoutCallingCreate_WhenCreateModelStateInvalid() in D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\Unit\IdentityServerAspNetIdentity.UnitTests\Pages\Admin\ApiScopes\EditModelTests.cs:line 94
+--- End of stack trace from previous location ---
+  Failed IdentityServerAspNetIdentity.UnitTests.Pages.Admin.ApiScopes.EditModelTests.OnPostAsync_ShouldAddModelStateError_WhenCreateDuplicateName [2 ms]
+  Error Message:
+   System.NullReferenceException : Object reference not set to an instance of an object.
+  Stack Trace:
+     at IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.ApplyPageData(ApiScopeEditPageDataDto pageData, Boolean mapInput) in D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\IdentityServerAspNetIdentity\Pages\Admin\ApiScopes\Edit.cshtml.cs:line 205
+   at IdentityServerAspNetIdentity.Pages.Admin.ApiScopes.EditModel.OnPostAsync() in D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\src\IdentityServerAspNetIdentity\Pages\Admin\ApiScopes\Edit.cshtml.cs:line 82
+   at IdentityServerAspNetIdentity.UnitTests.Pages.Admin.ApiScopes.EditModelTests.OnPostAsync_ShouldAddModelStateError_WhenCreateDuplicateName() in D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\Unit\IdentityServerAspNetIdentity.UnitTests\Pages\Admin\ApiScopes\EditModelTests.cs:line 117
+--- End of stack trace from previous location ---
+A total of 1 test files matched the specified pattern.
+
+Failed!  - Failed:     2, Passed:   111, Skipped:     0, Total:   113, Duration: 202 ms - IdentityServerAspNetIdentity.UnitTests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:     9, Skipped:     0, Total:     9, Duration: 1 s - IdentityServerAspNetIdentity.IntegrationTests.dll (net10.0)
+  Failed IdentityServerAspNetIdentity.E2ETests.Pages.Admin.ApiScopes.EditModelE2eTests.OnPostAsync_ShouldPersistBasicInfoChanges_WhenEditingFromBrowser [30 s]
+  Error Message:
+   System.TimeoutException : Timeout 30000ms exceeded.
+=========================== logs ===========================
+  "NetworkIdle" event fired
+============================================================
+---- System.TimeoutException : Timeout 30000ms exceeded.
+  Stack Trace:
+     at Microsoft.Playwright.Core.Waiter.WaitForPromiseAsync[T](Task`1 task, Action dispose) in /_/src/Playwright/Core/Waiter.cs:line 226
+   at Microsoft.Playwright.Core.Frame.WaitForLoadStateAsync(Nullable`1 state, FrameWaitForLoadStateOptions options) in /_/src/Playwright/Core/Frame.cs:line 235
+   at IdentityServerAspNetIdentity.E2ETests.Pages.Admin.ApiScopes.EditModelE2eTests.OnPostAsync_ShouldPersistBasicInfoChanges_WhenEditingFromBrowser() in D:\repos\IdentityServerStarter copy\IdentityServerStarter copy\Tests\E2E\IdentityServerAspNetIdentity.E2ETests\Pages\Admin\ApiScopes\EditModelE2eTests.cs:line 59
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Microsoft.Playwright.Helpers.TaskHelper.<>c__DisplayClass2_0.<WithTimeout>b__0() in /_/src/Playwright/Helpers/TaskHelper.cs:line 73
+   at Microsoft.Playwright.Helpers.TaskHelper.WithTimeout(Task task, Func`1 timeoutAction, TimeSpan timeout, CancellationToken cancellationToken) in /_/src/Playwright/Helpers/TaskHelper.cs:line 109
+   at Microsoft.Playwright.Core.Waiter.WaitForPromiseAsync[T](Task`1 task, Action dispose) in /_/src/Playwright/Core/Waiter.cs:line 218
+
+Failed!  - Failed:     1, Passed:     5, Skipped:     0, Total:     6, Duration: 33 s - IdentityServerAspNetIdentity.E2ETests.dll (net10.0)
